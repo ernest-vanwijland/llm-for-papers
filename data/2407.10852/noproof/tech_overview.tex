@@ -1,0 +1,55 @@
+\subsection{Technical Overview}
+\label{sec: tech_overview}
+
+\paragraph{Planar cut sparsifiers.}
+Our construction of planar cut sparsifiers follows a similar framework as the planar distance emulator construction in \cite{chang2022near}, based on the intuition that, if we take the dual graph, then min-cuts become min-length partitioning cycles and therefore can be approximated by distance-based approaches. The algorithm consists of three steps: 
+\begin{enumerate}
+\item reduce general planar graphs to $O(1)$-face instances (where terminals lie on $O(1)$ faces in the planar embedding of the graph);
+\item reduce $O(1)$-face instances to $1$-face instances (where all terminals lie on the boundary of a single face; such graphs are also known as \emph{Okamura-Seymour instances}); and
+\item construct quality-$(1+\eps)$ planar cut sparsifiers for $1$-face instances.
+\end{enumerate}
+Step $1$ and Step $3$ are implemented in a similar way as \cite{chang2022near}. Step $2$ requires several new ideas. The goal is to preserve the min-cuts for all terminal partitions. As terminals may lie on $O(1)$ faces, for different terminal partitions, the dual partitioning cycle corresponding to the min-cuts may go around these $O(1)$ faces in different ways, and therefore it is not enough to just preserve pairwise shortest paths in the dual graph. Indeed, as observed by \cite{krauthgamer2017refined}, we need to preserve, for each pair of terminals, and for each pattern (how a path going around the $O(1)$ faces, e.g., on the left side of face $1$, on the right side of face $2$, etc), the shortest path following the pattern and connecting the terminal pair. We call such a sparsifier a \emph{pattern distance emulator}, which a generalization of the standard distance emulators.
+%
+As there are $O(1)$ faces, there are $2^{O(1)}$ different patterns (left/right for each face). We manage to construct a near-linear size pattern emulator, incurring an unharmful factor $2^{O(1)}$ loss in its size. 
+
+We believe that the notion of pattern emulators is of independent interest, and should play a role in solving other algorithmic problems on planar graphs.
+
+
+
+
+
+
+
+
+\paragraph{Upper bounds for quasi-bipartite graphs.}
+For exact (quality-$1$) contraction-based cut sparsifiers, a central notion in previous constructions and lower bound proofs is the \emph{profiles} of vertices. Specifically, the profile of a vertex $v$ specifies, for each terminal partition $(S,T\setminus S)$, on which side of the cut $\mc_G(S,T\setminus S)$ lies the vertex $v$.
+Vertices of the same profile can be safely contracted together, and the number of different profiles is therefore an upper bound on the size of exact cut sparsifiers. For general graphs, a doubly-exponential upper bound of $2^{2^k}$ \cite{hagerup1998characterizing} on the number of distinct profiles was established, and this was later improved to $2^{\binom{k}{k/2}}$ \cite{khan2014mimicking}. For quasi-bipartite graphs, we will utilize its structure to proved a better (single-exponential) upper bound.
+
+By the definition of quasi-bipartite graphs, there are no edge between non-terminal vertices, so non-terminal vertices form separate stars with terminals, and therefore contribute to terminal min-cuts independently. For example, in a star centered at $v$ with $6$ edges $e_1,\ldots,e_6$ connecting to terminal $t_1,\ldots,t_6$, respectively. The profile of vertex $v$ only depends on the weights of the edges $e_1,\ldots,e_6$: for the terminal partition $(S=\set{t_1,t_2,t_3},T\setminus S=\set{t_4,t_5,t_6})$, $$\text{$v$ lies on the $S$ side of $\mc_G(S,T\setminus S)$ iff } w(e_1)+w(e_2)+w(e_3)>w(e_4)+w(e_5)+w(e_6).$$
+
+This gives us some power to reveal properties of profiles in quasi-bipartite graphs.
+For example, if we consider subsets $S\subseteq T$ being $\set{1,2},\set{3,4},\set{1,3},\set{2,4}$, then $v$ cannot lie on the $S$ side for all these terminal min-cuts. Since otherwise, letting $w=\sum_{1\le  i\le 6}w(e_i)$, we get $w(e_1)+w(e_2)>w/2$, $w(e_3)+w(e_4)>w/2$, $w(e_1)+w(e_3)\le w/2$, and $w(e_2)+w(e_4)\le w/2$, a contradiction. This means that there are some ``configurations'' in the family of terminal subsets that are simply not realizable by any vertex profiles in quasi-bipartite graphs. We implement this idea through the notion of VC-dimension, realizing ``configurations'' by ``set systems'' and ``not realizable'' by ``non-shatterable'', and obtain a bound of $k^{O(k^2)}=2^{O(k^2\log k)}$ on the number of  profiles in quasi-bipartite graphs.
+
+
+For quality-$(1+\eps)$ cut sparsifiers, since we allow a small multiplicative error in accuracy, we are not restricted to contracting vertices with the same profile, but are allowed to moderately manipulate vertex profiles so as to reduce their number. We implement this idea by ``projections onto $O(1/\eps^2)$-size stars''. On the one hand, consider for example a full star centered at $v$ (that is, a star containing edges $(v,t)$ for all $t\in T$) with uniform edge weights, and a subset $S\subseteq T$ with $|S|=|T|/2-1$, so $v$ lies on the $T\setminus S$ side of $\mc_G(S,T\setminus S)$. If we uniformly at random sample $c=O(1/\eps^2)$ edges from it and obtain a ``mimicking substar'' $H_v$, then by central limit theorem, with high probability $H_v$ contains at most $c/2+O(1/\eps)$ edges to $S$ and at least $c/2-O(1/\eps)$ edges to $T\setminus S$. Therefore, even if $H_v$ fails in mimicking the behavior of the full star on the cut $(S,T\setminus S)$, in that it mistakenly selects more edges to $S$ than to $T\setminus S$ and therefore place $v$ on the $S$ side of $\mc_G(S,T\setminus S)$ rather than the $T\setminus S$ side, it only causes an error of $\frac{c/2+O(1/\eps)}{c/2-O(1/\eps)}=1+O(\eps)$ in the min-cut size, which is allowed.
+
+On the other hand, we have shown in the exact case that the number of profiles for stars on a fixed $O(1/\eps^2)$-size terminal set is $O(1/\eps^2)^{O(1/\eps^4)}$ (replacing $k$ with $O(1/\eps^2)$ in the $k^{O(k^2)}$ bound). Since the number of $O(1/\eps^2)$-size terminal subsets is $k^{O(1/\eps^2)}$, we can bound the total number of profiles produced by $O(1/\eps^2)$-size starts by 
+ $k^{O(1/\eps^2)}\cdot O(1/\eps^2)^{O(1/\eps^4)}$, obtaining a size bound of $k^{O(1/\eps^2)} f(\eps)$ for quality-$(1+\eps)$ contraction-based cut sparsifiers for quasi-bipartite graphs.
+
+
+
+\paragraph{Lower bounds for quasi-bipartite graphs.}
+As shown in \cite{chen20241+,chen2024lower}, contraction-based sparsifiers are closely related to the Steiner node version of the classic $0$-Extension problem \cite{karzanov1998minimum}. Specifically, \cite{chen20241+} showed that the best quality achievable by contraction-based flow sparsifiers is bounded by the integrality gap of the semi-metric LP relaxation. For cut sparsifiers, we observe that the best achievable quality is controlled by an even more restricted case of the $0$-Extension with Steiner Nodes problem, where the underlying graph is a boolean hypercube. We focus on this special case, construct a hard hypercube-instance which is also a quasi-bipartite graph, and prove a size lower bound for its $(1+\eps)$-approximation, leading to a same size lower bound for quality-$(1+\eps)$ contraction-based cut sparsifiers for quasi-bipartite graphs.
+
+
+
+
+
+
+
+
+
+
+
+
+

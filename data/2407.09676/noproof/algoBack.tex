@@ -1,0 +1,462 @@
+% !TEX root = mfe.tex
+
+\section{Appendix: Backtracking algorithm to find the true MFE }\label{app:backalgo}
+
+In this backtracking algorithm, we use  $[i,j]_{q:k}^t $ to denote the generic form of segment that has been popped from the stack $\delta$, where $t \in \{\square,b,m\}$, and $q \in \{\text{mul}, \text{int},  \text{null}\}$, where null means (nothing), and $k \in [i,j]$. For the full details, see \cref{sec:backhigh}. 
+
+
+\begin{algorithm}[t] 
+	\caption{\small Backtracking pseudocode that takes as input: $c=\mathcal{O}(1)$ strands with total number of bases (length) $N$ and strand ordering $\pi$. 
+		Runs in  $\mathcal{O}(N^4)$ time and $\mathcal{O}(N^4)$ space, and assumes there are $k \leq c$ strand types given as a \emph{multiset}, 
+		each with an associated repetition number $n_1, ..., n_k \in \mathbb{N}$, such that $n_1+ ...+n_k = c$, with total length $N$. 
+		$[i,j]^t \Leftarrow \delta$ denotes  popping an element from stack $\delta$, 
+		which is a segment, and assigning it to the generic segment $[i,j]^t$.  
+		And $\mathcal{S} \Rightarrow \mathcal{R}$ denotes pushing structure $\mathcal{S}$ onto stack $\mathcal{R}$, and  $E(\mathcal{S})$ is defined in \cref{eq:ES}, and all refinement cases are analyzed in \cref{sec:backhigh}.
+	} \label{algo:2}
+	\begin{algorithmic}[1]
+		\footnotesize	
+		\If{($n_1, n_2, \ldots, n_k$) are all even}\Comment{use \cref{lem:even} to set symmetric structure upperbound $\mathcal{U}$}
+		\State $\mathcal{U} =  \frac{N-c}{v(\pi)} \left[ \sigma(v(\pi))-v(\pi) \right] + \frac{N^2}{16}$  \Comment{in $\mathcal{O}(1)$ time}
+		
+		\Else
+		
+		\State $\mathcal{U} =  \frac{N-c}{v(\pi)} \left[ \sigma(v(\pi))-v(\pi) \right]$
+		
+		\EndIf
+		
+		\State $\mathcal{E} =$ \snMFE \Comment{\snMFE is returned by \cref{algo:1}}
+		
+		\State $\mathcal{B} = \mathcal{E}+ k_\mathrm{B} T \log v(\pi)$ \Comment{where $v(\pi)$ is the highest symmetry degree for the $c$-strands ordering $\pi$}
+		
+		
+		
+		\State $\mathcal{S} = ([1,N]^\square, \phi,0)$ \Comment{the initial system (the parent of any possible structure)}
+		
+		\State $(\delta, \mathcal{P}, E_{L_{\mathcal{S}}}) = \mathcal{S}$
+		
+		\State $u = 1$ \Comment{$u$ is a symmetric secondary structures counter}
+		
+		\While{($u \leq \mathcal{U}$)}
+		\State  $y= \mathrm{False}$; \ \ $w= \mathrm{False}$  \Comment{$y$ and $w$ are indicator variables}
+		
+		\State $[i,j]_{q:k}^t \Leftarrow \delta$
+		
+		\State $\mathcal{H} = E_{L_{\mathcal{S}}} + \sum \limits_{[m,n]^t \in \delta} E([m,n]^t)$\Comment{in $\mathcal{O}(N)$, \cref{remark:timeE}}\label{line:H}
+		
+		\State $\mathcal{S} = (\delta, \mathcal{P}, E_{L_{\mathcal{S}}})$ \Comment{if all cases were not satisfied (just pop  $[i,j]_{q:k}^t$)}
+		
+		
+		\If{$(t == \square)$} \Comment{backtrack in matrix $M$}
+		
+		\State $\mathcal{S}' = ([i,j-1]^\square.\delta, \mathcal{P}, E_{L_{\mathcal{S}}})$\Comment{base $j$ is not paired}
+		
+		\State $E(\mathcal{S}')  = M_{i,j-1}  + \mathcal{H}$ 
+		
+		
+		\If{($E(\mathcal{S}') \leq \mathcal{B}$)}	
+		
+		\If{($y== \mathrm{False}$ and $E(\mathcal{S}') == \mathcal{E}$)}
+		
+		\State $\mathcal{S} = \mathcal{S}'$; \ \  $y = \mathrm{True}$
+		
+		\Else
+		
+		\State $\mathcal{S}' \Rightarrow \mathcal{R}_u$		
+		\EndIf
+		
+		
+		
+		\EndIf
+		
+		\For{$d \in [i,j-1]$}\Comment{base $j$ is paired with some base $d$}
+		
+		
+		\State $\mathcal{S}' = ([i,d-1]^\square.[d,j]^b.\delta, \mathcal{P}, E_{L_{\mathcal{S}}})$
+		
+		\State $E(\mathcal{S}')  = M_{i,d-1} + M^b_{d,j}   + \mathcal{H} $
+		
+		\If{($ M_{i,d-1} + M^b_{d,j}   + \mathcal{H} \leq \mathcal{B}$)}
+		
+		\If{($y== F$ and $E(\mathcal{S}') == \mathcal{E}$)}
+		
+		\State $\mathcal{S} = \mathcal{S}'$; \ \  $y = T$
+		
+		\Else
+		
+		\State $\mathcal{S}' \Rightarrow \mathcal{R}_u$		
+		
+		\EndIf
+		\EndIf
+		\EndFor
+		
+		\ElsIf{$(t == b)$}\Comment{backtrack in matrix $M^b$}
+		
+		\If{($q == \text{null}$)}\Comment{hairpin loop formation}
+		
+		\State$\mathcal{S}' = (\delta, \mathcal{P} \cup \{(i,j)\}, E_{L_{\mathcal{S}}} + \Delta G_{i,j}^\text{hairpin} )$ 
+		
+		\State $E(\mathcal{S}')  = \Delta G_{i,j}^\text{hairpin} + \mathcal{H} $
+		
+		
+		
+		
+		\If{($E(\mathcal{S}') \leq \mathcal{B}$)}	
+		
+		\If{($y== F$ and $E(\mathcal{S}') == \mathcal{E}$)}
+		
+		\State $\mathcal{S} = \mathcal{S}'$; \ \  $y = T$
+		
+		\Else
+		
+		\State $\mathcal{S}' \Rightarrow \mathcal{R}_u$		
+		\EndIf
+		
+		
+		\EndIf
+		\EndIf
+		
+		
+		
+		\algstore{backtracking1}		
+		
+	\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+	\caption*{Part 2 of backtracking algorithm}
+	\begin{algorithmic}[1]
+		\algrestore{backtracking1}
+		\footnotesize
+		
+		\If{($q == \text{null}$)} \Comment{interpreting the segment to be in a valid form for internal loop case \cref{sec:backhigh}.}
+		
+		\State $q = \text{int}$; \ \ $k = j$, \ \ $w= \mathrm{True}$
+		\EndIf	
+		
+		\If{($q == \text{int}$)}
+		
+		\State$\mathcal{S}' = ([i,j]^b_{\text{int}:k-1}.\delta, \mathcal{P}, E_{L_{\mathcal{S}}})$ \Comment{internal loop formation: base $k-1$ is unpaired}
+		
+		\State $E(\mathcal{S}')  = M_{i,j,k-2}^\text{b:int} + \mathcal{H}$
+		
+		\If{($E(\mathcal{S}') \leq \mathcal{B}$)}	
+		
+		\If{($y== F$ and $E(\mathcal{S}') == \mathcal{E}$)}
+		
+		\State $\mathcal{S} = \mathcal{S}'$; \ \  $y = T$
+		
+		\Else \ \  $\mathcal{S}' \Rightarrow \mathcal{R}_u$		
+		
+		\EndIf
+		\EndIf
+		\EndIf	
+		
+		
+		\If{($w == \mathrm{True}$)}
+		\State $q = \text{null}$; \ \ $k = \text{null}$, \ \ $w= \mathrm{False}$ 
+		\EndIf	
+		
+		
+		\If{($q == \text{null}$)}\Comment{internal loop formation: base $k-1$ is paired}
+		
+		\For{$d \in [i+1,k-2]$}
+		
+		
+		\State  $\mathcal{S}' = ([d,k-1]^b.\delta, \mathcal{P} \cup \{(i,j)\}, E_{L_{\mathcal{S}}} + \Delta G_{i,d,k-1,j}^\text{interior})$
+		
+		\State $E(\mathcal{S}')  = M^b_{d,k-1} + \Delta G_{i,d,k-1,j}^\text{interior} + \mathcal{H}$
+		
+		
+		\If{($E(\mathcal{S}') \leq \mathcal{B}$)}	
+		
+		\If{($y== F$ and $E(\mathcal{S}') == \mathcal{E}$)}
+		
+		\State $\mathcal{S} = \mathcal{S}'$; \ \  $y = T$
+		
+		\Else  \ \  $\mathcal{S}' \Rightarrow \mathcal{R}_u$		
+		
+		
+		\EndIf
+		
+		
+		
+		\EndIf
+		\EndFor
+		\EndIf
+		
+		\If{($q == \text{null}$)}\Comment{interpreting the segment to be in a valid form for multiloop case \cref{sec:backhigh}}
+		
+		\State $q = \text{mul}$; \ \ $k = j$, \ \ $w= \mathrm{True}$
+		\EndIf	
+		
+		\If{($q == \text{mul}$)}
+		
+		\State $\mathcal{S}' = ([i,j]^b_{\text{mul}:k-1}.\delta, \mathcal{P}, E_{L_{\mathcal{S}}})$ \Comment{multiloop formation: base $k-1$ is unpaired}
+		
+		\State $E(\mathcal{S}')  = M_{i,j,k-2}^\text{b:mul} + \mathcal{H}$
+		
+		
+		\If{($E(\mathcal{S}') \leq \mathcal{B}$)}	
+		
+		\If{($y== F$ and $E(\mathcal{S}') == \mathcal{E}$)}
+		
+		\State $\mathcal{S} = \mathcal{S}'$; \ \  $y = T$
+		
+		\Else
+		
+		\State $\mathcal{S}' \Rightarrow \mathcal{R}_u$		
+		\EndIf
+		
+		\EndIf
+		
+		\EndIf
+		\If{($w == \mathrm{True}$)}
+		\State $q = \text{null}$; \ \ $k = \text{null}$, \ \ $w= \mathrm{False}$ 
+		\EndIf	
+		
+		\If{($q == \text{null}$)}\Comment{multiloop formation: base $k-1$ is paired}
+		
+		\For{$d \in [i+1,k-2]$}
+		
+		
+		
+		\State  $\mathcal{S}' = ([i+1,d-1]^m.[d,k-1]^b.\delta, \mathcal{P} \cup \{(i,j)\}, \Delta G_\text{init}^\text{multi} + 2\Delta G_\text{bp}^\text{multi} + (j-k) \Delta G_\text{nt}^\text{multi} + E_{L_{\mathcal{S}}})$
+		
+		\State $E(\mathcal{S}')  = M^m_{i+1,d-1} + M^b_{d,k-1} + \Delta G_\text{init}^\text{multi} + 2\Delta G_\text{bp}^\text{multi} + (j-k)\Delta G_\text{nt}^\text{multi} + \mathcal{H}$
+		
+		
+		\If{($ E(\mathcal{S}') \leq \mathcal{B}$)}	
+		
+		\If{($y== F$ and $E(\mathcal{S}') == \mathcal{E}$)}
+		
+		\State $\mathcal{S} = \mathcal{S}'$; \ \  $y = T$
+		
+		\Else
+		
+		\State $\mathcal{S}' \Rightarrow \mathcal{R}_u$		
+		\EndIf
+		
+		
+		\EndIf
+		\EndFor
+		\EndIf
+		
+		
+		
+		
+		\algstore{backtracking2}
+		
+	\end{algorithmic}
+\end{algorithm}
+
+
+\begin{algorithm}
+	\caption*{Part 3 of backtracking algorithm}
+	\begin{algorithmic}[1]
+		\algrestore{backtracking2}
+		\footnotesize
+		
+		\If{($q == \text{null}$)}\Comment{exterior loop formation}
+		
+		\For{$z \in [i,j]$ s.t. $\eta[z+\frac{1}{2}] ==1$}
+		
+		
+		\State  $\mathcal{S}' = ([i+1,z]^\square.[z+1,j-1]^\square.\delta, \mathcal{P} \cup \{(i,j)\}, E_{L_{\mathcal{S}}})$
+		
+		\State $E(\mathcal{S}')  = M_{i+1,z} +  M_{z+1,j-1} + \mathcal{H}$
+		
+		
+		
+		\If{($E(\mathcal{S}') \leq \mathcal{B}$)}	
+		
+		\If{($y== F$ and $E(\mathcal{S}') == \mathcal{E}$)}
+		
+		\State $\mathcal{S} = \mathcal{S}'$; \ \  $y = T$
+		
+		\Else
+		
+		\State $\mathcal{S}' \Rightarrow \mathcal{R}_u$		
+		\EndIf
+		\EndIf
+		\EndFor
+		
+		\EndIf
+		
+		
+		
+		\ElsIf{$(t == m)$}\Comment{backtrack in matrix $M^m$}
+		
+		\If{($q == \text{null}$)}\Comment{multiloop case 1: base $j$ is unpaired}
+		
+		\State $\mathcal{S}' = ([i,j-1]^m.\delta, \mathcal{P}, E_{L_{\mathcal{S}}} + \Delta G_\text{nt}^\text{multi})$ 
+		
+		\State $E(\mathcal{S}')  = M_{i,j-1}^m + \Delta G_\text{nt}^\text{multi} + \mathcal{H}$
+		
+		
+		
+		\If{($E(\mathcal{S}')  \leq \mathcal{B}$)}	
+		
+		\If{($y== F$ and $E(\mathcal{S}') == \mathcal{E}$)}
+		
+		\State $\mathcal{S} = \mathcal{S}'$; \ \  $y = T$
+		
+		\Else
+		
+		\State $\mathcal{S}' \Rightarrow \mathcal{R}_u$		
+		\EndIf
+		
+		\EndIf
+		
+		\EndIf
+		\If{($q == \text{null}$)}\Comment{base $j$ is paired}
+		
+		\For{$d \in [i,j-1]$}
+		
+		
+		\State $\mathcal{S}' = ([d,j]^b.\delta, \mathcal{P}, E_{L_{\mathcal{S}}} + \Delta G_\text{bp}^\text{multi} + (d-i) \Delta G_\text{nt}^\text{multi})$ 
+		
+		\State $E(\mathcal{S}') = M^b_{d,j} + \Delta G_\text{bp}^\text{multi}+ (d-i) \Delta G_\text{nt}^\text{multi} + \mathcal{H}$
+		
+		
+		\If{($E(\mathcal{S}')  \leq \mathcal{B}$)}	
+		
+		\If{($y== F$ and $E(\mathcal{S}') == \mathcal{E}$)}
+		
+		\State $\mathcal{S} = \mathcal{S}'$; \ \  $y = T$
+		
+		\Else
+		
+		\State $\mathcal{S}' \Rightarrow \mathcal{R}_u$		
+		\EndIf
+		
+		
+		
+		\EndIf
+		
+		
+		\EndFor
+		\EndIf
+		
+		\If{($q == \text{null}$)}\Comment{interpreting the segment to be in a valid form for multiloop case \cref{sec:backhigh}}
+		
+		\State $q = \text{mul}$; \ \ $k = j-1$, \ \ $w= \mathrm{True}$
+		\EndIf	
+		
+		\If{($q == \text{mul}$)}\Comment{multiloop case 2: base $k$ is unpaired}
+		
+		\State  $\mathcal{S}' = ([i,j]^m_{\text{mul}:k-1}.\delta, \mathcal{P}, E_{L_{\mathcal{S}}})$ 
+		
+		\State $E(\mathcal{S}') = M_{i,j,k-2}^\text{m:2} + \mathcal{H}$
+		
+		\If{($E(\mathcal{S}') \leq \mathcal{B}$)}	
+		
+		\If{($y== F$ and $E(\mathcal{S}') == \mathcal{E}$)}
+		
+		\State $\mathcal{S} = \mathcal{S}'$; \ \  $y = T$
+		
+		\Else
+		
+		\State $\mathcal{S}' \Rightarrow \mathcal{R}_u$		
+		\EndIf
+		
+		\EndIf
+		
+		\EndIf
+		
+		\If{($w == \mathrm{True}$)}
+		\State $q = \text{null}$; \ \ $k = \text{null}$, \ \ $w= \mathrm{False}$ 
+		\EndIf	
+		
+		
+		
+		\algstore{backtracking3}
+		
+	\end{algorithmic}
+\end{algorithm}
+
+
+
+
+\begin{algorithm}
+	\caption*{Part 4 of backtracking algorithm}
+	\begin{algorithmic}[1]
+		\algrestore{backtracking3}
+		\footnotesize
+		
+		\If{($q == \text{null}$)}\Comment{base $k-1$ is paired}
+		
+		\For{$d \in [i,k-2]$}
+		
+		\State $\mathcal{S}' = ([i,d-1]^m.[d,k-1]^b.\delta, \mathcal{P},  \Delta G_\text{bp}^\text{multi} + (j-k+1) \Delta G_\text{nt}^\text{multi} + E_{L_{\mathcal{S}}})$ 
+		
+		
+		\State $E(\mathcal{S}') = M^m_{i,d-1} +  M^b_{d,k-1} + \Delta G_\text{bp}^\text{multi} + (j-k + 1)\Delta G_\text{nt}^\text{multi} + \mathcal{H} $
+		
+		\If{($ E(\mathcal{S}') \leq \mathcal{B}$)}	
+		
+		\If{($y== F$ and $E(\mathcal{S}') == \mathcal{E}$)}
+		
+		\State $\mathcal{S} = \mathcal{S}'$; \ \  $y = T$
+		
+		\Else
+		
+		\State $\mathcal{S}' \Rightarrow \mathcal{R}_u$		
+		\EndIf
+		
+		
+		
+		\EndIf
+		\EndFor
+		\EndIf
+		\EndIf
+		
+		\State $(\delta, \mathcal{P}, E_{L_{\mathcal{S}}}) = \mathcal{S}$
+		
+		\If{$(\delta == \phi)$}\Comment{ scanning $\mathcal{S}$ is done, $\mathcal{S}$ is a fully specified structure}
+		
+		\State Output secondary structure $\mathcal{S}$ using its base pairs set $\mathcal{P}$
+		
+		\If{($\mathcal{S}$ is asymmetric)}
+		\State  MFE $= \Delta G(\mathcal{S})$  \Comment{$\Delta G(\mathcal{S})$ is defined in \cref{eq:DGss}, which also equals $\mathcal{E}$ at the moment} 
+		\Break  \Comment{break out of top-level while loop}
+		\Else
+		\State Apply rot.~symmetry correction to free energy of $\mathcal{S}$ (i.e.~$\mathcal{E}' := \mathcal{E} + k_\mathrm{B} T \log R$);  
+		if $\mathcal{E}'<\mathcal{B}$ then $\mathcal{B} := \mathcal{E}'$ 
+		
+		
+		
+		\State  $\mathcal{S} = \min\limits_{z \in \left\{1,\ldots,u\right\}}\left\{\min\limits_{\mathcal{S}' \in \mathcal{R}_z}\left\{ E(\mathcal{S}')\right\}\right\}$  \Comment{\cref{eq:newS}, to ensure the sequential scanning over energy levels} 
+		
+		\State	$u = u+1$   \Comment{increment symmetric secondary structures counter} 
+		
+		
+		
+		\State $(\delta, \mathcal{P}, E_{L_{\mathcal{S}}}) = \mathcal{S}$
+		
+		\If{($E(\mathcal{S}) > \mathcal{B}$)}\Comment{compare with the updated $\mathcal{B}$}
+		
+		
+		\State    MFE $=  \mathcal{B}$ 
+		\Break  \Comment{break out of top-level while loop}
+		
+		\Else
+		\State $\mathcal{E} = E(\mathcal{S})$
+		
+		\State    MFE $=  \mathcal{E}$ \Comment{in case the upper bound $\mathcal{U}$ is exceeded}
+		
+		\EndIf		
+		
+		\EndIf	
+		\EndIf
+		
+		\EndWhile
+		
+		
+		
+		
+		\State \Return MFE   \Comment{return the true MFE} 
+		
+		
+	\end{algorithmic}
+\end{algorithm}
+

@@ -1,0 +1,466 @@
+%!TEX root = mainEV.tex
+
+
+\section{Algorithms against an Oblivious Adversary}\label{sec:Obl}
+
+To prove \Cref{thm:upper}, we first reduce Problem~\ref{prob:dyn} to solving a normalized threshold version of the problem where we assume that initially, the maximum eigenvalue is not much bigger than one. Then we want to maintain a certificate that 
+the maximum eigenvalue is not much less than one until no such certificate exists. This is formalized below.
+%
+%
+\begin{problem}[DecMaxEV($\epsilon,\AA_0,\vv_1,\cdots,\vv_T$)]\label{def:DecMaxEval} Let $\AA_0$ be an $n\times n$ symmetric PSD matrix such that $ \lambda_{\max}(\AA_0) \leq 1 + \frac{\epsilon}{\log n}$. The {\sc DecMaxEV}($\epsilon,\AA_0,\vv_1,\cdots,\vv_T$) problem asks to find for every $t$, a vector $\ww_t$ such that 
+\[
+\|\ww_t\| = 1 \quad \text{and} \quad \ww_t^{\top}\AA_t \ww_t \geq 1-40\epsilon,
+\]
+or return {\sc False} indicating that $\lambda_{\max}(\AA_t)\le 1- \frac{\eps}{\log n}$.
+\end{problem} 
+We defer the proof of the standard reduction stated below to the appendix.
+%
+\begin{restatable}{lemma}{Decision}\label{lem:Decision}
+Given an algorithm $\mathcal{A}$ that solves the decision problem {\sc DecMaxEV}($\epsilon,\AA_0,\vv_1,\cdots,\vv_T$) (Definition~\ref{def:DecMaxEval}) for any $\epsilon>0$, $\AA_0 \succeq 0$ and vectors $\vv_1,\cdots,\vv_T$ in time $\mathcal{T}$, we can solve Problem~\ref{prob:dyn} in total time $O\left(\frac{\log^2 n\log\frac{n}{\epsilon}}{\epsilon}\cdot nnz(\AA_0) + \frac{\log n}{\epsilon}\log \frac{\lambda_{\max}(\AA_0)}{\lambda_{\max}(\AA_T)}\mathcal{T}\right)$.
+\end{restatable}
+%
+%
+Next, we describe \Cref{alg:PowerMethod} which can be viewed as an algorithm for \Cref{def:DecMaxEval} when there are no updates. 
+Our algorithm essentially applies the {\it power iteration}, which is a standard algorithm used to find an approximate maximum eigenvalue and eigenvector of a matrix. In the algorithm, we make $R = O(\log n)$ copies to boost the probability.
+%
+%
+\begin{algorithm}
+\caption{{\sc DecMaxEV} with no update}\label{alg:PowerMethod}
+ \begin{algorithmic}[1]
+\Procedure{PowerMethod}{$\epsilon, \AA$}
+\State $R \leftarrow 10\log n, r_0 \leftarrow 1$
+\State $K \leftarrow \frac{4\log \frac{n}{\epsilon}}{\epsilon}$
+\For{$r = 1,\cdots , R$}
+\State $\vv^{(0,r)} \leftarrow $ random vector with coordinates chosen from $N(0,1)$\label{algline:randomInit}
+\For{$k = 1:K$}
+\State $\vv^{(k,r)}\leftarrow \AA\vv^{(k-1,r)}$
+\EndFor
+\State $\ww^{(r)} \leftarrow \frac{\vv^{(K,r)}}{\|\vv^{(K,r)}\|}$ 
+\EndFor
+\State $\WW = [\ww^{(1)},\dots,\ww^{(R)}]$\label{line:before case}
+\If{ $(\ww^{(r)})^{\top}\AA\ww^{(r)} < 1-\epsilon$ for all $r\le R$}\label{line: if all w 1-eps}
+\State \Return {\sc False}
+\Else
+\State $r_0\leftarrow$ smallest $r$ such that $(\ww^{(r)})^{\top}\AA\ww^{(r)} \geq 1-5\epsilon$
+\State \Return $[r_0,\WW]$
+\EndIf
+\EndProcedure 
+ \end{algorithmic}
+\end{algorithm}
+%
+%
+Below, we state the guarantees of the power method.
+
+\begin{restatable}{lemma}{PowerMethod}\label{thm:StaticPowerMain}
+Let $\epsilon>0$ and $\AA \succeq 0$. Let $\WW$ be as defined in Line~\ref{line:before case} in the execution of {\sc PowerMethod}($\epsilon,\AA$). With probability at least $1-1/n^{10}$, for some $\ww \in \WW$, it holds that $\ww^{\top}\AA\ww \geq (1-\frac{\epsilon}{2})\lambda_{\max}(\AA)$. The total time taken by the algorithm is at most $O\left(\frac{nnz(\AA)\log n\log \frac{n}{\epsilon}}{\epsilon}\right)$.
+
+Furthermore, let $\lambda_i$ and $\uu_i$ denote the eigenvalues and eigenvectors of $\AA$. For all $i$ such that $\lambda_i (\AA) \leq \frac{\lambda_{\max}(\AA)}{2}$, with probability at least $1-2/n^{10}$, $\left[\ww^{\top}\uu_i\right]^2\leq \frac{1}{n^8}\cdot \frac{\lambda_i}{\lambda_1}$.
+\end{restatable}
+ We note that the last line of the above lemma is saying that the vectors returned by the power method satisfy \Cref{def:super}, which we state for completeness but is not required by our algorithm. The following result is a direct consequence of Lemma~\ref{thm:StaticPowerMain}.
+
+ \begin{corollary}\label{thm:StaticPower}
+ Let $\epsilon>0, \AA \succeq 0$. Let $\WW$ be as defined in Line~\ref{line:before case} in the execution of {\sc PowerMethod}($\epsilon,\AA$). If $\lambda_{\max}(\AA) \ge 1-\epsilon$, then with probability at least $1-1/n^{10}$, $\ww^{\top}\AA\ww\geq 1-5\epsilon$ for some $\ww\in \WW$. Furthermore, if $\lambda_{\max}(\AA) \ge 1-\epsilon/\log n$, then with probability at least $1-1/n^{10}$, $\ww^{\top}\AA\ww\geq 1-\epsilon$ for some $\ww\in \WW$. The total time taken by the algorithm is at most $O\left(\frac{nnz(\AA)\log n\log \frac{n}{\epsilon}}{\epsilon}\right)$.
+ \end{corollary}
+
+Observe that, if the algorithm returns $[r_0,\WW]$, then $(\ww^{(r)})^{\top}\AA\ww^{(r)}\geq 1-5\epsilon$ for $r=r_0$, and $\ww^{(r_0)}$ is therefore a solution to Problem~\ref{def:DecMaxEval} when there is no update. The power method and its analysis are standard, and we thus defer the proof of \Cref{thm:StaticPowerMain} to the appendix. 
+
+
+
+
+Next, in \Cref{alg:Init,alg:DynamicMaxPM} we describe an algorithm for Problem~\ref{def:DecMaxEval} when we have an online sequence of updates $\vv_1,\cdots, \vv_T$. 
+%
+The algorithm starts by initializing $R = O(\log n)$ copies of the approximate maximum eigenvectors from the power method. Given a sequence of updates, as long as one of the copies is the witness that the current matrix $\AA_t$ still has a large eigenvalue, i.e., there exists $r$ where $(\ww^{(r)})_t^{\top}\AA_t\ww^{(r)}_t\geq 1-40\epsilon$, we can just return $\ww^{(r)}$ as the solution to Problem~\ref{def:DecMaxEval}. 
+Otherwise, $(\ww^{(r)})_t^{\top}\AA_t\ww^{(r)}_t< 1-40\epsilon$ for all $r \le R$ and none of the vectors from the previous call to the power method are a witness of large eigenvalues anymore. In this case, we simply recompute these vectors by calling the power method again. If the power method returns that there is no large eigenvector, then we return {\sc False} from now. Otherwise, we continue in the same manner. 
+%
+Note that our algorithm is very simple, but as we will see, the analysis is not straightforward.
+%
+\begin{algorithm}
+\caption{Initialization}\label{alg:Init}
+ \begin{algorithmic}[1]
+ \Procedure{Init}{$\epsilon, \AA_{0}$}
+\State $\WW \leftarrow$ {\sc PowerMethod}($\epsilon,\AA_0$)\label{algline:PMInit}
+\State \Return $\WW$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+
+\begin{algorithm}
+\caption{Update algorithm at time $t$ ($A_{t-1},r_t,\WW_{t-1}= [w^{(r)}_{t-1}: r= 1,\cdots R], \eps$ are maintained)}\label{alg:DynamicMaxPM}
+ \begin{algorithmic}[1]
+\Procedure{Update}{$\vv_t$}
+\State $\AA_t \leftarrow \AA_{t-1}-\vv_t\vv_t^{\top}$
+\If{$ (\ww^{(r)}_{t-1})^{\top}\AA_t\ww^{(r)}_{t-1} <1-40\epsilon$ for all $r \le R$}\label{algline:Check}
+\State $[r_t,\WW_t]\leftarrow$ {\sc PowerMethod}($\epsilon,\AA_t$)\label{algline:PM}
+\If{{\sc PowerMethod}($\epsilon,\AA_t$) returns {\sc False}}
+\State \Return {\sc False} for all further updates
+\EndIf
+\Else
+\State $r_t\leftarrow $ smallest $r$ such that $(\ww^{(r)}_{t-1})^{\top}\AA_t\ww^{(r)}_{t-1} \geq 1-40\epsilon$
+\State $\WW_t \leftarrow \WW_{t-1}$
+\EndIf
+\State \Return $[r_t,\WW_t]$
+\EndProcedure 
+ \end{algorithmic}
+\end{algorithm}
+
+\subsection{Proof Overview}
+The overall proof of \Cref{thm:upper}, including the proof of correctness and the runtime depends on the number of executions in Line~\ref{algline:PM} in Algorithm~\ref{alg:DynamicMaxPM}. If the number of executions of Line~\ref{algline:PM} is bounded by $\poly(\log n/\epsilon)$, then the remaining analysis is straightforward. Therefore, the majority of our analysis is dedicated to proving this key lemma, i.e., $\poly(\log n/\epsilon)$ bound on the number of calls to the power method:
+\begin{lemma}[Key Lemma]\label{lem:BoundW}
+The number of executions of Line~\ref{algline:PM} over all updates is bounded by $O(\log n\log^5\frac{n}{\epsilon}/\epsilon^2)$ with probability at least $1-\frac{1}{n}$.
+\end{lemma}
+Given the key lemma, the correctness and runtime analyses are quite straightforward and are presented in \Cref{sec:correct}. We now give an overview of the proof of \Cref{lem:BoundW}.
+
+
+Let us consider what happens between two consecutive calls to Line~\ref{algline:PM}, say at $\AA$ and $\AAtil = \AA - \sum_{i=1}^k\vv_i\vv_i^{\top}$. We first define the following subspaces of $\AA$ and $\AAtil$.
+Recall \Cref{def:subspace}, which we use to define the following subspaces.
+
+\begin{definition}[Subspaces of $\AA$ and $\AAtil$]\label{def:SpaceA} Given $\epsilon>0$, $\AA$, and $\AAtil$ define for $\nu = 0,1,\cdots, 15\log \frac{n}{\epsilon}-1$:
+\[
+T_{\nu} = \Span\left(\frac{(\nu+1)\epsilon}{5\log \frac{n}{\epsilon}},\AA\right) -\Span\left(\frac{\nu\epsilon}{5\log \frac{n}{\epsilon}},\AA\right),
+\]
+and,
+\[
+\tilde{T}_{\nu} = \Span\left(\frac{(\nu+1)\epsilon}{5\log \frac{n}{\epsilon}},\AAtil\right)-\Span\left(\frac{\nu\epsilon}{5\log \frac{n}{\epsilon}},\AAtil\right).
+\]
+That is, the space $T_{\nu}$ and $\Ttil_\nu$ are spanned by eigenvectors of $\AA$ and $\AAtil$, respectively, corresponding to eigenvalues between $\left(1-(\nu+1)\frac{\epsilon}{5\log \frac{n}{\epsilon}}\right)\lambda_0$ and $\left(1-\nu\frac{\epsilon}{5\log \frac{n}{\epsilon}}\right)\lambda_0$.
+
+Let $d_{\nu} = \dim{T_{\nu}}$ and $\tilde{d}_{\nu} = \dim{\tilde{T}_{\nu}}$. Also define,
+\[
+\tilde{T} = \Span(3\epsilon,\AAtil),\quad  T = \Span(3\epsilon,\AA),
+\]
+and let $d = \dim{T}$, $\tilde{d} = \dim{\tilde{T}}$.
+\end{definition}
+
+Observe that $T = \sum_{\nu = 0}^{15\log\frac{n}{\eps}-1}T_\nu$ and similarly $\Ttil = \sum_{\nu = 0}^{15\log\frac{n}{\eps}-1}\Ttil_\nu$. We next define some indices/levels corresponding to large subspaces, which we call ``important levels''.
+\begin{definition}[Important $\nu$]\label{def:impNu} We say a level $\nu$ is important if,
+\[d_{\nu} \geq \frac{\epsilon}{600\log^3 \frac{n}{\epsilon}} \sum_{\nu'<\nu}d_{\nu'}.
+\]
+We will use $\mathcal{I}$ to denote the set of $\nu$ that are important.
+\end{definition}
+%
+
+The main technical lemma that implies \Cref{lem:BoundW} is the following:
+
+
+\begin{restatable}[Measure of Progress]{lemma}{progress}\label{lem:EigenspaceChange}
+	Let $\epsilon>0$ and let $\WW=[\ww^{(1)},\dots,\ww^{(R)}]$ be as defined in Line~\ref{line:before case} in the execution of {\sc PowerMethod}($\epsilon,\AA$). Let $\vv_{1},\cdots,\vv_{k}$ be a sequence of updates generated by an oblivious adversary and define $\AAtil=\AA-\sum_{i=1}^{k}\vv_{i}\vv_{i}^{\top}$.
+	
+	Suppose that $\lambda_{\max}(\AA)\ge 1-\epsilon$ and $\ww^{\top}\AAtil\ww<1-40\epsilon$ for all $\ww\in\WW$. Then, with probability at least $1-\frac{50\log\frac{n}{\epsilon}}{n^{2}}$, for some $\nu\in\mathcal{I}$,
+	\begin{itemize}
+		\item $\dim{T_{\nu}-\tilde{T}}\geq\frac{\epsilon}{300\log\frac{n}{\epsilon}}d_{\nu}$ if $d_{\nu}\geq\frac{3000\log n\log\frac{n}{\epsilon}}{\epsilon}$, or
+		\item $\dim{T_{\nu}-\tilde{T}}\geq1$ if $d_{\nu}<\frac{3000\log n\log\frac{n}{\epsilon}}{\epsilon}$.
+	\end{itemize}
+\end{restatable}
+
+
+We prove this lemma in \Cref{sec:progress}. Intuitively speaking, it means that, whenever  Line~\ref{algline:PM} of \Cref{alg:DynamicMaxPM} is executed, there is some important level $\nu$ such that an $\Omega(\eps/\poly \log(n/\eps))$-fraction of eigenvalues of $\AA$ at level $\nu$ have decreased in value. This is the crucial place where we exploit an oblivious adversary.
+
+Given \Cref{lem:EigenspaceChange}, the remaining proof of \Cref{lem:BoundW} follows a potential function analysis which is presented in detail in Section~\ref{sec:proof key}. We consider potentials $\Phi_j = \sum_{\nu=0}^jd_{\nu}$ for $j = 0,\cdots,15\log\frac{n}{\epsilon}-1$. The main observation is that $\Phi_j$ is non-increasing over time for all $j$, and whenever there exists $\nu_0\in \mathcal{I}$ that satisfies the condition of Lemma~\ref{lem:EigenspaceChange}, $\Phi_{\nu_0}$ decreases by $\dim{T_{\nu_0}-\tilde{T}}$. Since $\dim{T_{\nu_0}-\tilde{T}} \geq \Omega(\epsilon/\poly\log(n/\epsilon))d_{\nu_0}$ and $\nu_0\in \mathcal{I}$, i.e., $\Phi_{\nu_0} = \sum_{\nu<\nu_0}d_{\nu} + d_{\nu_0} \leq d_{\nu_0} \left(\frac{O(\log^3\frac{n}{\epsilon})}{\epsilon}+1\right) $,  we can prove that $\Phi_{\nu_0}$ decreases by a multiplicative factor of $\Omega(1-\epsilon^2/\poly\log(n/\epsilon))$. As a result, every time our algorithm executes Line~\ref{algline:PM}, $\Phi_{j}$ decreases by a multiplicative factor for some $j$, and since we have at most $15\log\frac{n}{\epsilon}$ values of $j$, we can only have $\poly(\log n/\epsilon)$ executions of Line~\ref{algline:PM}.
+
+It remains to describe how we prove Lemma~\ref{lem:EigenspaceChange} at a high level. We can write $\ww^{\top}\AAtil\ww$ for any $\ww \in \WW$ as
+\[
+\ww^{\top}\AAtil\ww = \ww^{\top}\AA\ww - \ww^{\top}\VV\ww,
+\]
+for $\VV = \sum_{i=1}^k\vv_i\vv_i^{\top}$. 
+Our strategy is to show that:
+\begin{align*}\label{star}
+        &\text{If } \dim{T_{\nu}-\tilde{T}}\text{ does not satisfies the inequalities in \Cref{lem:EigenspaceChange} for all }\nu\in \mathcal{I},\\ 
+        &\text{then }\ww^{\top}\VV\ww \leq 35\epsilon \text{ for all } \ww \in \WW. \tag{$\star$}
+\end{align*}    
+Given \eqref{star} as formalized later in \Cref{cl:progress}, we can conclude \Cref{lem:EigenspaceChange} because, from the definition of $\AA$ and $\AAtil$, we have that for some $\ww\in \WW$, $\ww^{\top}\AA\ww \geq 1-5\epsilon$ by \Cref{thm:StaticPower} and $\ww^{\top}\AAtil\ww <1-40\epsilon$. As a result for this $\ww$, $\ww^{\top}\VV\ww >35\epsilon$. Now, by contra-position of \eqref{star}, we have that $\dim{T_{\nu}-\tilde{T}}$ is large for some $\nu \in \mathcal{I}$.
+
+To prove \eqref{star}, we further decompose $\ww^{\top}\VV\ww$ as
+\[
+\ww^{\top}\VV\ww = \ww^{\top}\VV_{\tilde{T}}\ww+\sum_{\nu = 0}^{15\log\frac{n}{\epsilon}-1}\ww^{\top}\VV_{T_{\nu} -\tilde{T}}\ww+ \ww^{\top}\VV_{\overline{T}}\ww.
+\]
+
+In the above equation, $\VV_{\tilde{T}}= \Pi_{\tilde{T}}\VV\Pi_{\tilde{T}},\VV_{T_{\nu} -\tilde{T}}=\Pi_{\nu}\VV\Pi_{\nu}$, and $\VV_{\overline{T}} = \Pi_{\overline{T}}\VV\Pi_{\overline{T}}$ where $\Pi_{\tilde{T}},\Pi_{\nu},\Pi_{\overline{T}}$ denote the projections matrices that project any vector onto the spaces $\tilde{T}$, $T_{\nu}-\tilde{T}$, and $\overline{T}$ respectively\footnote{Suppose a subspace $S$ is spanned by vectors $\uu_1,\dots,\uu_k$. Let $\UU = [\uu_1,\dots,\uu_k]$. Recall that the projection matrix onto $S$ is $\UU(\UU^\top \UU)^{-1} \UU^\top$.}. Refer to Section~\ref{sec:progress} for proof of why such a split is possible. Our proof of \eqref{star} then bounds the terms on the right-hand side. Let us consider each term separately.
+\begin{enumerate}
+	\item $\ww^{\top}\VV_{\tilde{T}}\ww$: We prove that this is always at most $10\epsilon(1+\epsilon)$ (Equation~\eqref{eq:V2}). From the definition of $\VV,$ 
+	\[
+	\ww^{\top}\VV_{\tilde{T}}\ww = \ww^{\top}\Pi_{\tilde{T}}\AA\Pi_{\tilde{T}}\ww - \ww^{\top}\Pi_{\tilde{T}}\AAtil\Pi_{\tilde{T}}\ww.
+	\] 
+	Since $\Pi_{\tilde{T}}\ww$ is the projection of $\ww$ along the large eigenspace of $\AAtil$, the second term on the right-hand side above is large, i.e. $\geq (1- 10\epsilon)\lambda_0\|\Pi_{\tilde{T}}\ww\|^2$. The first term on the right-hand side can be bounded as, $\ww^{\top}\Pi_{\tilde{T}}\AA\Pi_{\tilde{T}}\ww \leq \|\AA\|\|\Pi_{\tilde{T}}\ww\|^2 \leq \lambda_0 \|\Pi_{\tilde{T}}\ww\|^2$.
+ Therefore the difference on the right-hand side is at most $10\epsilon\lambda_0\|\Pi_{\tilde{T}}\ww\|^2 \leq 10 \epsilon\lambda_0\|\ww\|^2 = 10\epsilon \lambda_0 \leq 10\epsilon(1+\epsilon)$.
+	\item $\ww^{\top}\VV_{\overline{T}}\ww$: Observe that this term corresponds to the projection of $\ww$ along the space spanned by the eigenvalues of $\AA$ of size at most $1-3\epsilon$. Let $\uu_i$ and $\lambda_i$ denote an eigenvector and eigenvalue pair with $\lambda_i<1-3\epsilon$. Since the power method can guarantee that $\ww^{\top}{\uu_i}\approx\lambda_i^{2K}$, we have  $\lambda_i^{2K} \leq (1-3\epsilon)^{2K}\leq \poly\left(\frac{\epsilon}{n}\right)$ is tiny. So we have that $\ww^{\top}\VV_{\overline{T}}\ww\leq \epsilon$ (Lemma~\ref{lem:boundLowEV}).
+
+	\paragraph{}Before we look at the final case, we define a basis for the space $T_{\nu}$.
+	\begin{definition}[Basis for $T_{\nu}$]\label{def:Basis} Let $T_{\nu}$ be as defined in Definition~\ref{def:SpaceA}.  Define indices $a_{\nu}$ and $b_{\nu}$ with $b_{\nu}-a_{\nu}+1 = d_{\nu}$ such that the basis of $T_{\nu}$ is given by $\uu_{a_{\nu}},\cdots, \uu_{b_{\nu}}$, where $\uu_1,\uu_2,\cdots,\uu_n$ are the eigenvectors of $\AA$ in decreasing order of eigenvalues.
+	\end{definition}
+
+    \item $\ww^{\top}\VV_{T_{\nu} -\tilde{T}}\ww$: For this discussion, we will ignore the constant factors and assume that the high probability events hold. Let $\Pi_{\nu}$ denote the projection matrix for the space $T_{\nu}-\Ttil$. Observe that $\ww^{\top}\VV_{T_{\nu}-\Ttil}\ww=\ww^{\top}\Pi_{\nu}\VV\Pi_{\nu}\ww\le\|\VV\|\|\Pi_{\nu}\ww\|^2 \le (1+\epsilon)\|\Pi_{\nu}\ww\|^2$, where the last inequality is because $\AAtil=\AA-\VV\succeq0$, and therefore, $\|\VV\|\le\|\AA\|\le(1+\epsilon)$. Hence, it suffices to bound $\|\Pi_{\nu}\ww\|^2 = O(\epsilon)$. 
+
+We can write $\ensuremath{\ww=\frac{\sum_{i=1}^{n}\lambda_{i}^{K}\alpha_{i}\uu_{i}}{\sqrt{\sum_{i=1}^{n}\lambda_{i}^{2K}\alpha_{i}^{2}}}}$ where $\lambda_{i},\uu_{i}$'s are the eigenvalues and eigenvectors of $\AA$ and $\alpha_{i}\sim N(0,1)$. 
+Define $\zz = \sum_{i=1}^n z_i \uu_i$ where $z_i = \lambda_i^K\alpha_i$. That is, 
+$\ww=\frac{\zz}{\|\zz\|}$. Since $\|\Pi_{\nu}\ww\| = \|\Pi_{\nu}\zz\|/\|\zz\|$, it suffices to show that $\|\Pi_{\nu}\zz\|^2 \le O(\epsilon) \| \zz\|^2$. We show this in two separate cases. In both cases, we start with the following bound
+\[
+\|\Pi_{\nu}\zz\|^{2}\le\lambda_{a_{\nu}}^{2K}\cdot\dim{T_{\nu}-\tilde{T}},
+\]
+which holds with high probability. To see this, let $\boldsymbol{g}_{\nu}\sim N(0,1)$ be a gaussian vector in the space $T_{\nu}-\tilde{T}$. 
+We can couple $\textbf{g}_\nu$ with $\Pi_{\nu}\zz$ so that $\Pi_{\nu}\zz$ is dominated by $\lambda_{a_{\nu}}^{K}\cdot \boldsymbol{g}_{\nu}$. So $\|\Pi_{\nu}\zz\|^{2}\le\lambda_{a_{\nu}}^{2K}\|\boldsymbol{g}_{\nu}\|^{2}$. By \Cref{lem:NormG}, the norm square of gaussian vector is concentrated to its dimension so $\|\boldsymbol{g}_{\nu}\|^{2}\le\dim{T_{\nu}-\tilde{T}}$ with high probability, thus proving the inequality. Next, we will bound $\dim{T_{\nu}-\tilde{T}}$ in terms of $\|\zz\|$ in two cases. 
+
+\paragraph{When $\nu\protect\notin{\cal I}$ (\Cref{lem:NotImp}):}
+
+From the definition of the important levels, we have 
+\[
+\dim{T_{\nu}-\tilde{T}}\leq d_{\nu}\leq\frac{O(\epsilon)}{\log^{3}\frac{n}{\epsilon}}\sum_{\nu'<\nu}d_{\nu'}.
+\]
+Now, we have $\sum_{\nu'<\nu}d_{\nu'}\approx\sum_{i=1}^{b_{\nu-1}}\alpha_{i}^{2}$ because $\alpha_{i}\sim N(0,1)$ is gaussian and the norm square of gaussian vector is concentrated to its dimension (\Cref{lem:NormG}). Since $\alpha_{i}=z_{i}/\lambda_{i}^{K}$, we have that
+\[
+\sum_{\nu'<\nu}d_{\nu'}\approx\sum_{i=1}^{b_{\nu-1}}\alpha_{i}^{2}=\sum_{i=1}^{b_{\nu-1}}\frac{z_{i}^{2}}{\lambda_{i}^{2K}}\le\|\zz\|^{2}/\lambda_{b_{\nu-1}}^{2K}.
+\]
+Therefore, we have 
+\[
+\|\Pi_{\nu}\zz\|^2 \le\lambda_{a_{\nu}}^{2K}\dim{T_{\nu}-\tilde{T}}\le\left(\frac{\lambda_{a_{\nu}}}{\lambda_{_{b_{\nu-1}}}}\right)^{2K}\frac{O(\epsilon)}{\log^{3}\frac{n}{\epsilon}}\|\zz\|^{2}\le O(\epsilon)\|\zz\|^{2}
+\]
+where the last inequality is trivial because $\lambda_{b_{\nu-1}}\ge\lambda_{a_{\nu}}$ by definition.
+
+\paragraph{When $\nu\in{\cal I}$ (\Cref{lem:GaussianProjD}):}
+
+In this case, according to \eqref{star}, we can assume $$\dim{T_{\nu}-\tilde{T}}\lesssim\epsilon d_{\nu}.$$
+Again, by \Cref{lem:NormG}, we have that $d_{\nu}\approx\sum_{i=a_{\nu}}^{b_{\nu}}\alpha_{i}^{2}$ because $\alpha_{i}\sim N(0,1)$ is gaussian. Since $\alpha_{i}=z_{i}/\lambda_{i}^{K}$, we have
+\[
+d_{\nu}\approx\sum_{i=a_{\nu}}^{b_{\nu}}\alpha_{i}^{2}=\sum_{i=a_{\nu}}^{b_{\nu}}\frac{z_{i}^{2}}{\lambda_{i}^{2K}}\le\|\zz\|^{2}/\lambda_{b_{\nu}}^{2K}.
+\]
+Therefore,
+\[
+\|\Pi_{\nu}\zz\|^2\le\lambda_{a_{\nu}}^{2K}\dim{T_{\nu}-\tilde{T}}\le\left(\frac{\lambda_{a_{\nu}}}{\lambda_{_{b_{\nu}}}}\right)^{2K}\epsilon\|\zz\|^{2}\le O(\epsilon)\|z\|^{2}
+\]
+where the last inequality is because $\ensuremath{\left(\frac{\lambda_{a_{\nu}}}{\lambda_{b_{\nu}}}\right)^{2K}\leq\left(\frac{1-\frac{\nu\epsilon}{5\log\frac{n}{\epsilon}}}{1-\frac{(\nu+1)\epsilon}{5\log\frac{n}{\epsilon}}}\right)^{2K}\approx\left(1+\frac{\epsilon}{2\log\frac{n}{\epsilon}}\right)^{2K}\approx O(1)}.$
+
+\end{enumerate}
+From these three cases, we can conclude that if $\dim{T_{\nu}-\tilde{T}}$ is small for all $\nu\in \mathcal{I}$, then $\ww^{\top}\VV\ww \leq 35\epsilon$, proving our claim.
+
+In the remaining sections, 
+we give formal proofs of the claims made in this section. In \Cref{sec:correct}, we prove the main result, \Cref{thm:upper}, assuming the key lemma. In \Cref{sec:proof key}, we prove the key lemma, \Cref{lem:BoundW}, assuming the \Cref{lem:EigenspaceChange}. Finally, we prove \Cref{lem:EigenspaceChange} in \Cref{sec:progress}
+
+
+\subsection{Proof of the Main \Cref{thm:upper} assuming the Key \Cref{lem:BoundW}}\label{sec:correct}
+
+Here, we formally prove \Cref{thm:upper} assuming the key \Cref{lem:BoundW}. We will first prove the correctness and then bound the total runtime.
+
+
+\paragraph{Correctness.}
+The following formalizes the correctness guarantee of  Algorithm~\ref{alg:DynamicMaxPM}. 
+
+\begin{lemma}\label{lem:DynCorrectAns}
+Let $\epsilon>1/n$. With probability at least $1-1/n$, the following holds for all time step $t \ge 1$: 
+if the maximum eigenvalue of $\AA_t$ is at least $1-\frac{\epsilon}{\log n}$, {\sc Update}($\vv_t$) returns $[r_t,\WW_t]$.
+\end{lemma}
+\begin{proof}
+We upper bound the probability that Algorithm {\sc Update}($\vv_t$) returns \textsc{False}. This can happen only when  Line~\ref{algline:PM} is executed and {\sc PowerMethod}($\epsilon,\AA_t$) returns {\sc False}, which happens with probability at most $1/n^{10}$ by \Cref{thm:StaticPower}.
+By Lemma~\ref{lem:BoundW}, we execute Line~\ref{algline:PM} at most $O(\log n\log^5\frac{n}{\epsilon}/\epsilon^2)$ times throughout the whole update sequence. Therefore, by union bounds, {\sc Update}($\vv_t$) may return \textsc{False} with probability at most $\poly(\log(n)/\eps)/n^{10} \le 1/n$.
+\end{proof}
+
+
+
+\paragraph{Runtime.}\label{sec:runtime}
+
+Next, we bound the runtime of the various lines of Algorithm~\ref{alg:DynamicMaxPM}. 
+%
+\begin{lemma}\label{lem:SameW}
+For a fixed $\ww$ and any $t$, we can update $\ww^{\top}\AA_{t-1}\ww$ to $\ww^{\top}\AA_t\ww$ in time $O(nnz(\vv_t))$.
+\end{lemma}
+\begin{proof}
+Note that,
+\[
+\ww^{\top}\AA_t\ww = \ww^{\top}\AA_{t-1}\ww - (\vv_t^{\top}\ww)^2.
+\]
+The second term can be computed in time $O(nnz(\vv_t))$.
+\end{proof}
+%
+\begin{lemma}\label{lem:DiffW}
+Fix time $t$. Given $\ww$ as input, we have that $\ww^{\top}\AA_t\ww$ and $\AA_t\ww$ can be computed $O\left(nnz(\AA_0) +\sum_{i=1}^t nnz(\vv_i)\right)$ time.
+\end{lemma}
+\begin{proof}
+We can split $\AA_t$, and get,
+\[
+\ww^{\top}\AA_t\ww = \ww^{\top}\AA_0\ww - \sum_{i=1}^t (\vv_i^{\top}\ww)^2,\quad \text{and,}\quad
+\AA_t\ww = \AA_0\ww - \sum_{i=1}^t \vv_i(\vv_i^{\top}\ww).
+\]
+The first term in both expressions can be computed in time $O(nnz(\AA_0))$ and for every $i$ we can compute $\vv_i^{\top}\ww$ in time $O(nnz(\vv_i))$, thus concluding the proof.
+\end{proof}
+%
+\begin{lemma}\label{lem:PMt}For any time $t$, we can implement {\sc PowerMethod}($\epsilon,\AA_t$) in time at most 
+\[
+O\left(\frac{\log n\log \frac{n}{\epsilon}}{\epsilon}\left(nnz(\AA_0) +\sum_{i=1}^t nnz(\vv_i)\right)\right).
+\]
+\end{lemma}
+\begin{proof}
+When we call {\sc PowerMethod}($\epsilon,\AA_t$) from \Cref{alg:PowerMethod}, we can to compute $\AA_t\ww$ for some vector $\ww$ for $R\cdot K$ times and, at the end, compute $\ww \AA_t\ww$ for some vector $\ww$ for $R$ times. 
+By \Cref{lem:DiffW}, this takes $O( (nnz(\AA_0) +\sum_{i=1}^t nnz(\vv_i) ) \cdot \log n\log (\frac{n}{\epsilon})/\epsilon)$ because $R = O(\log n)$ and $K = O(\log(\frac{n}{\epsilon})/\epsilon)$.
+%
+
+\end{proof}
+
+ Given the above results, we can now prove Theorem~\ref{thm:upper}.
+\subsubsection*{Proof of Theorem~\ref{thm:upper}}
+\begin{proof}
+
+We will prove that Algorithms~\ref{alg:Init} and \ref{alg:DynamicMaxPM} solve Problem~\ref{def:DecMaxEval}, which implies an algorithm for \Cref{prob:dyn} by \Cref{lem:Decision}.
+
+From \Cref{thm:StaticPower}, Algorithm~\ref{alg:Init} solves Problem~\ref{def:DecMaxEval} for the initial matrix $\AA_0$ with probability at least $1-1/n$. From \Cref{lem:DynCorrectAns}, Algorithm~\ref{alg:DynamicMaxPM} returns $[r_t,\WW_t]$ for all $t\geq 1$, whenever the maximum eigenvalue of $\AA_t$ is at least $1-\epsilon/\log n$, with probability at least $1-1/n$. Note that, $\ww^{(r_t)}\in \WW_t$ is the required solution. Therefore, our algorithm returns the correct solution with a probability of at least $1-2/n$.
+
+We now bound the total runtime of the algorithm over all time $t$. Define an indicator function $I_t$ as $I_t = 1$, if we execute Line~\ref{algline:PM} in {\sc Update}$(\vv_t)$ and $0$ otherwise. From Lemmas~\ref{lem:SameW} and \ref{lem:DiffW}, executing Line~\ref{algline:Check} at $t$ requires time $O(nnz(\vv_t)\log n)$ if $I_{t-1} = 0$ and time $O\left(\frac{\log n\log \frac{n}{\epsilon}}{\epsilon}\left(nnz(\AA_0) +\sum_{i=1}^t nnz(\vv_i)\right)\right)$ if $I_{t-1} = 1$. Summing these up, the total time $\mathcal{T}$ required for solving \Cref{def:DecMaxEval} is at most,
+\begin{align*}
+\mathcal{T} \leq &  O\left(\underbrace{\frac{\log n\log \frac{n}{\epsilon} \cdot nnz(\AA_0)}{\epsilon}}_{\text{Time for {\sc Init}($\epsilon,\AA_0$)}} + \sum_t I_t \underbrace{\frac{\log n\log \frac{n}{\epsilon}}{\epsilon}\left(nnz(\AA_0) +\sum_{i=1}^t nnz(\vv_i)\right)}_{\text{Time required at $t$ when $I_t = 1$}} + \sum_t (1-I_t)\underbrace{\log n \cdot nnz(\vv_t)}_{\text{Time when $I_t=0$}}\right)\\
+\leq & O\left( \frac{\log n\log \frac{n}{\epsilon}\cdot nnz(\AA_0)}{\epsilon}+ \sum_t I_t \frac{\log n\log \frac{n}{\epsilon}}{\epsilon}\left(nnz(\AA_0) +\sum_{i=1}^t nnz(\vv_i)\right) + \sum_t\log n\cdot  nnz(\vv_t)\right)\\
+\substack{(a)\\ \leq}& O\left( \frac{\log n\log^2 \frac{n}{\epsilon}\cdot nnz(\AA_0)}{\epsilon}+ \frac{\log n\log^5\frac{n}{\epsilon}}{\epsilon^2}\frac{\log n\log \frac{n}{\epsilon}}{\epsilon} \left(nnz(\AA_0) +\sum_{i=1}^T nnz(\vv_i)\right) + \sum_{t=1}^T\log n\cdot nnz(\vv_t)\right)\\
+\substack{(b)\\ \leq} & O\left( \frac{\log^2 n\log^6\frac{n}{\epsilon}}{\epsilon^3} \left(nnz(\AA_0) +\sum_{i=1}^T nnz(\vv_i)\right) \right),
+\end{align*}
+with probability at least $1-\frac{1}{n}$. In $(a)$, we used Lemma~\ref{lem:BoundW} which states that the maximum number of $t$ for which $I_t=1$ is at most $O(\log n\log^5\frac{n}{\epsilon}/\epsilon^2)$ with probability at least $1-1/n$. In $(b)$, we combined all the terms. Therefore, by \Cref{lem:Decision}, our algorithms solve Problem~\ref{prob:dyn} with probability at least $1-3/n$ in total time
+\begin{multline*}
+O\left(\frac{\log^2 n\log\frac{n}{\epsilon}}{\epsilon}\cdot nnz(\AA_0) + \frac{\log n}{\epsilon}\log \frac{\lambda_{\max}(\AA_0)}{\lambda_{\max}(\AA_T)}\mathcal{T}\right) \leq \\ O\left(\frac{\log^3 n\log^6 \frac{n}{\epsilon}\log \frac{\lambda_{\max}(\AA_0)}{\lambda_{\max}(\AA_T)}}{\epsilon^4}\left(nnz(\AA_0) +\sum_{i=1}^T nnz(\vv_i)\right)\right).
+\end{multline*}
+\end{proof}
+
+
+\input{KeyLemma}
+
+\section{Conditional Lower Bounds for an Adaptive Adversary}\label{sec:Adap}
+
+In this section, we will prove a conditional hardness result for algorithms against adaptive adversaries. In particular, we will prove \Cref{thm:lower}.
+Consider \Cref{alg:red} for solving \Cref{prob:factor}. 
+The only step in \Cref{alg:red} whose implementation is not specified is Line~\ref{line:approx eig}. We will implement this step using an algorithm for \Cref{prob:dyn}.
+
+
+
+\begin{algorithm}
+\caption{Algorithm for Checking PSDness}\label{alg:red}
+ \begin{algorithmic}[1]
+\Procedure{CheckPSD}{$\delta,\kappa,\AA$}
+\State $\epsilon \leftarrow \min\{1- n^{-o(1)}, (1-\delta)/(1+\delta)\}$
+\State $T \leftarrow \frac{2n}{\epsilon(1-\epsilon)^2}\log \frac{\kappa}{\delta}$
+\State $\AA_0 \leftarrow \AA$
+\State $\mu_0 = 0, \ww_0 = 0$
+\For{$t  = 1,2,\cdots,T$}
+\State $\AA_t = \AA_{t-1} - \frac{\mu_{t-1}}{10}\ww_{t-1}\ww_{t-1}^{\top}$\label{line:red update}
+\State $(\mu_t,\ww_t)\leftarrow \epsilon$-approximate maximum eigenvalue and eigenvector of $\AA_t$ (Equations~\eqref{eq:epsEigvalue},\eqref{eq:epsEigvec})\label{line:approx eig}
+\If{$\mu_t<0$}
+\State \Return {\sc False}:$\AA$ is not PSD
+\EndIf
+\EndFor
+\State {$\sigma^2 \gets $PowerMethod($\epsilon,\AA_T^{\top}\AA_T$)}\label{line:last check}
+\If{$0\leq \sigma \leq \frac{(1+\epsilon)\mu_1\delta}{\kappa}$}\label{line:red lastcheck}
+\State \Return $\XX=\frac{1}{\sqrt{10}}\begin{bmatrix}\sqrt{\mu_1}\ww_1 & \sqrt{\mu_2}\ww_2 & \cdots & \sqrt{\mu_T}\ww_T\end{bmatrix}$
+\Else
+\State \Return {\sc False}:$\AA$ is not PSD
+\EndIf
+\EndProcedure 
+ \end{algorithmic}
+\end{algorithm}
+
+\paragraph{High-level idea.}
+ Overall for our hardness result, we use the idea that an adaptive adversary can use the maximum eigenvectors returned to perform an update. This can happen $n$ times and in the process, we would recover the entire eigen-decomposition of the matrix, which is hard. Now consider Algorithm~\ref{alg:red}. We claim that \Cref{alg:red} solves \Cref{prob:factor}. 
+At the first glance, this claim looks suspicious because the input matrix for \Cref{prob:factor} might not be PSD, but the dynamic algorithm for \Cref{prob:dyn} at Line~\ref{line:approx eig} has any guarantees only when the matrices remain PSD. 
+However, the reduction does work by crucially exploiting \Cref{prop:assume}. The high-level idea is as follows. 
+\begin{itemize}
+    \item If the input matrix $\AA$ is initially PSD, then we can show that $\AA_t$ remains PSD for all $t$  by exploiting \Cref{prop:assume}, (see \Cref{lem:orthoUpdate}). So, the approximation guarantee of the algorithm at Line~\ref{line:approx eig} is valid at all steps.
+    From this guarantee, $\|\AA_T\|$ must be tiny since we keep decreasing the approximately maximum eigenvalues (see \Cref{lem:RedAns}). At the end, the reduction will return $\XX$.
+    \item If the input matrix $\AA$ is initially \emph{not} PSD, there must exist a direction $\vv$ such that $\vv^{\top}\AA\vv <0$. Since in the reduction, we update $\AA_T = \AA - \WW$ for some $\WW \succeq 0$, we must have that $\vv^{\top}\AA_T\vv <\vv^{\top}\AA\vv$. That is, this negative direction remains negative or gets even more negative. It does not matter at all what guarantees the algorithm at Line~\ref{line:approx eig} has. We still have that $\|\AA_T\|$ cannot be tiny. We can distinguish whether $\|\AA_T\|$ is tiny or not using the static power method at Line~\ref{line:last check}, and, hence, we will return {\sc False} in this case (see \Cref{lem:RedAns}).
+\end{itemize}
+
+
+
+% {\color{blue} We now give a high-level reasoning to why our \Cref{alg:red} returns the right answer before we formally prove the reduction. When the input matrix $\AA$ is PSD, then \Cref{def:super} guarantees that $\AA_t$ remains PSD for all $t$ (see Lemma~\ref{lem:orthoUpdate}) and $\|\AA_T\|$ is small in the end (see Lemma~\ref{lem:RedAns}) as required. When $\AA$ is not PSD, there must exist a direction $\vv$ such that $\vv^{\top}\AA\vv <0$. Since in the algorithm, we create $\AA_T = \AA - \WW$ for $\WW \succeq 0$, we must have that $\vv^{\top}\AA_T\vv <\vv^{\top}\AA\vv.$ Now, since there is a large negative eigenvalue of $\AA$ and $\AA_T$, the eigenvalue with the largest magnitude ($\sigma$ computed in the end) must be large. Therefore, the algorithm must return that $\AA$ is not PSD. We now give the formal reduction.}
+
+
+\paragraph{Analysis.}
+We prove the guarantees of the output of Algorithm~\ref{alg:red} when $\ww_t$'s satisfy \Cref{def:super} for all $t$.
+
+
+\begin{lemma}\label{lem:orthoUpdate}
+In Algorithm~\ref{alg:red}, let $\ww_t$'s, $t=1,\cdots, T$ be generated such that they additionally satisfy \Cref{def:super}. If $\AA_0\succeq 0$, then $\AA_t \succeq 0$ for all $t$.
+\end{lemma}
+ We would like to point out that our parameter $\epsilon$ is quite large. This just implies that our reduction can work even if we find crude approximations to the maximum eigenvector as long as this is along the directions with large eigenvalue, since $\ww$ also has to satisfy \Cref{def:super}.
+\begin{proof}
+We will prove this by induction. This is true in the beginning because $\AA_0 \succeq 0$ by assumption. Let us assume $\AA_{t}\succeq 0$. We now look at $\AA_{t+1} = \AA_{t}- \frac{\mu_{t}}{10} \ww_{t}\ww_{t}^{\top}$.
+ For simplicity, we use $\lambda_i,\uu_i$ to denote the  $i^{th}$ eigenvalue and eigenvector of $\AA_{t}$, and $\mu = \mu_t$, $\ww = \ww_t$. By \Cref{eq:epsEigvalue}, $\lambda_1 \geq \mu \geq (1-\epsilon)\lambda_1$. Now, for any $\yy$
+ %
+\begin{equation}\label{eq:psdT}
+\yy^{\top}\AA_{t+1}\yy = \yy^{\top}\AA_{t}\yy - \frac{\mu}{10} (\ww^{\top}\yy)^2 = \sum_{i=1}^n \lambda_i (\uu_i^{\top}\yy)^2 -  \frac{\mu}{10}\left(\sum_{i=1}^n (\ww^{\top}\uu_i)(\yy^{\top}\uu_i)\right)^2 .
+\end{equation}
+We will upper bound the second term. We know that $\ww$ satisfies \Cref{def:super}. Let $d$ be such that $\lambda_i \leq \lambda_1/2$ for all $i \geq d$.
+\begin{align*}
+\left(\sum_{i=1}^n (\ww^{\top}\uu_i)(\yy^{\top}\uu_i)\right)^2 & \leq 2 \left(\sum_{i=1}^d(\ww^{\top}\uu_i)(\yy^{\top}\uu_i)\right)^2 + 2 \left(\sum_{i=d}^n(\ww^{\top}\uu_i)(\yy^{\top}\uu_i)\right)^2\\
+& \substack{(a)\\ \leq} 2 \sum_{i=1}^d (\ww^{\top}\uu_i)^2\sum_{i=1}^d (\yy^{\top}\uu_i)^2 + 2(n-d) \sum_{i=d}^n  (\ww^{\top}\uu_i)^2(\yy^{\top}\uu_i)^2\\
+& \substack{(b)\\ \leq} 2 \sum_{i=1}^d (\yy^{\top}\uu_i)^2 + 2(n-d)\sum_{i=d}^n \frac{\lambda_i(\yy^{\top}\uu_i)^2}{\lambda_1 n^2}\\
+& \substack{(c)\\ \leq}  \frac{4}{\lambda_1}\sum_{i=1}^d \lambda_i(\yy^{\top}\uu_i)^2 + \sum_{i=d}^n \frac{\lambda_i(\yy^{\top}\uu_i)^2}{\lambda_1 n}.
+\end{align*}
+In the above, $(a)$ follows by applying Cauchy Schwarz to both terms, $(b)$ follows by using $\|\ww\| = 1$ in the first term and applying Property~\ref{def:super} on the second term, and $(c)$ follows by using the fact that for all $i \leq d$, $\lambda_i \geq \lambda_1/2$ in the first term. 
+
+Using this in \eqref{eq:psdT},
+\begin{align*}
+\yy^{\top}\AA_{t+1}\yy & \geq \sum_{i=1}^n \lambda_i (\uu_i^{\top}\yy)^2 - \left(\frac{4\mu}{10\lambda_1}\sum_{i=1}^d \lambda_i (\uu_i^{\top}\yy)^2 + \frac{\mu}{10}\sum_{i=d}^n \frac{\lambda_i(\yy^{\top}\uu_i)^2}{\lambda_1 n}\right)\\
+& = \sum_{i=1}^d \left(1 - \frac{2\mu}{5\lambda_1}\right)\lambda_i (\uu_i^{\top}\yy)^2  + \sum_{i=d}^n \left(1 - \frac{\mu}{10n\lambda_1}\right)\lambda_i (\uu_i^{\top}\yy)^2  \\
+& \geq 0.
+\end{align*}
+We have thus shown that $\AA_{t+1}$ is psd, as required.
+\end{proof}
+
+
+\begin{lemma}\label{lem:RedAns}
+In Algorithm~\ref{alg:red}, let $\ww_t$'s, $t=1,\cdots, T$ be generated such that they additionally satisfy \Cref{def:super}. 
+\begin{itemize}
+    \item If $\AA\succeq 0$, then \Cref{alg:red} returns $\XX$ such that $\|\AA-\XX\XX^{\top}\|\leq \delta \min_{\|\xx\|=1}\|\AA\xx\|$. 
+    \item If $\AA$ is not psd, then \Cref{alg:red} returns {\sc False}.
+\end{itemize}
+\end{lemma}
+\begin{proof}
+We prove the first part first. Let $\AA_0\succeq 0$ with maximum eigenvalue $\lambda_1$, and $t$ be the iterate such that the maximum eigenvalue of $\AA_{t-1}$ is at least $(1-\epsilon)\lambda_1$ and the maximum eigenvalue of $\AA_t$ is at most $(1-\epsilon)\lambda_1$. We also know that $\AA_t\succeq 0$ for all $t$ from Lemma~\ref{lem:orthoUpdate}.
+
+In this case, $\mu_i \geq (1-\epsilon)^2\lambda_1$ for all $i\leq t-1$ (since $\mu_i$ is an $\epsilon$-max eigenvalue and the max eigenvalue is at least $(1-\epsilon)\lambda_1$) and we must have that $\Tr[\AA_t]\leq \Tr[\AA] - (1-\epsilon)^2\lambda_1(t-1)$. Also,
+\[
+\lambda_{\max}(\AA_t) \leq \Tr[\AA_t]\leq \Tr[\AA] - (1-\epsilon)^2\lambda_1(t-1) \leq  n\lambda_1 - (1-\epsilon)^2\lambda_1(t-1).
+\]
+Thus we require at most $t = 2n/(1-\epsilon)^2$ iterates after which $\AA_t$ will have a maximum eigenvalue at most $(1-\epsilon)\lambda_1$. 
+
+Our algorithm runs for $T = \frac{2n}{\epsilon(1-\epsilon)^2}\log \frac{\kappa}{\delta}$ and every $2n/(1-\epsilon)^2$ iterations we decrease the maximum eigenvalue by a factor of at least $1-\epsilon$. Finally, the maximum eigenvalue of $\AA_T$ is therefore at most,
+\[
+\lambda_1 \cdot (1-\epsilon)^{\frac{T(1-\epsilon)^2}{2n}}=\lambda_1 \cdot (1-\epsilon)^{\frac{1}{\epsilon}\log \frac{\kappa}{\delta}} \leq \lambda_1 e^{-\log \frac{\kappa}{\delta}}\leq \lambda_1 \frac{\delta}{\kappa} = \delta \cdot \min_{\|\xx\|=1}\|\AA\xx\|, 
+\] 
+as required. We have proved that, if $\AA\succeq 0$, then the maximum eigenvalue of $\AA-\XX\XX^{\top}$ is at most $\lambda_1\delta/\kappa \leq \delta \min_{\|\xx\|=1}\|\AA\xx\|$.%
+
+Next, if $\AA$ is not psd, then we will prove that $\sigma\ge\frac{(1-\epsilon)\mu_{1}}{\kappa}.$ This implies that $\sigma>\frac{(1+\epsilon)\mu_{1}\delta}{\kappa}$ from the value of $\epsilon$.  
+and so the algorithm will return $\textsc{False}$ by the condition at Line~\ref{line:red lastcheck}. Since $\AA$ is not psd, there exists a unit vector $\vv$ such that $\vv^{\top}\AA\vv<0$. We can lower bound $\sigma$ as follows.
+\[
+\sigma\ge(1-\epsilon)\|\AA_{T}\|\ge(1-\epsilon)|\vv^{\top}\AA_{T}\vv|.
+\]
+On the other hand, we have
+\[
+|\vv^{\top}\AA_{T}\vv|\ge|\vv^{\top}\AA\vv|\ge\min_{\|\xx\|=1}\xx^{\top}\AA\xx\ge\frac{\mu_{1}}{\kappa}
+\]
+where the first inequality is because $\vv^{\top}\AA_{T}\vv=\vv^{\top}\AA\vv-\|\XX^{\top}\vv\|^{2}<\vv^{\top}\AA\vv<0$. Combining the two inequalities, we get $\sigma\ge\frac{(1-\epsilon)\mu_{1}}{\kappa}$, which concludes the proof.
+ \end{proof}
+
+
+\paragraph{Proof of Theorem~\ref{thm:lower}.} 
+We are now ready to prove our conditional lower bound.
+\begin{proof} 
+Let $\calM(\epsilon,\AA_0,\vv_1,\cdots,\vv_T)$ denote an algorithm for \Cref{prob:dyn} that maintains an $\epsilon$-max eigenvalue~\eqref{eq:epsEigvalue}, $\mu_t$, and eigenvector~\eqref{eq:epsEigvec}, $\ww_t$, for matrices $\AA_t = \AA_{t-1}-\vv_t\vv_t^{\top}$ such that $\ww_t$'s satisfy \Cref{def:super}. We will show that if the total update time of $\calM$ is $n^{o(1)}\cdot \left(nnz(\AA_0) + \sum_{t=1}^T nnz(\vv_i)\right)$, then there is an $n^{2+o(1)}$-time algorithm for \Cref{prob:factor} which contradicts \Cref{conj:decomp is hard}.
+
+
+Given an instance $(\delta,\kappa,\AA)$ of \Cref{prob:factor}, 
+we will run \Cref{alg:red} where Line~\ref{line:approx eig} is implemented using $\calM$. We will generate the input and the update sequence for $\calM$ as follows.
+Set $\AA_0 \gets \AA$. Set $\eps$ and $T$ according to \Cref{alg:red}. For $1\le t\le T$, we set $\vv_t = \frac{1}{\sqrt{10}}\cdot \sqrt{\mu_{t-1}} \ww_{t-1}$ according to Line~\ref{line:red update} of \Cref{alg:red}. We note that this is a valid update sequence for \Cref{prob:dyn} when $\AA\succeq 0$ since from \Cref{lem:orthoUpdate}, 
+ if $\AA\succeq 0$ then, $\AA_t = \AA - \sum_{i=0}^{t-1}\frac{\mu_i}{10}\ww_i\ww_i^{\top}\succeq 0$. 
+
+Now, we describe what we return as an answer for \Cref{prob:factor}.  From \Cref{lem:RedAns} if $\AA$ is not PSD, then Algorithm~\ref{alg:red} returns \textsc{False} and reports the matrix is not PSD. Additionally if $\AA\succeq 0$, the algorithm returns $\XX=\frac{1}{\sqrt{10}}\begin{bmatrix}\sqrt{\mu_1}\ww_1 & \sqrt{\mu_2}\ww_2 & \cdots & \sqrt{\mu_T}\ww_T\end{bmatrix}$ as a certificate that $\AA$ is PSD. This completes the reduction from \Cref{prob:factor} to \Cref{prob:dyn}.
+
+The total time required by the reduction is 
+\[
+O\left(n^{o(1)}\cdot (nnz(\AA) + \sum_{t=1}^T nnz(\ww_t))\right) \leq O\left(n^{o(1)}\cdot (n^2 + T\cdot n)\right) \leq O(n^{2+o(1)}\log\frac{\kappa}{\delta}),
+\]
+which is at most $n^{2+o(1)}$ when $\frac{\kappa}{\delta} \leq \poly(n)$. 
+
+To conclude, we indeed obtain an $n^{2+o(1)}$-time algorithm for \Cref{prob:factor}. Assuming \Cref{conj:decomp is hard}, the algorithm $\calM$ cannot have $n^{o(1)}\cdot \left(nnz(\AA_0) + \sum_{t=1}^T nnz(\vv_i)\right)$ total update time.
+\end{proof}
+
+
+
+
+
+
+
+

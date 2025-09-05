@@ -1,0 +1,168 @@
+% !TEX root = mfe.tex
+
+
+\section{Appendix: \SymnMFE  (\snMFE) algorithm}\label{sec:AlgoMFE}
+
+\cref{algo:1}, shown in \cref{fig:mfe}, computes \snMFE  for a constant number, $c=\mathcal{O}(1)$, of interacting nucleic acid strands. 
+We should note that: \cref{algo:1} is a straightforward conversion of the partition function algorithm from Dirks et al. \cite{dirks2007thermodynamic}. 
+\cref{algo:1} ignores rotational symmetry, 
+if the predicted \snMFE structure from this algorithm happens to be asymmetric, 
+then the output of \cref{algo:1} is the true MFE as there is no symmetry correction penalty for asymmetric secondary structures.
+However, if the \snMFE structure is an $R$-fold symmetric secondary structure, then its free energy must be corrected by by $+k_\mathrm{B} T \log R$, a positive value, then it is not guaranteed that the \snMFE will be the true MFE without scanning all secondary structures in the window of $k_\mathrm{B} T \log R$ above \snMFE, and applying any needed symmetry corrections to the free energy of each secondary structure that lies in that window. Wuchty et al. \cite{wuchty1999complete} showed that this window of secondary structures could scale exponentially with $N$, which shows why this strategy fails. But in this work, we proved that only a polynomial number of these structures are enough for predicting the true MFE. 
+
+We introduced new three-dimensional matrices $M^\text{b:int}, M^\text{b:mul}$,  $M^\text{m:2}$ to help in reducing the time complexity of the backtracking algorithm. For any segment $[i,j]^b$, if $i+2 \leq k \leq j-1$, $M_{i,j,k}^\text{b:int}$ will contain the minimum free energy attainable from the segment $[i,j]^b$ such that all bases $d$, such that $k<d<j$ are unpaired, and there exist exactly one base pair $(m,n)$, such that $i+1 \leq m < n \leq k$, $(i,j)$ and $(m,n)$ are forming together an internal loop. The same for $M_{i,j,k}^\text{b:mul}$, except that there exist more than one base pair $(m,n)$, such that $i+1 \leq m < n \leq k$, forming together a multiloop with $(i,j)$.  
+
+
+For any segment $[i,j]^m$, if $i+1 \leq k \leq j$, $M_{i,j,k}^\text{m:2}$ contains the minimum free energy attainable from the segment $[i,j]^m$ such that all bases $d$, such that $k<d \leq j$ are unpaired, and there exist more than one base pair $(m,n)$, such that $i \leq m < n \leq k$, forming together a multiloop with $(i,j)$.    
+
+
+
+
+
+\begin{figure}[H]
+	\centering\includegraphics[width=1\textwidth]{figures/dirkis.jpg}
+	\caption{\snMFE dynamic program recursion diagrams (left) and recursion equations (right). A solid straight line indicates a base pair and
+		a dashed line demarcates a region without implying that the connected bases are paired. Shaded regions correspond to loop free energies that are	explicitly incorporated at the current level of recursion. See \cite{dirks2003partition, fornace2020unified} for  full details.  
+	}\label{fig:mfe}
+\end{figure}
+
+
+
+\begin{algorithm}[H] 
+	%\newgeometry{top=0.2in,bottom=0.1in,left=1in,right=1in}
+	\caption{\small\SymnMFE (\snMFE) algorithm pseudocode  that takes as input: $c=\mathcal{O}(1)$ strands with total number of bases (length) $N$ and strand ordering $\pi$. 
+		Runs in  $\mathcal{O}(N^4)$ time and $\mathcal{O}(N^3)$ space with
+		recursive calls illustrated in \cref{fig:mfe}. Nicks between strands are denoted by half indices (e.g.~$x+ \frac{1}{2}$). 
+		The function $\eta[i+ \frac{1}{2}, j+\frac{1}{2}]$ returns the number of nicks in the interval $[i+ \frac{1}{2}, j+\frac{1}{2}]$. 
+		The shorthand $\eta[i+ \frac{1}{2}]$ is equivalent to $\eta[i+ \frac{1}{2}, i+\frac{1}{2}]$ and by convention, $\eta[i+ \frac{1}{2}, i-\frac{1}{2}] =0$.
+	} \label{algo:1}
+	\begin{algorithmic}[1]
+		\footnotesize
+		\State Initialize $M, M^b, M^m, M^\text{b:int}, M^\text{b:mul}$,  $M^\text{m:2}$  by setting all values to $+\infty$, except $M_{i,i-1} = 0$ for all $i=1,\ldots,N$
+		
+		\For{$l \gets 1 \ldots N$}
+		\For{$i \gets 1 \ldots N-l+1$}
+		\State $j = i+l-1$
+		
+		\Comment{$M^b$ recursion equations} 
+		\If{$\eta[i+\frac{1}{2}, j-\frac{1}{2}] ==0$}
+		$M_{i,j}^b =\Delta G_{i,j}^\text{hairpin}$
+		\Comment{hairpin loop requires no nicks} 		
+		
+		
+		
+		\EndIf 
+		
+		\State $\text{min}_\text{int}^b =  \text{min}_\text{mul}^b = \text{min}_\text{mul}^m = +\infty$
+		
+		
+		
+		\For{$e \gets i+2 \ldots j-1$}
+		\Comment{loop over all possible $3'$-most pairs $(d,e)$} 
+		
+		\For{$d \gets i+1 \ldots e-1$} 
+		
+		\If{$\eta[i+\frac{1}{2}, d-\frac{1}{2}] ==0$ and $\eta[e+\frac{1}{2}, j-\frac{1}{2}] ==0$}
+		$M_{i,j}^b = \min \{ M_{i,j}^b, M_{d,e}^b + \Delta G_{i,d,e,j}^\text{interior} \}$
+		
+		\If{$(M_{d,e}^b + \Delta G_{i,d,e,j}^\text{interior}) < \text{min}_\text{int}^b $}
+		$\text{min}_\text{int}^b = M_{d,e}^b + \Delta G_{i,d,e,j}^\text{interior} $
+		
+		\EndIf
+		
+		
+		\EndIf 
+		
+		\If{$\eta[e+\frac{1}{2}, j-\frac{1}{2}] ==0$ and $\eta[i+\frac{1}{2}] ==0$ and $\eta[d-\frac{1}{2}] ==0$}
+		\Comment{multiloop: no nicks} 
+		
+		\State  $M_{i,j}^b = \min \{ M_{i,j}^b, M^b_{d,e} + M^m_{i+1,d-1} + \Delta G_\text{init}^\text{multi} + 2\Delta G_\text{bp}^\text{multi} + (j-e-1)\Delta G_\text{nt}^\text{multi}\}$
+		
+		\If{$(  M^m_{i+1,d-1} +  M^b_{d,e} + \Delta G_\text{init}^\text{multi} + 2\Delta G_\text{bp}^\text{multi} + (j-e-1)\Delta G_\text{nt}^\text{multi}) < \text{min}_\text{mul}^b$}
+		
+		\State $\text{min}_\text{mul}^b =   M^m_{i+1,d-1} + M^b_{d,e} + \Delta G_\text{init}^\text{multi} + 2\Delta G_\text{bp}^\text{multi} + (j-e-1)\Delta G_\text{nt}^\text{multi} $
+		
+		\EndIf
+		
+		\EndIf
+		\EndFor
+		
+		\State $M_{i,j,e}^\text{b:int} = \text{min}_\text{int}^b$; \ \  
+		$M_{i,j,e}^\text{b:mul} = \text{min}_\text{mul}^b$ \Comment{for the new auxiliary matrices} 
+		
+		
+		\EndFor
+		
+		
+		
+		\For{$x \in \{i, \ldots,j+1\}$ s.t. $\eta[x+\frac{1}{2}] = 1$} 
+		\Comment{loop over all nicks $\in [i+\frac{1}{2}, j-\frac{1}{2}]$} 
+		
+		\If{($\eta[i+\frac{1}{2}] == 0$ and $\eta[j-\frac{1}{2}] == 0$) or ($i==j-1$) or  ($x==i$ and $\eta[j-\frac{1}{2}] == 0$) or
+			\par \hskip\algorithmicindent  
+			\hspace{6 mm} ($x==j-1$ and $\eta[i+\frac{1}{2}] == 0$)}
+		
+		\State  $M_{i,j}^b = \min \{ M_{i,j}^b, M_{i+1,x} + M_{x+1,j-1} \}$\Comment{exterior loops} 
+		
+		\EndIf
+		\EndFor
+		
+		
+		\\	
+		\Comment{$M, M^m$ recursion equations} 
+		
+		\If{$\eta[i+\frac{1}{2}, j-\frac{1}{2}] == 0$} 
+		$M_{i,j} = 0$\Comment{empty substructure} 
+		
+		\EndIf
+		
+		\For{$e \gets i+1 \ldots j$} \Comment{loop over all possible $3'$-most pairs $(d,e)$}
+		
+		\For{$d \gets i \ldots e-1$}
+		
+		\If{$\eta[e+\frac{1}{2}, j-\frac{1}{2}] == 0$} 
+		
+		\If{$\eta[d-\frac{1}{2}] == 0$ or $d==i$}
+		$M_{i,j} = \min \{M_{i,j}, M_{i,d-1} + M_{d,e} \}$
+		\EndIf
+		
+		\If{$\eta[i+\frac{1}{2}, d-\frac{1}{2}] == 0$}
+		
+		\State $M_{i,j}^m = \min \{M_{i,j}^m, M^b_{d,e} + \Delta G_\text{bp}^\text{multi} + (d-i + j-e)\Delta G_\text{nt}^\text{multi}\}$
+		\Comment{single base pair}
+		
+		\EndIf
+		\If{$\eta[d-\frac{1}{2}] == 0$}
+		\State $M_{i,j}^m = \min \{M_{i,j}^m, M^b_{d,e} + M^m_{i,d-1} + \Delta G_\text{bp}^\text{multi} + (j-e)\Delta G_\text{nt}^\text{multi}\}$
+		\Comment{more than one base pair}
+		
+		\If{$( M^m_{i,d-1} +  M^b_{d,e} +  \Delta G_\text{bp}^\text{multi} + (j-e)\Delta G_\text{nt}^\text{multi}) < \text{min}_\text{mul}^m $}
+		
+		\State $\text{min}_\text{mul}^m  =   M^m_{i,d-1} + M^b_{d,e} + \Delta G_\text{bp}^\text{multi} + (j-e)\Delta G_\text{nt}^\text{multi}$
+		
+		\EndIf
+		
+		\EndIf
+		
+		\EndIf
+		
+		\EndFor
+		\State $M_{i,j,e}^\text{m:2} = \text{min}_\text{mul}^m $
+		\EndFor
+		
+		\EndFor
+		\EndFor \Comment{next line returns the \snMFE for ordering $\pi$, and several matrices for future backtracking} 
+		\State \Return $M_{1,N} + (c-1) \Delta G^\text{assoc}$; 
+		and matrices: $M, M^b, M^m, M^\text{b:int}, M^\text{b:mul}$,  $M^\text{m:2}$
+		
+		
+		
+	\end{algorithmic}
+\end{algorithm}
+
+
+
+
+
+
+
