@@ -69,7 +69,7 @@ if __name__ == "__main__":
     
     #verify_solution(paper, 0, memory_file)
     
-    print(get_problem_statement(paper, 1, memory_file))
+    print(get_problem_statement(paper, 2, memory_file))
 
 
 
