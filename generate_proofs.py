@@ -1,5 +1,4 @@
 from typing import List, Dict, Any, Optional, Tuple
-from pathlib import Path
 from textwrap import dedent
 import json
 import os
@@ -8,6 +7,47 @@ from pipeline import *
 from pipeline_util import *
 from api import *
 from checker import *
+
+# =============================
+# Unified checker grading helper
+# =============================
+
+def _grade_text_with_checker(paper: str, idx: int, text: str, memory_file: str, want_logs: bool = True):
+    """
+    Temporarily inject `text` as the solution for (paper, idx) in the GENERAL memory (`memory_file`),
+    run the checker, then restore the previous solution.
+    Returns: (grade:int or None, detailed_verif:str or None)
+    - If want_logs=True: uses verify_solution -> returns (grade, logs)
+    - Else: uses grade_idx -> returns (grade, None)
+    """
+    general = load_memory(memory_file) or {}
+    prev_solution = None
+    try:
+        # snapshot previous
+        if "solutions" in general and isinstance(general.get("solutions"), list) and len(general["solutions"]) > idx:
+            prev_solution = general["solutions"][idx]
+        else:
+            if "solutions" not in general or not isinstance(general.get("solutions"), list):
+                general["solutions"] = []
+        save_solution(idx, text, general)
+        save_memory(memory_file, general)
+
+        if want_logs:
+            detailed_verif, grade = verify_solution(paper, idx, memory_file)
+            return int(grade), detailed_verif
+        else:
+            # fast path without logs
+            grade = grade_idx(paper, idx, general) if 'grade_idx' in globals() else None
+            return int(grade) if grade is not None else None, None
+    finally:
+        # restore
+        general = load_memory(memory_file) or {}
+        if "solutions" not in general or not isinstance(general.get("solutions"), list):
+            general["solutions"] = []
+        while len(general["solutions"]) <= idx:
+            general["solutions"].append("")
+        general["solutions"][idx] = prev_solution if prev_solution is not None else ""
+        save_memory(memory_file, general)
 
 # =============================
 # Extraction-memory (memoryProof.json) helpers
@@ -136,44 +176,7 @@ def get_proof(
 
     validity_before = None
     if proof and grade_original_with_checker:
-        # Temporarily inject proof into the general memory to reuse checker.verify_solution,
-        # then revert previous memory["solutions"][idx].
-        general = load_memory(memory_file) or {}
-        prev_solution = None
-        try:
-            # snapshot previous
-            if isinstance(general, dict):
-                if "solutions" in general and isinstance(general["solutions"], list) and len(general["solutions"]) > idx:
-                    prev_solution = general["solutions"][idx]
-                else:
-                    # ensure list long enough
-                    if "solutions" not in general or not isinstance(general.get("solutions"), list):
-                        general["solutions"] = []
-                save_solution(idx, proof, general)
-                save_memory(memory_file, general)
-
-            # run checker (returns grade 0/1)
-            grade_value = grade_idx(paper, idx, general) if 'grade_idx' in globals() else verify_solution(paper, idx, memory_file)
-            if isinstance(grade_value, tuple):
-                # if verify_solution returned (detailed, grade) in some implementations
-                _, gv = grade_value
-                validity_before = int(gv)
-            elif isinstance(grade_value, (int, bool)):
-                validity_before = int(grade_value)
-            else:
-                try:
-                    validity_before = int(grade_value)  # best effort
-                except Exception:
-                    validity_before = None
-        finally:
-            # restore previous solution in general memory
-            general = load_memory(memory_file) or {}
-            if "solutions" not in general or not isinstance(general.get("solutions"), list):
-                general["solutions"] = []
-            while len(general["solutions"]) <= idx:
-                general["solutions"].append("")
-            general["solutions"][idx] = prev_solution if prev_solution is not None else ""
-            save_memory(memory_file, general)
+        validity_before, _logs = _grade_text_with_checker(paper, idx, proof, memory_file, want_logs=False)
 
     # Cache and return
     if proof:
@@ -353,39 +356,7 @@ def diversify_proof(
             graded_valid = None
             detailed_verif = None
             if grade_with_checker and text:
-                # Temporarily grade via checker: inject into general memory, revert after.
-                general = load_memory(memory_file) or {}
-                prev_solution = None
-                try:
-                    if "solutions" in general and isinstance(general["solutions"], list) and len(general["solutions"]) > idx:
-                        prev_solution = general["solutions"][idx]
-                    else:
-                        if "solutions" not in general or not isinstance(general.get("solutions"), list):
-                            general["solutions"] = []
-                    save_solution(idx, text, general)
-                    save_memory(memory_file, general)
-
-                    grade_value = grade_idx(paper, idx, general) if 'grade_idx' in globals() else verify_solution(paper, idx, memory_file)
-                    if isinstance(grade_value, tuple):
-                        _, gv = grade_value
-                        graded_valid = int(gv)
-                    elif isinstance(grade_value, (int, bool)):
-                        graded_valid = int(grade_value)
-                    else:
-                        try:
-                            graded_valid = int(grade_value)
-                        except Exception:
-                            graded_valid = None
-                    detailed_verif = None  # can be filled if verify_solution returns logs in your setup
-                finally:
-                    # restore general memory
-                    general = load_memory(memory_file) or {}
-                    if "solutions" not in general or not isinstance(general.get("solutions"), list):
-                        general["solutions"] = []
-                    while len(general["solutions"]) <= idx:
-                        general["solutions"].append("")
-                    general["solutions"][idx] = prev_solution if prev_solution is not None else ""
-                    save_memory(memory_file, general)
+                graded_valid, detailed_verif = _grade_text_with_checker(paper, idx, text, memory_file, want_logs=True)
 
             variant_record = {
                 "proof_idx": idx,
@@ -422,7 +393,7 @@ def diversify_proof(
         existing = {"paper": paper, "variants": []}
     existing["variants"].extend(variants)
 
-    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(existing, f, ensure_ascii=False, indent=2)
 
@@ -430,7 +401,7 @@ def diversify_proof(
 
 # CLI for quick runs
 if __name__ == "__main__":
-    memory_file = "memory.json"         # general pipeline memory (statements/solutions/etc.)
+    memory_file = "memory.json"          # general pipeline memory (statements/solutions/etc.)
     extraction_file = "memoryProof.json" # extraction memory (keyed by article)
     paper = "2407.02412"
     idx = 0
@@ -440,5 +411,5 @@ if __name__ == "__main__":
     print("Base proof extracted:", bool(proof))
 
     # Generate variants (without grading by default to save tokens)
-    result = diversify_proof(paper, idx, memory_file, extraction_file,methods=["paraphrase","simplify"] ,k_per_method=1, grade_with_checker=False)
+    result = diversify_proof(paper, idx, memory_file, extraction_file, methods=["compress_justifications"], k_per_method=1, grade_with_checker=False)
     print(f"Wrote {len(result.get('variants', []))} variants to data/{paper}/proof_variants.json")
