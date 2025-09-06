@@ -292,6 +292,8 @@ def circular_reasoning_proof(proof, paper, idx, memory_file):
 def verify_solution_not_in_memory(paper, idx, memory_file, solution):
 
     statement = get_problem_statement(paper, idx, memory_file)
+    print("statement", statement)
+    print("solution", solution)
     prompt = f"""
     ### Problem ###
     
@@ -467,7 +469,8 @@ def generate_testcases(paper, idx, memory_file, nb_variants=1):
 if __name__ == "__main__":
     # Exemple d'article + énoncé
     paper = "2407.02412"
-    idx = 0
+    # paper = "2407.10852"
+    idx = 4
     memory_file = "memory.json"   
     generate_testcases(paper, idx, memory_file, nb_variants=1)
 

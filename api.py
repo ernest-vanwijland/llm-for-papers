@@ -5,7 +5,8 @@ import mimetypes
 import os
 from pathlib import Path
 
-API_KEY = "AIzaSyBR7Z3Qatx-S72g_OZXSfAOyl3IfagMXe4"
+# API_KEY = "AIzaSyBR7Z3Qatx-S72g_OZXSfAOyl3IfagMXe4"#ernest 
+API_KEY ="AIzaSyBNkra1dEv2nLtQWIcyoiUYSzOJhBCPjYY" #julien
 MODEL_NAME = "gemini-1.5-flash-latest"
 MODEL_NAME = "gemini-2.5-pro"
 API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent"
