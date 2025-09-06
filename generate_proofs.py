@@ -31,8 +31,30 @@ def save_testcase(paper, toprove, validity, comment, proof, name = None):
     except Exception as e:
         print(f"Error saving memory to {name}: {e}")
         return False
+    
+def _load_cached_proof_from_testdir(paper, idx, cache_dir="test"):
+    """Return any cached 'original' proof for (paper, idx) from test/*.json, or None (no recency logic)."""
+    if not os.path.isdir(cache_dir):
+        return None
+    for name in os.listdir(cache_dir):
+        if not name.endswith(".json"):
+            continue
+        path = os.path.join(cache_dir, name)
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception:
+            continue
+        if data.get("paper") == paper and data.get("toprove") == idx and data.get("comment") == "original":
+            return data.get("proof")
+    return None
+
 
 def get_proof(paper, idx, memory_file):
+    cached = _load_cached_proof_from_testdir(paper, idx)
+    if isinstance(cached, str) and cached.strip():
+        print("load cached proof")
+        return cached, False
     prompt = f"""
     ### Instructions ###
     
@@ -42,7 +64,7 @@ def get_proof(paper, idx, memory_file):
     
     {get_problem_statement(paper, idx, memory_file)}
     """
-    return request([prompt], contents = [full(paper)])
+    return request([prompt], contents = [full(paper)]), True
 
 def paraphrase_proof(proof, paper, idx, memory_file):
     prompt = f"""
@@ -311,10 +333,7 @@ _ALLOWED_REASON_LABELS = [
 ]
 
 def _normalize_reason_llm(details: str, is_valid: int|None) -> str:
-    """
-    Ask the LLM to map a free-text diagnostic to one label in _ALLOWED_REASON_LABELS.
-    Returns a single lowercase label. Falls back to 'valid' if is_valid==1, else 'unknown'.
-    """
+   
     fallback = "valid" if is_valid == 1 else "unknown"
     if not isinstance(details, str) or not details.strip():
         return fallback
@@ -339,7 +358,7 @@ def _normalize_reason_llm(details: str, is_valid: int|None) -> str:
 
     {details}
     """
-    
+    print("LLM normalizing reason with prompt:")
     res = request([prompt], contents=[])
 
     label = res.strip().split()[0].lower()
@@ -348,12 +367,17 @@ def _normalize_reason_llm(details: str, is_valid: int|None) -> str:
 
 def check_testcase(paper, toprove, expected_validity, expected_reason, proof, memory_file):
     """ function that checks that the testcase is correct """
-    # TODO
-    detailed_verif, grade = verify_solution_not_in_memory(paper, toprove, memory_file, proof)
-    found_reason = _normalize_reason_llm(detailed_verif, grade)
 
+    print("Checking testcase:", paper, toprove, expected_validity, expected_reason)
+    detailed_verif, grade = verify_solution_not_in_memory(paper, toprove, memory_file, proof)
+    print("verify pass")
+    validity_ok = grade == expected_validity
+    print("validity ok:", validity_ok)
+    # 3) Trouver la raison
+    found_reason = _normalize_reason_llm(detailed_verif, grade)
+    print("found reason pass")
     # 4) Comparer validité et raison
-    validity_ok = (expected_validity is None) or (grade == expected_validity)
+    
     reason_ok = (expected_reason is None) or (grade == 1 and expected_reason == "valid") or (found_reason == expected_reason)
 
     return {
@@ -374,6 +398,7 @@ def save_checked_variants(paper, idx, variants, expected_validity, method_label,
 
     saved = 0
     for v in variants:
+        print("check")
         res = check_testcase(paper, idx, expected_validity, expected_reason, v, memory_file)
         if res["validity_ok"] and res["reason_ok"]:
             ok = save_testcase(paper, idx, expected_validity, method_label, v, f"{paper}_{idx}_{method_label}")
@@ -384,57 +409,60 @@ def save_checked_variants(paper, idx, variants, expected_validity, method_label,
     return saved
 
 def generate_testcases(paper, idx, memory_file, nb_variants=1):
-    proof = get_proof(paper, idx, memory_file)
-    save_testcase(paper, idx, 1, "original", proof, f"{paper}_{idx}_original")
-
+    proof,is_new = get_proof(paper, idx, memory_file)
+    if is_new:
+        save_testcase(paper, idx, 1, "original", proof, f"{paper}_{idx}_original")
+    res_sanitary = save_checked_variants(paper, idx, [proof],                   1, "sanitary_check", memory_file)
+    print("res_sanitary", res_sanitary)
+    # ------- verification -------
     paraphrases = [paraphrase_proof(proof, paper, idx, memory_file) for _ in range(nb_variants)]
     res0 = save_checked_variants(paper, idx, paraphrases,                   1, "paraphrase", memory_file)
     print("res0", res0)
 
-    rename_vars_proofs = [rename_vars_proof(proof, paper, idx, memory_file) for _ in range(nb_variants)]
-    res1 = save_checked_variants(paper, idx, rename_vars_proofs,            1, "rename_vars", memory_file)
-    print("res1", res1)
+    # rename_vars_proofs = [rename_vars_proof(proof, paper, idx, memory_file) for _ in range(nb_variants)]
+    # res1 = save_checked_variants(paper, idx, rename_vars_proofs,            1, "rename_vars", memory_file)
+    # print("res1", res1)
 
-    reorder_noncritical_proofs = [reorder_noncritical_proof(proof, paper, idx, memory_file) for _ in range(nb_variants)]
-    res2 = save_checked_variants(paper, idx, reorder_noncritical_proofs,    1, "reorder_noncritical", memory_file)
-    print("res2", res2)
+    # reorder_noncritical_proofs = [reorder_noncritical_proof(proof, paper, idx, memory_file) for _ in range(nb_variants)]
+    # res2 = save_checked_variants(paper, idx, reorder_noncritical_proofs,    1, "reorder_noncritical", memory_file)
+    # print("res2", res2)
 
-    expand_justifications_proofs = [expand_justifications_proof(proof, paper, idx, memory_file) for _ in range(nb_variants)]
-    res3 = save_checked_variants(paper, idx, expand_justifications_proofs,  1, "expand_justifications", memory_file)
-    print("res3", res3)
+    # expand_justifications_proofs = [expand_justifications_proof(proof, paper, idx, memory_file) for _ in range(nb_variants)]
+    # res3 = save_checked_variants(paper, idx, expand_justifications_proofs,  1, "expand_justifications", memory_file)
+    # print("res3", res3)
 
-    compress_justifications_proofs = [compress_justifications_proof(proof, paper, idx, memory_file) for _ in range(nb_variants)]
-    res4 = save_checked_variants(paper, idx, compress_justifications_proofs,1, "compress_justifications", memory_file)
-    print("res4", res4)
-
+    # compress_justifications_proofs = [compress_justifications_proof(proof, paper, idx, memory_file) for _ in range(nb_variants)]
+    # res4 = save_checked_variants(paper, idx, compress_justifications_proofs,1, "compress_justifications", memory_file)
+    # print("res4", res4)
+    # ------- falsification --------
     drop_key_step_proofs = [drop_key_step_proof(proof, paper, idx, memory_file) for _ in range(nb_variants)]
     res5 = save_checked_variants(paper, idx, drop_key_step_proofs,          0, "drop_key_step", memory_file)
     print("res5", res5)
 
-    wrong_bound_proofs = [wrong_bound_proof(proof, paper, idx, memory_file) for _ in range(nb_variants)]
-    res6 = save_checked_variants(paper, idx, wrong_bound_proofs,            0, "wrong_bound", memory_file)
-    print("res6", res6)
+    # wrong_bound_proofs = [wrong_bound_proof(proof, paper, idx, memory_file) for _ in range(nb_variants)]
+    # res6 = save_checked_variants(paper, idx, wrong_bound_proofs,            0, "wrong_bound", memory_file)
+    # print("res6", res6)
 
-    weaken_assumption_proofs = [weaken_assumption_proof(proof, paper, idx, memory_file) for _ in range(nb_variants)]
-    res7 = save_checked_variants(paper, idx, weaken_assumption_proofs,      0, "weaken_assumption", memory_file)
-    print("res7", res7)
+    # weaken_assumption_proofs = [weaken_assumption_proof(proof, paper, idx, memory_file) for _ in range(nb_variants)]
+    # res7 = save_checked_variants(paper, idx, weaken_assumption_proofs,      0, "weaken_assumption", memory_file)
+    # print("res7", res7)
 
-    quantifier_swap_proofs = [quantifier_swap_proof(proof, paper, idx, memory_file) for _ in range(nb_variants)]
-    res8 = save_checked_variants(paper, idx, quantifier_swap_proofs,        0, "quantifier_swap", memory_file)
-    print("res8", res8)
+    # quantifier_swap_proofs = [quantifier_swap_proof(proof, paper, idx, memory_file) for _ in range(nb_variants)]
+    # res8 = save_checked_variants(paper, idx, quantifier_swap_proofs,        0, "quantifier_swap", memory_file)
+    # print("res8", res8)
 
-    case_mismerge_proofs = [case_mismerge_proof(proof, paper, idx, memory_file) for _ in range(nb_variants)]
-    res9 = save_checked_variants(paper, idx, case_mismerge_proofs,          0, "case_mismerge", memory_file)
-    print("res9", res9)
+    # case_mismerge_proofs = [case_mismerge_proof(proof, paper, idx, memory_file) for _ in range(nb_variants)]
+    # res9 = save_checked_variants(paper, idx, case_mismerge_proofs,          0, "case_mismerge", memory_file)
+    # print("res9", res9)
 
-    circular_reasoning_proofs = [circular_reasoning_proof(proof, paper, idx, memory_file) for _ in range(nb_variants)]
-    res10 = save_checked_variants(paper, idx, circular_reasoning_proofs,    0, "circular_reasoning", memory_file)
-    print("res10", res10)
+    # circular_reasoning_proofs = [circular_reasoning_proof(proof, paper, idx, memory_file) for _ in range(nb_variants)]
+    # res10 = save_checked_variants(paper, idx, circular_reasoning_proofs,    0, "circular_reasoning", memory_file)
+    # print("res10", res10)
     # here add all the other modifications, correct and incorrect
-    if res0 + res1 + res2 + res3 + res4 + res5 + res6 + res7 + res8 + res9 + res10 == 11*nb_variants:
-        print("perfect", idx)
-    else:
-        print("not perfect", idx, res0, res1, res2, res3, res4, res5, res6, res7, res8, res9, res10)
+    # if res0 + res1 + res2 + res3 + res4 + res5 + res6 + res7 + res8 + res9 + res10 == 11*nb_variants:
+    #     print("perfect", idx)
+    # else:
+    #     print("not perfect", idx, res0, res1, res2, res3, res4, res5, res6, res7, res8, res9, res10)
     # do the same for the other modifications
 if __name__ == "__main__":
     # Exemple d'article + énoncé
