@@ -33,7 +33,7 @@ def save_testcase(paper, toprove, validity, comment, proof, name = None):
         return False
     
 def _load_cached_proof_from_testdir(paper, idx, cache_dir="test"):
-    """Return any cached 'original' proof for (paper, idx) from test/*.json, or None (no recency logic)."""
+    """Return any cached 'original' proof for (paper, idx) from test/*.json, or None (no recency logic).."""
     if not os.path.isdir(cache_dir):
         return None
     for name in os.listdir(cache_dir):
