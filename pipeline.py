@@ -3,10 +3,9 @@ from pipeline_util import *
 from checker import *
 from prompts import *
 
-def first_attempt(paper, idx, memory_file):
-    memory = load_memory(memory_file)
+def first_attempt(paper, idx):
     paper = noproof(paper)
-    statement = get_problem_statement(paper, idx, memory_file)
+    statement = get_problem_statement(paper, idx)
     prompt = f"""
     Your job is to prove:
     --- BEGIN STATEMENT ---
@@ -16,26 +15,23 @@ def first_attempt(paper, idx, memory_file):
     """
     
     solution = request([prompt], system_prompt = step1_prompt, contents = [paper])
-    save_solution(idx, solution, memory)
-    save_memory(memory_file, memory)
+    save_solution(paper, idx, solution)
     return solution
 
-def self_improvement(paper, idx, memory_file, verif = None):
-    memory = load_memory(memory_file)
-    first_solution = get_solution(idx, memory)
-    statement = get_problem_statement(paper, idx, memory_file)
+def self_improvement(paper, idx, verif = None):
+    first_solution = get_solution(paper, idx)
+    statement = get_problem_statement(paper, idx)
     if verif:
         solution = request([statement, correction_prompt, verif], system_prompt = step1_prompt, model = first_solution, contents = [paper])
     else:
         solution = request([statement, self_improvement_prompt], system_prompt = step1_prompt, model = first_solution, contents = [noproof(paper)])
-    save_solution(idx, solution, memory)
-    save_memory(memory_file, memory)
+    save_solution(paper, idx, solution)
     return solution
 
-def solve(paper, idx, memory_file):
-    first_attempt(paper, idx, memory_file)
-    solution = self_improvement(paper, idx, memory_file)
-    detailed_verif, grade = verify_solution(paper, idx, memory_file)
+def solve(paper, idx):
+    first_attempt(paper, idx)
+    solution = self_improvement(paper, idx)
+    detailed_verif, grade = verify_solution(paper, idx)
     error_count = 0
     correct_count = 1
     success = False
@@ -45,9 +41,9 @@ def solve(paper, idx, memory_file):
         if grade == 0:
             correct_count = 0
             error_count += 1
-            solution = self_improvement(paper, idx, memory_file, detailed_verif)
+            solution = self_improvement(paper, idx, detailed_verif)
         
-        detailed_verif, grade = verify_solution(paper, idx, memory_file)
+        detailed_verif, grade = verify_solution(paper, idx)
         
         if grade == 1:
             correct_count += 1
@@ -62,14 +58,13 @@ def solve(paper, idx, memory_file):
         return None
 
 if __name__ == "__main__":
-    memory_file = "memory.json"
     papers = list_papers("data/")
     
     paper = "2407.02412"
     
-    #verify_solution(paper, 0, memory_file)
+    #verify_solution(paper, 0)
     
-    print(get_problem_statement(paper, 2, memory_file))
+    print(get_problem_statement(paper, 3))
 
 
 

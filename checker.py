@@ -2,10 +2,9 @@ from api import *
 from pipeline_util import *
 from prompts import *
 
-def verify_solution(paper, idx, memory_file):
-    memory = load_memory(memory_file)
-    statement = get_problem_statement(paper, idx, memory_file)
-    solution = extract_detailed_solution(get_solution(idx, memory))
+def verify_solution(paper, idx):
+    statement = get_problem_statement(paper, idx)
+    solution = extract_detailed_solution(get_solution(paper, idx))
     prompt = f"""
     ### Problem ###
     
@@ -32,14 +31,13 @@ def verify_solution(paper, idx, memory_file):
     
     grade = int(request([prompt], contents = []))
     
-    save_verif(idx, detailed_verif, memory)
-    save_grade(idx, grade, memory)
-    save_memory(memory_file, memory)
+    save_verif(paper, idx, detailed_verif)
+    save_grade(paper, idx, grade)
     
     return detailed_verif, grade
 
-def grade_once(paper, idx, memory):
-    prompt = f"### Task ###\nYour task is to verify that \n------\n{memory['solutions'][idx]}\n-----\nis a valid proof of {memory['statements'][idx]}\n in the context of where the statement and its proof appear in the attached paper.\n"
+def grade_once(paper, idx):
+    prompt = f"### Task ###\nYour task is to verify that \n------\n{get_solution(paper, idx)}\n-----\nis a valid proof of {get_problem_statement(paper, idx)}\n in the context of where the statement and its proof appear in the attached paper.\n"
     prompt += "You can use the paper and understand the actual correct proof of the statement in the paper to get a deeper understanding of the subtelties of the problem you are tackling and provide a more thorough verification."
     paper = full(paper)
     detailed_verif = request([prompt], system_prompt = verification_system_prompt, contents = [paper])
@@ -48,23 +46,22 @@ def grade_once(paper, idx, memory):
     grade = int(request([prompt], contents=[]))
     return grade
    
-def grade_idx(paper, idx, memory, nbVerifs = 1):
+def grade_idx(paper, idx, nbVerifs = 1):
     grade = 0
     for _ in range(nbVerifs):
-        grade += grade_once(paper, idx, memory)
+        grade += grade_once(paper, idx)
     # grade = 1 iff all the verifications are correct
     grade //= nbVerifs
     return grade
 
-def grade(paper, memory_file):
-    memory = load_memory(memory_file)
-    nbProofs = min(len(memory["statements"]), len(memory["solutions"]))
+def grade(paper):
+    nbProofs = 0 # this needs a function call: min(len(memory["statements"]), len(memory["solutions"]))
     total = 0
     correct = 0
     for idx in range(nbProofs):
         if memory["statements"][idx] != None:
             total += 1
-            correct += grade_idx(paper, idx, memory)
+            correct += grade_idx(paper, idx)
     if total == 0:
         return None
     return correct, total
