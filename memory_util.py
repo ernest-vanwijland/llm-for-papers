@@ -11,13 +11,15 @@ def noproof(paper):
 
 def init_memory(paper):
     memory_file = f"memory/memory_{paper}.json"
+    os.makedirs("memory", exist_ok=True)
     if not os.path.exists(memory_file):
-        os.mknod(memory_file)
+        # os.mknod(memory_file)
         memory = {
             "statements": [],
             "solutions": [],
             "verifs": [],
             "grades": [],
+            "proof_support": [],
             "timestamp": __import__('datetime').datetime.now().isoformat()
         }
         with open(memory_file, 'w', encoding='utf-8') as f:
@@ -25,6 +27,8 @@ def init_memory(paper):
 
 def load_memory(paper):
     memory_file = f"memory/memory_{paper}.json"
+    if not os.path.exists(memory_file):           
+        init_memory(paper)
     try:
         with open(memory_file, 'r', encoding='utf-8') as f:
             memory = json.load(f)
@@ -78,6 +82,19 @@ def get_verif(paper, idx):
     if len(memory["verifs"]) <= idx:
         return None
     return memory["verifs"][idx]
+
+def save_proof_support(paper, idx, proof_support):
+    memory = load_memory(paper)
+    while len(memory["proof_support"]) <= idx:
+        memory["proof_support"].append("")
+    memory["proof_support"][idx] = proof_support
+    save_memory(paper, memory)
+
+def get_proof_support(paper, idx):
+    memory = load_memory(paper)
+    if len(memory["proof_support"]) <= idx:
+        return None
+    return memory["proof_support"][idx]
 
 def get_problem_statement(paper, idx):
     memory = load_memory(paper)

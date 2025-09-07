@@ -50,7 +50,7 @@ def load_original_proof(paper, idx, cache_dir="test"):
     return None
 
 def get_proof(paper, idx):
-    cached = get_original_proof(paper, idx)
+    cached = load_original_proof(paper, idx)
     if isinstance(cached, str) and cached.strip():
         print("load cached proof")
         return cached, False
@@ -73,6 +73,8 @@ def paraphrase_proof(proof, paper, idx):
         Constraints:
         - Preserve correctness rigorously.
         - DO NOT change any mathematical content.
+        - DO NOT change the ordering of logically dependent steps.
+        - DO NOT add or remove any steps.
         - Keep the same structure of claims and equations, but you may rephrase sentences.
         Output ONLY the proof text, using latex for mathematical notations.
     
@@ -93,8 +95,10 @@ def rename_vars_proof(proof, paper, idx):
     Your job is to consistently rename variables and symbols throughout the proof (e.g., $x \\to u$, $S \\to T$) without changing the logic.
         Constraints:
         - Preserve correctness rigorously.
+        - DO NOT change any mathematical content.
+        - DO NOT change the ordering of logically dependent steps.
+        - DO NOT add or remove any steps.
         - Keep LaTeX notation consistent across the proof.
-        - DO NOT change any mathematical content or the ordering of logically dependent steps.
         Output ONLY the proof text, using latex for mathematical notations.
     
     ### Statement ###
@@ -113,8 +117,10 @@ def reorder_noncritical_proof(proof, paper, idx):
     You are given an academic paper, a statement in the paper and the proof of the statement extracted from the paper.
     Your job is to reorder independent steps or cases in the proof (e.g., present Case 2 before Case 1) without changing dependencies or the logical content.
         Constraints:
-        - DO NOT move a step before its prerequisites.
         - Preserve correctness rigorously.
+        - DO NOT change any mathematical content.
+        - DO NOT change the ordering of logically dependent steps.
+        - DO NOT add or remove any steps.
         - DO NOT change any mathematical content.
         Output ONLY the proof text, using latex for mathematical notations.
     
@@ -135,6 +141,9 @@ def expand_justifications_proof(proof, paper, idx):
     Your job is to expand terse parts of the proof by inserting short, rigorous justifications for steps that were previously implicit.
         Constraints:
         - Preserve correctness rigorously.
+        - DO NOT change any mathematical content.
+        - DO NOT change the ordering of logically dependent steps.
+        - DO NOT add or remove any steps.
         - DO NOT change any mathematical content.
         - Add only the minimal explanations necessary to clarify implicit steps.
         Output ONLY the proof text, using latex for mathematical notations.
@@ -157,7 +166,9 @@ def compress_justifications_proof(proof, paper, idx):
         Constraints:
         - Preserve correctness rigorously.
         - DO NOT change any mathematical content.
-        - DO NOT remove logically necessary steps.
+        - DO NOT change the ordering of logically dependent steps.
+        - DO NOT add or remove any necessary steps.
+        - DO NOT change any mathematical content.
         Output ONLY the proof text, using latex for mathematical notations.
     
     ### Statement ###
