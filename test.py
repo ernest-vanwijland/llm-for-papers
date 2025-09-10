@@ -15,7 +15,8 @@ ten_proofs = {
 }
 
 hundred_proofs = {
-    "2502.09440": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    "2502.09440": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    "2502.08328": [11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31, 32, 33, 34, 35]
 }
 
 def get_nb_proofs(proofs):
@@ -82,7 +83,9 @@ if __name__ == "__main__":
     #results = run_checker("one_proof")
     #save_results(results, "results_one_proof.json")
     
-    prepare_testcases(ten_proofs, "ten_proofs", 0)
+    # prepare_testcases(ten_proofs, "ten_proofs", 0)
+    
+    print(get_nb_proofs(hundred_proofs))
 
 
 
