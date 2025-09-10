@@ -7,12 +7,12 @@ from prompts import verification_system_prompt, verification_reminder
 import os
 
 testcase_counter = 0
-def save_testcase(paper, toprove, validity, comment, proof, subfolder, name = None):
+def save_testcase(paper, toprove, validity, comment, proof, name = None):
     global testcase_counter
     if name == None:
-        name = f"test/{subfolder}/testcase_{testcase_counter}.json"
+        name = f"test/testcase_{testcase_counter}.json"
     else:
-        name = f"test/{subfolder}/{name}_{testcase_counter}.json"
+        name = f"test/{name}_{testcase_counter}.json"
     testcase_counter += 1
     testcase = {
         "paper": paper,
@@ -32,28 +32,38 @@ def save_testcase(paper, toprove, validity, comment, proof, subfolder, name = No
         print(f"Error saving memory to {name}: {e}")
         return False
 
-def get_proof_type(paper, idx, proof):
-    prompt=f"""
+def load_original_proof(paper, idx, cache_dir="test"):
+    """Return any cached 'original' proof for (paper, idx) from test/*.json, or None"""
+    if not os.path.isdir(cache_dir):
+        return None
+    for name in os.listdir(cache_dir):
+        if not name.endswith(".json"):
+            continue
+        path = os.path.join(cache_dir, name)
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception:
+            continue
+        if data.get("paper") == paper and data.get("toprove") == idx and data.get("comment") == "original":
+            return data.get("proof")
+    return None
+
+def get_proof(paper, idx):
+    cached = load_original_proof(paper, idx)
+    if isinstance(cached, str) and cached.strip():
+        print("load cached proof")
+        return cached, False
+    prompt = f"""
     ### Instructions ###
-    You are given a mathematical proof from an academic paper. Your task is to classify the proof into exactly ONE of the following categories based on its dependencies and references.
-
-    ### Categories ###
-    1.  `self_contained`: The proof is entirely self-contained. All logic and justifications are present within the proof's text itself, without needing to refer to other parts of the paper or external documents.
-    2.  `internal_reference`: The proof explicitly refers to other numbered or named parts of the same paper. Examples include citing a Lemma, Theorem, Corollary, Equation, or Section (e.g., "by Lemma 3.1", "from Equation (5)", "as defined in Section 2").
-    3.  `figure_reference`: The proof's justification relies on a visual element like a figure, diagram, table, or schema within the paper (e.g., "as shown in Figure 2", "the construction in the diagram shows...").
-    4.  `external_reference`: The proof cites an external work, such as another research paper, a book, or a technical report (e.g., "by the result in [15]", "as shown by Smith et al. [2021]").
-
-    ### Task ###
-    Analyze the provided proof and determine which category it best fits. Choose the most specific category that applies. If multiple types of references exist, prioritize them in this order: `external_reference`, `figure_reference`, `internal_reference`, `self_contained`.
-
-    Output ONLY the single category label (e.g., `self_contained`, `internal_reference`, `figure_reference`, `external_reference`) and nothing else.
-
-    ### Proof ###
-    {proof}
+    
+    You are given an academic paper and one of the statements that appears in the paper. Your job is to return the proof of the statement as it appears in the paper, and nothing else. You will use latex for mathematical notations. You should provide the whole proof and make sure it is exactly the same as the one that appears in the paper. Sometimes, the proof might not be right after the statement in the paper.
+    
+    ### Statement ###
+    
+    {get_problem_statement(paper, idx)}
     """
-    type_of_proof = request([prompt], contents=[full(paper)]).strip()
-    save_proof_type(paper, idx, type_of_proof)
-    return type_of_proof
+    return request([prompt], contents = [full(paper)]), True
 
 def paraphrase_proof(proof, paper, idx):
     prompt = f"""
