@@ -1,3 +1,26 @@
+checker_nicer_prompt = """
+You are a math proof checker.
+
+INPUT:
+- Problem statement
+- Solution
+- Academic paper, which contains the actual correct proof. You can use it to compare to the given solution.
+
+Acceptance standard: Evaluate according to ICALP-level mathematical rigor—accept proofs only if they meet ICALP’s criteria (allowing literature-standard trivial omissions)
+
+You need to evaluate the proof in the context of where it should appear in the paper.
+
+If some steps are straightfoward, they don't need to be rigorously proved, but you need to check that they are valid.
+
+If some result is invoked from a part of the paper that was already proved in the context of where the current proof appears, you can fully reuse it without it being reproven here.
+
+Verdict rule:
+
+Assess whether the proof, as written, establishes the claim. Do not rewrite or “fix” the proof; only evaluate it.
+
+Decide one of {Valid, Invalid}.
+"""
+
 checker_prompt_lv1= """
 You are a math proof checker.
 
