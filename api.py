@@ -30,7 +30,8 @@ def request(prompts, system_prompt = "", model = "", contents=[]):
         'Content-Type': 'application/json',
         'x-goog-api-key': API_KEY
     }
-    parts = []
+    #parts = []
+    parts = [{"text": prompt} for prompt in prompts]
     for file_path in contents:
         if file_path and os.path.exists(file_path):
             try:
@@ -77,8 +78,8 @@ def request(prompts, system_prompt = "", model = "", contents=[]):
         }
         ]
     }
-    for prompt in prompts:
-        payload["contents"].append({"role": "user", "parts": [{"text": prompt}]})
+    #for prompt in prompts:
+    #    payload["contents"].append({"role": "user", "parts": [{"text": prompt}]})
 
     response = None
     cnt = 5

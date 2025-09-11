@@ -4,22 +4,23 @@ import json
 import os
 
 def full(paper):
-    return f"data/{paper}/paper.pdf"
+    return f"data/{paper}/full.pdf"
 
 def noproof(paper):
-    return f"data/{paper}/noproof/paper.pdf"
+    return f"data/{paper}/noproof.pdf"
 
 def init_memory(paper):
     memory_file = f"memory/memory_{paper}.json"
     os.makedirs("memory", exist_ok=True)
     if not os.path.exists(memory_file):
-        # os.mknod(memory_file)
         memory = {
+            "nbtoprove": -1,
             "statements": [],
+            "proofs": [],
             "solutions": [],
             "verifs": [],
             "grades": [],
-            "proof_support": [],
+            "proof_type": [],
             "timestamp": __import__('datetime').datetime.now().isoformat()
         }
         with open(memory_file, 'w', encoding='utf-8') as f:
@@ -63,6 +64,35 @@ def save_solution(paper, idx, solution):
     memory["solutions"][idx] = solution
     save_memory(paper, memory)
 
+def save_proof(paper, idx, proof):
+    memory = load_memory(paper)
+    while len(memory["proofs"]) <= idx:
+        memory["proofs"].append(None)
+    memory["proofs"][idx] = proof
+    save_memory(paper, memory)
+
+def get_proof(paper, idx):
+    memory = load_memory(paper)
+    if len(memory["proofs"]) > idx and memory["proofs"][idx] != None:
+        return memory["proofs"][idx]
+    
+    statement = get_problem_statement(paper, idx)
+    if statement == None:
+        return None
+    
+    prompt = f"""
+    ### Instructions ###
+    
+    You are given an academic paper and one of the statements that appears in the paper. Your job is to return the proof of the statement as it appears in the paper, and nothing else. You will use latex for mathematical notations. You should provide the whole proof and make sure it is exactly the same as the one that appears in the paper. Sometimes, the proof might not be right after the statement in the paper.
+    
+    ### Statement ###
+    
+    {statement}
+    """
+    proof = request([prompt], contents = [full(paper)])
+    save_proof(paper, idx, proof)
+    return proof
+
 def save_verif(paper, idx, verif):
     memory = load_memory(paper)
     while len(memory["verifs"]) <= idx:
@@ -83,18 +113,33 @@ def get_verif(paper, idx):
         return None
     return memory["verifs"][idx]
 
-def save_proof_support(paper, idx, proof_support):
+def save_proof_type(paper, idx, proof_type):
     memory = load_memory(paper)
-    while len(memory["proof_support"]) <= idx:
-        memory["proof_support"].append("")
-    memory["proof_support"][idx] = proof_support
+    while len(memory["proof_type"]) <= idx:
+        memory["proof_type"].append("")
+    memory["proof_type"][idx] = proof_type
     save_memory(paper, memory)
 
-def get_proof_support(paper, idx):
+def get_proof_type(paper, idx):
     memory = load_memory(paper)
-    if len(memory["proof_support"]) <= idx:
+    if len(memory["proof_type"]) <= idx:
         return None
-    return memory["proof_support"][idx]
+    return memory["proof_type"][idx]
+
+def save_toprove(paper, x):
+    memory = load_memory(paper)
+    memory["nbtoprove"] = x
+    while len(memory["statements"]) < x:
+        memory["statements"].append(None)
+    save_memory(paper, memory)
+
+def get_toprove(paper):
+    memory = load_memory(paper)
+    x = memory["nbtoprove"]
+    if x == -1:
+        x = int(request([number_of_toprove_prompt], contents = [noproof(paper)]))
+        save_toprove(paper, x)
+    return x
 
 def get_problem_statement(paper, idx):
     memory = load_memory(paper)
@@ -103,7 +148,7 @@ def get_problem_statement(paper, idx):
             memory["statements"].append(None)
         statement = request([problem_statement_prompt + str(idx)], contents = [noproof(paper)])
         if statement == "NONE":
-            return "NONE"
+            return None
         memory["statements"][idx] = statement
         save_memory(paper, memory)
     return memory["statements"][idx]

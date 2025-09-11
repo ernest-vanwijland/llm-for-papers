@@ -112,3 +112,7 @@ Your task is to verify that this is a valid proof of the statement in the contex
 problem_statement_prompt = """
 You are reading the attached paper and you are given a value IDX. Your job is to identify the statement of the claim that is proved in the proof that was replaced by TOPROVE IDX. You need to output juste the statement of the claim, using latex notation for mathematical characters. If NOPROVE IDX does not appear in the paper, just output NONE and nothing else. The value of IDX is: 
 """
+
+number_of_toprove_prompt = """
+You are given an academic article. You must count how many times the string "TOPROVE" appears in the article, and output just that number and nothing else.
+"""
