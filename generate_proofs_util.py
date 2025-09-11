@@ -13,6 +13,9 @@ def save_testcase(paper, toprove, validity, comment, proof, subfolder, name = No
         name = f"test/{subfolder}/testcase_{testcase_counter}.json"
     else:
         name = f"test/{subfolder}/{name}_{testcase_counter}.json"
+    if proof == None:
+        print(f"Empty proof for {name}.")
+        return
     testcase_counter += 1
     testcase = {
         "paper": paper,
