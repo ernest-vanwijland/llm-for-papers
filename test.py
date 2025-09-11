@@ -59,9 +59,9 @@ def load_testcase(testcase_file):
         #print(f"Error loading testcase from {testcase_file}: {e}")
         return None
 
-def run_checker(subfolder):
+def run_checker(testcases, CHECKER):
     results = {}
-    testcase_files = glob.glob(f"test/{subfolder}/*")
+    testcase_files = glob.glob(f"test/{testcases}/*")
     nb_testcases = len(testcase_files)
     cnt = 1
     for testcase_file in testcase_files:
@@ -70,7 +70,7 @@ def run_checker(subfolder):
         testcase = load_testcase(testcase_file)
         if testcase == None:
             continue
-        results[testcase_file] = checker(testcase["paper"], testcase["toprove"], testcase["proof"])
+        results[testcase_file] = CHECKER(testcase["paper"], testcase["toprove"], testcase["proof"])
     return results
 
 def save_results(results, results_file):
@@ -80,12 +80,18 @@ def save_results(results, results_file):
 
 if __name__ == "__main__":
     #prepare_testcases(one_proof, "one_proof", 0)
-    #results = run_checker("one_proof")
+    # results = run_checker("one_proof", checker)
     #save_results(results, "results_one_proof.json")
     
-    # prepare_testcases(ten_proofs, "ten_proofs", 0)
+    #prepare_testcases(ten_proofs, "ten_proofs", 0)
     
-    print(get_nb_proofs(hundred_proofs))
+    #print(get_nb_proofs(hundred_proofs))
+    
+    # @ Julien:
+    # en gros si tu peux mettre tes fonctions dans le fichier checker.py et faire:
+    # results1 = run_checker("ten_proofs_small", checker1)
+    # save_results(results1, "results1.json")
+    # etc pour chacun de tes checker, ca serait parfait
 
 
 

@@ -82,10 +82,10 @@ def request(prompts, system_prompt = "", model = "", contents=[]):
     #    payload["contents"].append({"role": "user", "parts": [{"text": prompt}]})
 
     response = None
-    cnt = 5
-    while response == None and cnt > 0:
-        cnt -= 1
-        print("Sending request to Gemini API...")
+    cnt = 1
+    while response == None and cnt <= 5:
+        print(f"Sending request to Gemini API... (attempt {cnt} of 5)")
+        cnt += 1
         try:
             response = requests.post(API_URL, headers=headers, data=json.dumps(payload))
             
@@ -112,26 +112,6 @@ def request(prompts, system_prompt = "", model = "", contents=[]):
             print("--------------------------------\n")
             response = None
     return extract_text_from_response(response)
-
-def run_examples():
-    if API_KEY == "YOUR_API_KEY_HERE":
-        print("="*50)
-        print("!!! IMPORTANT !!!")
-        print("Please replace 'YOUR_API_KEY_HERE' with your actual Gemini API key.")
-        print("="*50)
-        return
-    
-    image_path = "example_image.png"
-    image_prompt = "Describe this image."
-
-    if os.path.exists(image_path):
-        image_text_response = request([image_prompt], contents=[image_path])
-        if image_text_response:
-            print("\n--- Gemini's Response (Single Image) ---")
-            print(image_text_response)
-            print("------------------------------------------\n")
-    else:
-        print(f"Skipping single image example because the file was not found or created.")
 
 def get_file_paths(folder_path):
     file_paths = []
@@ -160,21 +140,6 @@ def list_papers(folder_path: str):
     except FileNotFoundError:
         print(f"Error: Directory not found at '{folder_path}'")
         return None
-
-if __name__ == "__main__":
-    run_examples()
-    prompt = "You are a university professor and an expert mathematician and algorithmician. Your job is to write the proof where TOPROVE 1 is written. Do not read the article after that point. You need to understand the article until TOPROVE 1 to understand what the claim to prove is. Make sure your proof is rigorous and correctly proves the desired claim. Your proof cannot use the statement of the claim it needs to prove to prove itself, and it cannot use any element that is not yet proved. Provide your answer as a Latex code snippet that I can copy paste into an overleaf document, make sure it compiles correctly. Just provide the proof of TOPROVE 1 and nothing else."
-    
-    prompt = "You are a university professor and an expert mathematician and algorithmician. Your job is to understand the article until TOPROVE 1, do not read anything that comes after. Then, you need to output a latex code snippet that compiles correctly that contains just the statement of the result of which TOPROVE 1 replaces the proof, and nothing else."
-    
-    
-    files=["data/2407.02412/noproof/paper.pdf"]
-    
-    if os.path.exists(files[0]):
-        text_response = request([prompt], contents = files)
-        print(text_response)
-    else:
-        print(f"File not found")
 
 
 
