@@ -36,6 +36,7 @@ def checker(paper, idx, solution, system_prompt_arg = verification_system_prompt
     
     grade = int(raw_grade)
     return grade
+
 def checker_lv1(paper, idx, solution, system_prompt_arg = checker_prompt_lv1):
     """ this is the main checker function """
     statement = get_problem_statement(paper, idx)
@@ -69,6 +70,7 @@ def checker_lv1(paper, idx, solution, system_prompt_arg = checker_prompt_lv1):
     
     grade = int(raw_grade)
     return grade
+
 def checker_lv2(paper, idx, solution, system_prompt_arg = checker_prompt_lv2):
     """ this is the main checker function """
     statement = get_problem_statement(paper, idx)
@@ -102,6 +104,7 @@ def checker_lv2(paper, idx, solution, system_prompt_arg = checker_prompt_lv2):
     
     grade = int(raw_grade)
     return grade
+
 def checker_lv3_adv(paper, idx, solution, system_prompt_arg = checker_prompt_lv3_adversarial):
     """ this is the main checker function """
     statement = get_problem_statement(paper, idx)
@@ -135,6 +138,7 @@ def checker_lv3_adv(paper, idx, solution, system_prompt_arg = checker_prompt_lv3
     
     grade = int(raw_grade)
     return grade
+
 def checker_lv3_speK(paper, idx, solution, system_prompt_arg = checker_prompt_lv3_specifique_knowledge):
     """ this is the main checker function """
     statement = get_problem_statement(paper, idx)
@@ -168,6 +172,7 @@ def checker_lv3_speK(paper, idx, solution, system_prompt_arg = checker_prompt_lv
     
     grade = int(raw_grade)
     return grade
+
 def verify_solution(paper, idx):
     statement = get_problem_statement(paper, idx)
     solution = extract_detailed_solution(get_solution(paper, idx))
@@ -211,7 +216,7 @@ def grade_once(paper, idx):
     prompt += detailed_verif
     grade = int(request([prompt], contents=[]))
     return grade
-   
+
 def grade_idx(paper, idx, nbVerifs = 1):
     grade = 0
     for _ in range(nbVerifs):

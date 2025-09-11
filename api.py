@@ -98,9 +98,7 @@ def request(prompts, system_prompt = "", model = "", contents=[]):
     cnt = 1
     max_retries = 2
     while response == None and API_KEYS_USED != None :
-        time.sleep(2.5)
         while response == None and cnt <= max_retries :
-            time.sleep(1)
             print(f"Sending request to Gemini API... (attempt {cnt} of {max_retries})")
             cnt += 1
             try:
