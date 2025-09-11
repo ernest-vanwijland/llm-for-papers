@@ -1,8 +1,9 @@
 from api import *
 from pipeline_util import *
 from prompts import *
+from prompts_checker import *
 
-def checker(paper, idx, solution):
+def checker(paper, idx, solution, system_prompt_arg = verification_system_prompt):
     """ this is the main checker function """
     statement = get_problem_statement(paper, idx)
     prompt = f"""
@@ -17,7 +18,7 @@ def checker(paper, idx, solution):
     {verification_reminder}
     """
     
-    detailed_verif = request([prompt], system_prompt = verification_system_prompt, contents = [full(paper)])
+    detailed_verif = request([prompt], system_prompt = system_prompt_arg, contents = [full(paper)])
     
     prompt = f"""
     ### Instructions ###
@@ -35,7 +36,138 @@ def checker(paper, idx, solution):
     
     grade = int(raw_grade)
     return grade
-
+def checker_lv1(paper, idx, solution, system_prompt_arg = checker_prompt_lv1):
+    """ this is the main checker function """
+    statement = get_problem_statement(paper, idx)
+    prompt = f"""
+    ### Problem ###
+    
+    {statement}
+    
+    ### Solution ###
+    
+    {solution}
+    
+    {verification_reminder}
+    """
+    
+    detailed_verif = request([prompt], system_prompt = system_prompt_arg, contents = [full(paper)])
+    
+    prompt = f"""
+    ### Instructions ###
+    
+    You are given a detailed verification log of a mathematical proof, with a verdict on its validity. You need to ouput just one number and nothing else, either 0 or 1. You need to output 0 if the proof is invalid or incomplete in any way. If and only if the verdict says the proof is completely correct, output 1.
+    
+    ### Verification log: ###
+    
+    {detailed_verif}
+    """
+    
+    raw_grade = request([prompt], contents = [])
+    if raw_grade == None or raw_grade.strip() not in ["0", "1"]:
+        return -1
+    
+    grade = int(raw_grade)
+    return grade
+def checker_lv2(paper, idx, solution, system_prompt_arg = checker_prompt_lv2):
+    """ this is the main checker function """
+    statement = get_problem_statement(paper, idx)
+    prompt = f"""
+    ### Problem ###
+    
+    {statement}
+    
+    ### Solution ###
+    
+    {solution}
+    
+    {verification_reminder}
+    """
+    
+    detailed_verif = request([prompt], system_prompt = system_prompt_arg, contents = [full(paper)])
+    
+    prompt = f"""
+    ### Instructions ###
+    
+    You are given a detailed verification log of a mathematical proof, with a verdict on its validity. You need to ouput just one number and nothing else, either 0 or 1. You need to output 0 if the proof is invalid or incomplete in any way. If and only if the verdict says the proof is completely correct, output 1.
+    
+    ### Verification log: ###
+    
+    {detailed_verif}
+    """
+    
+    raw_grade = request([prompt], contents = [])
+    if raw_grade == None or raw_grade.strip() not in ["0", "1"]:
+        return -1
+    
+    grade = int(raw_grade)
+    return grade
+def checker_lv3_adv(paper, idx, solution, system_prompt_arg = checker_prompt_lv3_adversarial):
+    """ this is the main checker function """
+    statement = get_problem_statement(paper, idx)
+    prompt = f"""
+    ### Problem ###
+    
+    {statement}
+    
+    ### Solution ###
+    
+    {solution}
+    
+    {verification_reminder}
+    """
+    
+    detailed_verif = request([prompt], system_prompt = system_prompt_arg, contents = [full(paper)])
+    
+    prompt = f"""
+    ### Instructions ###
+    
+    You are given a detailed verification log of a mathematical proof, with a verdict on its validity. You need to ouput just one number and nothing else, either 0 or 1. You need to output 0 if the proof is invalid or incomplete in any way. If and only if the verdict says the proof is completely correct, output 1.
+    
+    ### Verification log: ###
+    
+    {detailed_verif}
+    """
+    
+    raw_grade = request([prompt], contents = [])
+    if raw_grade == None or raw_grade.strip() not in ["0", "1"]:
+        return -1
+    
+    grade = int(raw_grade)
+    return grade
+def checker_lv3_speK(paper, idx, solution, system_prompt_arg = checker_prompt_lv3_specifique_knowledge):
+    """ this is the main checker function """
+    statement = get_problem_statement(paper, idx)
+    prompt = f"""
+    ### Problem ###
+    
+    {statement}
+    
+    ### Solution ###
+    
+    {solution}
+    
+    {verification_reminder}
+    """
+    
+    detailed_verif = request([prompt], system_prompt = system_prompt_arg, contents = [full(paper)])
+    
+    prompt = f"""
+    ### Instructions ###
+    
+    You are given a detailed verification log of a mathematical proof, with a verdict on its validity. You need to ouput just one number and nothing else, either 0 or 1. You need to output 0 if the proof is invalid or incomplete in any way. If and only if the verdict says the proof is completely correct, output 1.
+    
+    ### Verification log: ###
+    
+    {detailed_verif}
+    """
+    
+    raw_grade = request([prompt], contents = [])
+    if raw_grade == None or raw_grade.strip() not in ["0", "1"]:
+        return -1
+    
+    grade = int(raw_grade)
+    return grade
 def verify_solution(paper, idx):
     statement = get_problem_statement(paper, idx)
     solution = extract_detailed_solution(get_solution(paper, idx))

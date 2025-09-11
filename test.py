@@ -2,9 +2,10 @@ from api import *
 from memory_util import *
 from generate_proofs import *
 from checker import *
+from prompts_checker import *
 import os
 import glob
-
+import multiprocessing
 one_proof = {
     "2407.02412": [1]
 }
@@ -73,12 +74,60 @@ def run_checker(testcases, CHECKER):
         results[testcase_file] = CHECKER(testcase["paper"], testcase["toprove"], testcase["proof"])
     return results
 
+def run_checker_on_specific(testcases, CHECKER, paper_id, proof_indices):
+    results = {}
+    testcase_files = glob.glob(f"test/{testcases}/*")
+    
+    filtered_files = []
+    for testcase_file in testcase_files:
+        testcase = load_testcase(testcase_file)
+        if testcase is None:
+            continue
+
+        # Appliquer le filtrage
+        if testcase.get("paper") == paper_id and testcase.get("toprove") in proof_indices:
+            filtered_files.append(testcase_file)
+
+    nb_testcases = len(filtered_files)
+    if nb_testcases == 0:
+        print(f"No testcases found for paper {paper_id} and proofs {proof_indices}")
+        return results
+
+    cnt = 1
+    for testcase_file in filtered_files:
+        print(f"Running checker on {testcase_file} ({cnt} of {nb_testcases})")
+        cnt += 1
+        testcase = load_testcase(testcase_file)
+        if testcase is None: # Re-check in case file was deleted
+            continue
+        results[testcase_file] = CHECKER(testcase["paper"], testcase["toprove"], testcase["proof"])
+    return results
+
 def save_results(results, results_file):
     results_file = f"results/{results_file}"
+    print(f"Saving results to {results_file}")
     with open(results_file, 'w', encoding='utf-8') as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
 
+def run_and_save_task(args):
+    """
+    Worker function to run the checker on a single proof and save the result.
+    """
+    print(f"--- Starting task with args: {args} ---")
+    paper_to_check, proof_index, checker_use, dossier = args
+    checker_name = checker_use.__name__
+    print(f"--- Starting check for paper {paper_to_check}, proof {proof_index} with {checker_name} ---")
+    results = run_checker_on_specific(dossier, checker_use, paper_id=paper_to_check, proof_indices=[proof_index])
+    save_results(results, f"article_{paper_to_check}_results_{checker_name}_{proof_index}.json")
+    print(f"--- Finished check for paper {paper_to_check}, proof {proof_index} ---")
+    
+
 if __name__ == "__main__":
+    
+    API_KEYS_SET_USED = API_KEY_SET1
+    API_KEYS_USED = API_KEYS_SET_USED[0]
+
+    print(API_KEYS_SET_USED, API_KEYS_USED)
     #prepare_testcases(one_proof, "one_proof", 0)
     # results = run_checker("one_proof", checker)
     #save_results(results, "results_one_proof.json")
@@ -87,13 +136,37 @@ if __name__ == "__main__":
     
     #print(get_nb_proofs(hundred_proofs))
     
-    # @ Julien:
-    # en gros si tu peux mettre tes fonctions dans le fichier checker.py et faire:
-    # results1 = run_checker("ten_proofs_small", checker1)
-    # save_results(results1, "results1.json")
+
+    
+    # checker_use = checker_lv2
+    
+    # results1 = run_checker_on_specific(dossier, checker_use, paper_id=paper_to_check, proof_indices=proofs_to_check)
+    # save_results(results1, f"article_{paper_to_check}_results_lv1_checker_{'_'.join(map(str, proofs_to_check))}.json")
+    checker_use = checker_lv1
+    # checker_use = checker_lv2
+    dossier = "ten_proofs"
+    checker_name = checker_use.__name__
+
+    # Définir les tâches à exécuter
+    papers_and_proofs = {
+        "2502.08328": [31, 32, 33, 34, 35],
+        "2502.09440": [1, 2, 3, 4, 5]
+    }
+
+
+    print("\n--- SETUP FOR PARALLEL EXECUTION ---")
+    tasks = []
+    for paper, proofs in papers_and_proofs.items():
+        for proof_idx in proofs:
+            tasks.append((paper, proof_idx, checker_use, dossier))
+    
+    num_processes = min(len(tasks), os.cpu_count() or 1)
+    print(f"Starting parallel processing with {num_processes} processes...")
+    with multiprocessing.Pool(processes=num_processes) as pool:
+        pool.map(run_and_save_task, tasks)
+    print("All parallel tasks completed.")
+
     # etc pour chacun de tes checker, ca serait parfait
-
-
 
 
 
