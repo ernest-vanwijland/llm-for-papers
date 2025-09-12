@@ -59,6 +59,7 @@ def get_proof_type(paper, idx, proof):
     return type_of_proof
 # --------------------------------------------------------------
 def paraphrase_proof(proof, paper, idx):
+    
     prompt = f"""
     ### Instructions ###
     You are given an academic paper, a statement in the paper and the proof of the statement extracted from the paper.
@@ -83,25 +84,31 @@ def paraphrase_proof(proof, paper, idx):
 
 def switch_noncritical_proof(proof, paper, idx):
     prompt = f"""
-    ### Instructions ###
-    You are given an academic paper, a statement in the paper and the proof of the statement extracted from the paper.
-    Your job is to reorder independent steps or cases in the proof (e.g., present Case 2 before Case 1) without changing dependencies or the logical content.
-        Constraints:
-        - Preserve correctness rigorously.
-        - DO NOT change any mathematical content.
-        - DO NOT change the ordering of logically dependent steps.
-        - DO NOT add or remove any steps.
-        - DO NOT change any mathematical content.
-        Output ONLY the proof text, using latex for mathematical notations.
-    
-    ### Statement ###
-    
-    {get_problem_statement(paper, idx)}
-    
-    ### Proof ###
-    
-    {proof}
-    """
+### Instructions ###
+You are given an academic paper, a statement, and its proof extracted from the paper.
+Your task is to REORDER **at least one** pair of **independent** units in the proof so that the order of the output differs from the input, while preserving all dependencies and mathematical content.
+
+**Movable units (examples):**
+- Whole case blocks (“Case 1/2/...”) that do not depend on each other;
+- Symmetric subarguments on disjoint sets or by symmetry A/B;
+- Independent lemmas/claims proved in parallel and used only later jointly;
+- Standalone reminders/definitions not used by each other.
+
+**Rules:**
+1) **Dependency safety:** Never move a unit before anything it depends on (uses a result/equation/assumption/definition introduced earlier).
+2) **Minimal change:** Perform exactly one small permutation (swap two units or reorder a short list). If no block-level swap exists, **fallback**: swap two adjacent independent sentences (e.g., two parallel checks). The output MUST differ.
+3) **No edits:** Keep all text and equations verbatim; only move units. Do not paraphrase, add, or delete content.
+4) **Labels:** If needed, adjust only superficial labels (“Case 1/Case 2”) to remain consistent; do not change references or mathematics.
+
+Output ONLY the proof text, using LaTeX for mathematical notations.
+
+### Statement ###
+{get_problem_statement(paper, idx)}
+
+### Proof ###
+{proof}
+"""
+
     return request([prompt], contents = [full(paper)])
 
 def rename_vars_proof(proof, paper, idx):
@@ -199,24 +206,33 @@ def hallucination_proof(proof, paper, idx):
 def suppress_critical_paragraph_proof(proof, paper, idx):
 
     prompt = f"""
-    ### Instructions ###
-    You are given an academic paper, a statement in the paper and the proof of the statement extracted from the paper.
-    Your job is to remove one or more consecutive sentences that form a logically critical paragraph, creating a fatal gap in the proof while keeping it superficially plausible.
-    The number of sentences to remove must be sufficient to create a fatal gap in the proof that cannot be repaired with data from the paper.
-        Constraints:
-        - DO NOT add new arguments that would repair the gap.
-        - Keep the rest of the proof intact and plausible.
-        - Ensure the resulting proof is invalid.
-        Output ONLY the proof text, using latex for mathematical notations.
-    
-    ### Statement ###
-    
-    {get_problem_statement(paper, idx)}
-    
-    ### Proof ###
-    
-    {proof}
-    """
+### Instructions ###
+You are given an academic paper, a statement, and its proof extracted from the paper.
+Your task is to DELETE exactly one **consecutive** block so that the remaining proof looks superficially plausible but is **logically invalid** (a fatal, unrecoverable gap).
+
+**Selection criteria (all required):**
+1) **Critical bridge:** The block you delete is strictly necessary for a later step (e.g., a key bound, lemma application, existence/expansion/coupling, or counting/union-bound argument).
+2) **Dependency break:** After deletion, at least one later sentence still relies on the deleted conclusion, making the proof invalid.
+3) **Non-recoverability:** The missing content cannot be reconstructed from earlier definitions or trivial algebra elsewhere in the paper.
+4) **Size:** Remove ≥ 2 sentences, OR at least one displayed equation **plus** its immediate textual justification.
+
+**Do NOT:**
+- Do not add, edit, paraphrase, or reorder any remaining text.
+- Do not add placeholders or comments.
+- Do not fix references/labels; keep the rest verbatim so the reliance remains visible.
+
+**Coherence requirement:**
+Keep the proof flowing and natural despite the deletion; the remaining text should still read smoothly, while the conclusion is no longer logically supported.
+
+Output ONLY the proof text, using LaTeX for mathematical notations.
+
+### Statement ###
+{get_problem_statement(paper, idx)}
+
+### Proof ###
+{proof}
+"""
+
     return request([prompt], contents = [full(paper)])
 
 def add_error_step_proof(proof, paper, idx):

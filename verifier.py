@@ -26,6 +26,7 @@ Verdict rule:
 Assess whether the proof, as written, establishes the claim. Do not rewrite or “fix” the proof; only evaluate it.
 
 You need to ouput just one number and nothing else, either 0 or 1. You need to output 0 if the proof is invalid in any way. If and only if the verdict says the proof is valid, output 1.
+
 """
 
 def verify(paper, idx, solution, system_prompt = verifier_prompt):
@@ -46,11 +47,13 @@ def verify(paper, idx, solution, system_prompt = verifier_prompt):
     """
     
     raw_grade = request([prompt], system_prompt = system_prompt, contents = [full(paper)])
-    
-    if raw_grade == None or raw_grade.strip() not in ["0", "1"]:
+
+    if (raw_grade == None) or isinstance(raw_grade[0], str) or ((raw_grade.strip() not in ["0", "1"]) and (raw_grade[0] not in ["0", "1"]) and (int(raw_grade[0]) not in [0, 1])):
+        print(raw_grade[0], raw_grade[0] not in [0, 1], raw_grade[0] not in ["0", "1"], raw_grade.strip() not in ["0", "1"], int(raw_grade[0]) not in [0, 1])
+        print(f"Verifier returned invalid output: {raw_grade}")
         return -1
     
-    grade = int(raw_grade)
+    grade = int(raw_grade[0])
     return grade
 
 def verifier(paper, idx, solution):

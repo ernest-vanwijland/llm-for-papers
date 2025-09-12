@@ -6,8 +6,8 @@ import os
 import time
 from pathlib import Path
 
-API_KEY = os.environ.get("GEMINI_API_KEY")
-
+API_KEY = os.environ.get("GEMINI_API_KEY_2")
+API_DRY_RUN = False
 # MODEL_NAME = "gemini-1.5-flash-latest"
 MODEL_NAME = "gemini-2.5-pro"
 API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent"
@@ -27,6 +27,10 @@ def extract_text_from_response(api_response):
         return None
 
 def request(prompts, system_prompt = "", model = "", contents=[]):
+    if API_DRY_RUN:
+        print("[DRY RUN] skipping Gemini call")
+        time.sleep(3)
+        return "Dry run response"
     global API_KEY
     headers = {
         'Content-Type': 'application/json',

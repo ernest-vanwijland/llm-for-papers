@@ -6,6 +6,7 @@ from presentation import *
 import os
 import glob
 import multiprocessing
+import concurrent.futures
 
 one_proof = {
     "2407.02412": [1]
@@ -114,10 +115,10 @@ def run_checker_parallel(testcases, CHECKER, num_processes=50):
 
 def run_checker_on_specific(testcases, CHECKER, paper, indices):
     results = {}
-    testcase_files = glob.glob(f"test/{testcases}/*")
+    all_testcase_files = glob.glob(f"test/{testcases}/*")
     
     filtered_files = []
-    for testcase_file in testcase_files:
+    for testcase_file in all_testcase_files:
         testcase = load_testcase(testcase_file)
         if testcase is None:
             continue
@@ -125,24 +126,21 @@ def run_checker_on_specific(testcases, CHECKER, paper, indices):
         if testcase.get("paper") == paper and testcase.get("toprove") in indices:
             filtered_files.append(testcase_file)
 
-    nb_testcases = len(filtered_files)
-    if nb_testcases == 0:
+    if not filtered_files:
         print(f"No testcases found for paper {paper} and TOPROVE {indices}")
         return results
 
-    cnt = 1
     for testcase_file in filtered_files:
-        print(f"Running checker on {testcase_file} ({cnt} of {nb_testcases})")
-        cnt += 1
-        testcase = load_testcase(testcase_file)
-        if testcase is None:
-            continue
-        results[testcase_file] = CHECKER(testcase["paper"], testcase["toprove"], testcase["proof"])
+        filename, result = run_checker_on_file(testcase_file, CHECKER)
+        if result is not None:
+            results[filename] = result
+            
     return results
 
 def save_results(results, results_file):
     results_file = f"results/{results_file}"
     print(f"Saving results to {results_file}")
+    os.makedirs(os.path.dirname(results_file), exist_ok=True)
     with open(results_file, 'w', encoding='utf-8') as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
 
@@ -158,43 +156,54 @@ def run_and_save(args):
     save_results(results, f"results_{paper}_{idx}_{checker_name}.json")
     print(f"--- Finished check for paper {paper}, TOPROVE {idx} ---")
 
-def run_full_parallel(papers_and_proofs, testcases, CHECKER, num_processes=50):
+def run_checker_on_file(testcase_file, CHECKER):
     """
-    Runs tasks in parallel by creating a new process for each task, up to a limit managed by a semaphore.
-    :param num_processes: The maximum number of processes to run at once. Defaults to 50.
+    Worker function to run the checker on a single testcase file.
     """
-    tasks = []
-    for paper, toprove in papers_and_proofs.items():
-        for idx in toprove:
-            tasks.append((paper, idx, CHECKER, testcases))
+    print(f"Running checker on {testcase_file}")
+    testcase = load_testcase(testcase_file)
+    if testcase:
+        result = CHECKER(testcase["paper"], testcase["toprove"], testcase["proof"])
+        return testcase_file, result
+    return testcase_file, None
+
+def run_full_parallel(papers_and_proofs, testcases, CHECKER, max_workers=60):
+    """
+    Runs the checker in parallel for all relevant test cases using a thread pool.
+    :param max_workers: The maximum number of threads to run at once. Defaults to 60.
+    """
+    all_testcase_files = glob.glob(f"test/{testcases}/*")
     
-    semaphore = multiprocessing.Semaphore(num_processes)
-    processes = []
+    # Filter files based on papers_and_proofs
+    tasks = []
+    for testcase_file in all_testcase_files:
+        testcase = load_testcase(testcase_file)
+        if testcase and testcase.get("paper") in papers_and_proofs and testcase.get("toprove") in papers_and_proofs[testcase.get("paper")]:
+            tasks.append(testcase_file)
+    print(f"Starting parallel processing with {len(tasks)} processes...{tasks} ")
+    results = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_file = {executor.submit(run_checker_on_file, file, CHECKER): file for file in tasks}
+        for future in concurrent.futures.as_completed(future_to_file):
+            file = future_to_file[future]
+            try:
+                filename, result = future.result()
+                if result is not None:
+                    results[filename] = result
+            except Exception as exc:
+                print(f'{file} generated an exception: {exc}')
 
-    def worker(task):
-        try:
-            run_and_save(task)
-        finally:
-            semaphore.release()
-
-    for task in tasks:
-        semaphore.acquire()
-        process = multiprocessing.Process(target=worker, args=(task,))
-        processes.append(process)
-        process.start()
-
-    # Wait for all processes to complete
-    for process in processes:
-        process.join()
-
+    checker_name = CHECKER.__name__
+    save_results(results, f"results_{testcases}_{checker_name}.json")
     print("All parallel tasks completed.")
 
 def run_parallel(papers_and_proofs, testcases, CHECKER):
     tasks = []
     for paper, toprove in papers_and_proofs.items():
         for idx in toprove:
+            print(f"Preparing task for paper {paper}, TOPROVE {idx}")
             tasks.append((paper, idx, CHECKER, testcases))
-    
+    print(os.cpu_count())
     num_processes = min(len(tasks), os.cpu_count() or 1)
     print(f"Starting parallel processing with {num_processes} processes...")
     with multiprocessing.Pool(processes = num_processes) as pool:
@@ -213,18 +222,18 @@ if __name__ == "__main__":
     proof = {
         "2502.09440": [1]
     }
-    
-    run_full_parallel(ten_proofs, "ten_proofs", checker_lv1_aclm)
-    compile_results(checker_lv1_aclm)
+    # run_parallel(ten_proofs, "ten_proofs", verify)
+    run_full_parallel(ten_proofs, "ten_proofs", verifier)
+    compile_results(verifier)
 
-    run_parallel(one_proof, "one_proof", verifier)
+    
     
     #compile_results(checker)
     #compile_results(checker_lv1)
     #compile_results(checker_lv2)
     #compile_results(checker_lv3_adv)
     #compile_results(majority_nicer)
-    compile_results(verifier)
+    # compile_results(verifier)
 
 
 
