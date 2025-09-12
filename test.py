@@ -76,6 +76,43 @@ def run_checker(testcases, CHECKER):
         results[testcase_file] = CHECKER(testcase["paper"], testcase["toprove"], testcase["proof"])
     return results
 
+def run_and_collect_result(testcase_file, CHECKER, results):
+    """
+    Worker function to run the checker on a single testcase file and store the result.
+    """
+    print(f"Running checker on {testcase_file}")
+    testcase = load_testcase(testcase_file)
+    if testcase:
+        results[testcase_file] = CHECKER(testcase["paper"], testcase["toprove"], testcase["proof"])
+
+def run_checker_parallel(testcases, CHECKER, num_processes=50):
+    """
+    Runs the checker in parallel for all test cases in a given folder, using a semaphore.
+    """
+    manager = multiprocessing.Manager()
+    results = manager.dict()
+    testcase_files = glob.glob(f"test/{testcases}/*")
+    semaphore = multiprocessing.Semaphore(num_processes)
+    processes = []
+
+    def worker(testcase_file, CHECKER, results_dict):
+        try:
+            run_and_collect_result(testcase_file, CHECKER, results_dict)
+        finally:
+            semaphore.release()
+
+    for testcase_file in testcase_files:
+        semaphore.acquire()
+        process = multiprocessing.Process(target=worker, args=(testcase_file, CHECKER, results))
+        processes.append(process)
+        process.start()
+
+    for process in processes:
+        process.join()
+
+    print("All parallel checker tasks completed.")
+    return dict(results)
+
 def run_checker_on_specific(testcases, CHECKER, paper, indices):
     results = {}
     testcase_files = glob.glob(f"test/{testcases}/*")
@@ -122,6 +159,37 @@ def run_and_save(args):
     save_results(results, f"results_{paper}_{idx}_{checker_name}.json")
     print(f"--- Finished check for paper {paper}, TOPROVE {idx} ---")
 
+def run_full_parallel(papers_and_proofs, testcases, CHECKER, num_processes=50):
+    """
+    Runs tasks in parallel by creating a new process for each task, up to a limit managed by a semaphore.
+    :param num_processes: The maximum number of processes to run at once. Defaults to 50.
+    """
+    tasks = []
+    for paper, toprove in papers_and_proofs.items():
+        for idx in toprove:
+            tasks.append((paper, idx, CHECKER, testcases))
+    
+    semaphore = multiprocessing.Semaphore(num_processes)
+    processes = []
+
+    def worker(task):
+        try:
+            run_and_save(task)
+        finally:
+            semaphore.release()
+
+    for task in tasks:
+        semaphore.acquire()
+        process = multiprocessing.Process(target=worker, args=(task,))
+        processes.append(process)
+        process.start()
+
+    # Wait for all processes to complete
+    for process in processes:
+        process.join()
+
+    print("All parallel tasks completed.")
+
 def run_parallel(papers_and_proofs, testcases, CHECKER):
     tasks = []
     for paper, toprove in papers_and_proofs.items():
@@ -147,12 +215,9 @@ if __name__ == "__main__":
         "2502.09440": [1]
     }
     
-    # run_parallel(ten_proofs, "ten_proofs", checker)
-    
-    compile_results(checker)
-    compile_results(checker_lv1)
-    compile_results(checker_lv2)
-    compile_results(checker_lv3_adv)
+    run_full_parallel(ten_proofs, "ten_proofs", checker_lv1_aclm)
+    compile_results(checker_lv1_aclm)
+
 
 
 

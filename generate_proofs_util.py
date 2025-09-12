@@ -57,7 +57,7 @@ def get_proof_type(paper, idx, proof):
     type_of_proof = request([prompt], contents=[full(paper)]).strip()
     save_proof_type(paper, idx, type_of_proof)
     return type_of_proof
-
+# --------------------------------------------------------------
 def paraphrase_proof(proof, paper, idx):
     prompt = f"""
     ### Instructions ###
@@ -81,17 +81,17 @@ def paraphrase_proof(proof, paper, idx):
     """
     return request([prompt], contents = [full(paper)])
 
-def rename_vars_proof(proof, paper, idx):
+def switch_noncritical_proof(proof, paper, idx):
     prompt = f"""
     ### Instructions ###
     You are given an academic paper, a statement in the paper and the proof of the statement extracted from the paper.
-    Your job is to consistently rename variables and symbols throughout the proof (e.g., $x \\to u$, $S \\to T$) without changing the logic.
+    Your job is to reorder independent steps or cases in the proof (e.g., present Case 2 before Case 1) without changing dependencies or the logical content.
         Constraints:
         - Preserve correctness rigorously.
         - DO NOT change any mathematical content.
         - DO NOT change the ordering of logically dependent steps.
         - DO NOT add or remove any steps.
-        - Keep LaTeX notation consistent across the proof.
+        - DO NOT change any mathematical content.
         Output ONLY the proof text, using latex for mathematical notations.
     
     ### Statement ###
@@ -104,17 +104,17 @@ def rename_vars_proof(proof, paper, idx):
     """
     return request([prompt], contents = [full(paper)])
 
-def reorder_noncritical_proof(proof, paper, idx):
+def rename_vars_proof(proof, paper, idx):
     prompt = f"""
     ### Instructions ###
     You are given an academic paper, a statement in the paper and the proof of the statement extracted from the paper.
-    Your job is to reorder independent steps or cases in the proof (e.g., present Case 2 before Case 1) without changing dependencies or the logical content.
+    Your job is to consistently rename variables and symbols throughout the proof (e.g., $x \\to u$, $S \\to T$) without changing the logic.
         Constraints:
         - Preserve correctness rigorously.
         - DO NOT change any mathematical content.
         - DO NOT change the ordering of logically dependent steps.
         - DO NOT add or remove any steps.
-        - DO NOT change any mathematical content.
+        - Keep LaTeX notation consistent across the proof.
         Output ONLY the proof text, using latex for mathematical notations.
     
     ### Statement ###
@@ -175,7 +175,71 @@ def compress_justifications_proof(proof, paper, idx):
     return request([prompt], contents = [full(paper)])
 
 # --- invalidating edits ---
+def hallucination_proof(proof, paper, idx):
+    prompt = f"""
+    ### Instructions ###
+    You are given an academic paper, a statement in the paper and the proof of the statement extracted from the paper.
+    Your job is to introduce a subtle but fatal hallucinated step that appears plausible but is logically unfounded or incorrect.
+        Constraints:
+        - Keep the rest of the proof intact and plausible.
+        - Ensure the resulting proof is invalid.
+        - Make only a minimal change that causes the flaw.
+        Output ONLY the proof text, using latex for mathematical notations.
+    
+    ### Statement ###
+    
+    {get_problem_statement(paper, idx)}
+    
+    ### Proof ###
+    
+    {proof}
+    """
+    return request([prompt], contents = [full(paper)])
 
+def suppress_critical_paragraph_proof(proof, paper, idx):
+
+    prompt = f"""
+    ### Instructions ###
+    You are given an academic paper, a statement in the paper and the proof of the statement extracted from the paper.
+    Your job is to remove one or more consecutive sentences that form a logically critical paragraph, creating a fatal gap in the proof while keeping it superficially plausible.
+    The number of sentences to remove must be sufficient to create a fatal gap in the proof that cannot be repaired with data from the paper.
+        Constraints:
+        - DO NOT add new arguments that would repair the gap.
+        - Keep the rest of the proof intact and plausible.
+        - Ensure the resulting proof is invalid.
+        Output ONLY the proof text, using latex for mathematical notations.
+    
+    ### Statement ###
+    
+    {get_problem_statement(paper, idx)}
+    
+    ### Proof ###
+    
+    {proof}
+    """
+    return request([prompt], contents = [full(paper)])
+
+def add_error_step_proof(proof, paper, idx):
+    prompt = f"""
+    ### Instructions ###
+    You are given an academic paper, a statement in the paper and the proof of the statement extracted from the paper.
+    Your job is to insert a subtle but fatal error step that appears plausible but is logically incorrect or unjustified.
+        Constraints:
+        - Keep the rest of the proof intact and plausible.
+        - Ensure the resulting proof is invalid.
+        - Make only a minimal change that causes the flaw.
+        Output ONLY the proof text, using latex for mathematical notations.
+    
+    ### Statement ###
+    
+    {get_problem_statement(paper, idx)}
+    
+    ### Proof ###
+    
+    {proof}
+    """
+    return request([prompt], contents = [full(paper)])
+# ---  ---
 def drop_key_step_proof(proof, paper, idx):
     prompt = f"""
     ### Instructions ###
