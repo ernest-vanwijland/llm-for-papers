@@ -1,6 +1,6 @@
 import os
 import glob
-from checker import *
+from verifier import *
 from test import *
 
 def replace_antislash(filename):
@@ -43,7 +43,7 @@ def print_results(checker_name, results):
     print(f"The verdict was correct in {correct} out of {results['total']['all']} cases.")
     print(f"There were {results['truepositives']['all']} out of {results['truepositives']['positive']} true positives.")
     print(f"There were {results['truenegatives']['all']} out of {results['truenegatives']['negative']} true negatives.")
-    print("Here are the results category per category:")
+    print("Here are the results per category:")
     for cat in ["original", "paraphrase", "switch"]:
         print(f"{cat}: {results['truepositives'][cat]} / {results['total'][cat]} true positives.")
     for cat in ["error", "incomplete", "hallucination"]:

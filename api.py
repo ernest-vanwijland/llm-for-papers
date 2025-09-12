@@ -6,20 +6,9 @@ import os
 import time
 from pathlib import Path
 
-API_KEY0 = "AIzaSyBR7Z3Qatx-S72g_OZXSfAOyl3IfagMXe4" # ernest 
-API_KEY1 = "AIzaSyBNkra1dEv2nLtQWIcyoiUYSzOJhBCPjYY" # julien
-API_KEY2 = "AIzaSyB2upUm17f7xuXKO4MamqVIyxKZ8glzUzc" # E
-API_KEY3 = "AIzaSyBoJ__GLc7VDvQRV3OIYzzxJswVLZ3EXIs" # P
-API_KEY4 = "AIzaSyBtTnn8z6QrVpwnJ0LinhB6YAU2rbWGSx0" # A
-API_KEY5 = "AIzaSyAbVp0XrKFGaDcYKFkm-tubUh4y7rXNYaA" # max
-API_KEY6 = "AIzaSyCKrge05eWudrw6R93osZaexqN4Eds_OwI" # julien 2
-API_KEY_SET_ALL = [API_KEY0, API_KEY1, API_KEY2, API_KEY3, API_KEY4, API_KEY5, API_KEY6]
-API_KEY_SET1 = [API_KEY5]
-API_KEY_SET2 = [API_KEY2, API_KEY3]
-API_KEY_SET3 = [API_KEY4, API_KEY5]
-API_KEYS_SET_USED = API_KEY_SET1
-API_KEYS_USED = API_KEYS_SET_USED[0] 
-MODEL_NAME = "gemini-1.5-flash-latest"
+API_KEY = os.environ.get("GEMINI_API_KEY")
+
+# MODEL_NAME = "gemini-1.5-flash-latest"
 MODEL_NAME = "gemini-2.5-pro"
 API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent"
 
@@ -38,12 +27,11 @@ def extract_text_from_response(api_response):
         return None
 
 def request(prompts, system_prompt = "", model = "", contents=[]):
-    global API_KEYS_USED
+    global API_KEY
     headers = {
         'Content-Type': 'application/json',
-        'x-goog-api-key': API_KEYS_USED  # You can implement a rotation mechanism if needed
+        'x-goog-api-key': API_KEY  # You can implement a rotation mechanism if needed
     }
-    #parts = []
     parts = [{"text": prompt} for prompt in prompts]
     for file_path in contents:
         if file_path and os.path.exists(file_path):
@@ -80,6 +68,11 @@ def request(prompts, system_prompt = "", model = "", contents=[]):
             }
             ]
         },
+        "generationConfig": {
+            "temperature": 0.1,
+            "topP": 1.0,
+            "thinkingConfig": { "thinkingBudget": 32768} 
+        },
         "contents": [
         {
             "role": "user",
@@ -91,13 +84,11 @@ def request(prompts, system_prompt = "", model = "", contents=[]):
         }
         ]
     }
-    #for prompt in prompts:
-    #    payload["contents"].append({"role": "user", "parts": [{"text": prompt}]})
 
     response = None
     cnt = 1
-    max_retries = 2
-    while response == None and API_KEYS_USED != None :
+    max_retries = 3
+    while response == None and API_KEY != None :
         while response == None and cnt <= max_retries :
             print(f"Sending request to Gemini API... (attempt {cnt} of {max_retries})")
             cnt += 1
@@ -126,12 +117,9 @@ def request(prompts, system_prompt = "", model = "", contents=[]):
                 print(f"An error occurred while making the request: {e}")
                 print("--------------------------------\n")
                 response = None
-        API_KEYS_USED = API_KEYS_SET_USED[(API_KEYS_SET_USED.index(API_KEYS_USED) + 1) % len(API_KEYS_SET_USED)] if API_KEYS_USED in API_KEYS_SET_USED else None
-        current_key = API_KEYS_USED
-        print(f"Switching to the next API key: {current_key if current_key else 'No more keys available.'}")
         headers = {
             'Content-Type': 'application/json',
-            'x-goog-api-key': API_KEYS_USED  # You can implement a rotation mechanism if needed
+            'x-goog-api-key': API_KEY  # You can implement a rotation mechanism if needed
         }
         cnt = 1
     return extract_text_from_response(response)

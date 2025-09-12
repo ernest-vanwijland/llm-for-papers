@@ -1,7 +1,7 @@
 from pipeline import *
 from pipeline_util import *
 from api import *
-from checker import *
+from verifier import *
 import json
 from prompts import verification_system_prompt, verification_reminder
 import os
