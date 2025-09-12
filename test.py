@@ -1,8 +1,7 @@
 from api import *
 from memory_util import *
 from generate_proofs import *
-from checker import *
-from prompts_checker import *
+from verifier import *
 from presentation import *
 import os
 import glob
@@ -147,13 +146,14 @@ if __name__ == "__main__":
         "2502.09440": [1]
     }
     
-    # run_parallel(ten_proofs, "ten_proofs", checker_nicer)
+    run_parallel(one_proof, "one_proof", verifier)
     
-    compile_results(checker)
-    compile_results(checker_lv1)
-    compile_results(checker_lv2)
-    compile_results(checker_lv3_adv)
-    compile_results(checker_nicer)
+    #compile_results(checker)
+    #compile_results(checker_lv1)
+    #compile_results(checker_lv2)
+    #compile_results(checker_lv3_adv)
+    #compile_results(majority_nicer)
+    compile_results(verifier)
 
 
 

@@ -1,6 +1,6 @@
 from api import *
 from pipeline_util import *
-from checker import *
+from verifier import *
 from prompts import *
 
 def first_attempt(paper, idx):
