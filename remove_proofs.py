@@ -2,6 +2,7 @@ import regex as re
 import os
 import sys
 import tarfile
+import gzip
 import shutil
 import subprocess
 import tempfile
@@ -117,6 +118,75 @@ def extract_archive(archive_path: str):
         print(f"An unexpected error occurred during extraction: {e}", file=sys.stderr)
         return None
 
+def extract_gz(archive_path: str) -> Optional[str]:
+    """
+    Decompresses a.gz file with a name like '*-XXXX.XXXXX*.gz'
+    into a folder named 'XXXX.XXXXX'.
+    """
+    try:
+        input_path = Path(archive_path)
+        if not input_path.is_file():
+            raise FileNotFoundError(f"Input path '{archive_path}' does not exist or is not a file.")
+    except FileNotFoundError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return None
+
+    # Regex to find the required part of the filename (e.g., '1234.56789')
+    pattern = re.compile(r'-(\d{4}\.\d{5}).*\.gz$')
+    match = pattern.search(input_path.name)
+
+    if not match:
+        print(
+            f"Error: Filename '{input_path.name}' does not match the "
+            f"expected '*-XXXX.XXXXX*.gz' format.",
+            file=sys.stderr
+        )
+        return None
+
+    folder_name = match.group(1)
+    output_dir = input_path.parent / folder_name
+
+    # Determine the output filename by removing the.gz extension
+    output_filename = input_path.stem + ".tex"
+    destination_path = output_dir / output_filename
+
+    try:
+        # Create the output directory if it doesn't exist
+        output_dir.mkdir(exist_ok=True)
+
+        #print(f"Decompressing '{input_path.name}' to '{destination_path}'...")
+
+        # Use a streaming approach for memory efficiency with large files
+        with gzip.open(input_path, 'rb') as f_in:
+            with open(destination_path, 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
+
+        #print("Decompression complete.")
+        return str(output_dir)
+
+    except gzip.BadGzipFile:
+        print(
+            f"Error: '{input_path.name}' is not a valid gzip file or is corrupted.",
+            file=sys.stderr
+        )
+        # Clean up partially created file if it exists
+        if destination_path.exists():
+            destination_path.unlink()
+        return None
+    except OSError as e:
+        print(
+            f"Error: A filesystem error occurred. Check permissions "
+            f"for '{output_dir}'. Details: {e}",
+            file=sys.stderr
+        )
+        return None
+    except Exception as e:
+        print(
+            f"An unexpected error occurred during decompression: {e}",
+            file=sys.stderr
+        )
+        return None
+
 def find_archives_in_folder(folder_path: str):
     """
     Finds all.tar.gz files in the specified folder and returns a list of their paths.
@@ -128,6 +198,22 @@ def find_archives_in_folder(folder_path: str):
     
     # Use glob to find all files ending with.tar.gz in the directory
     archive_files = [str(p) for p in input_dir.glob('*.tar.gz')]
+    return archive_files
+
+def find_gz_in_folder(folder_path: str):
+    """
+    Finds all .gz files in the specified folder and returns a list of their paths.
+    """
+    input_dir = Path(folder_path)
+    if not input_dir.is_dir():
+        print(f"Error: Not a valid directory: '{folder_path}'", file=sys.stderr)
+        return
+    
+    # Use glob to find all files ending with.tar.gz in the directory
+    archive_files = []
+    for p in input_dir.glob('*.gz'):
+        if p not in input_dir.glob('*.tar.gz'):
+            archive_files.append(str(p))
     return archive_files
 
 def inline_latex_files(folder_path: str, main_file_name: str) -> Optional[str]:
@@ -246,6 +332,13 @@ def process(archive):
     compile_latex_to_pdf(extracted, main_file)
     compile_latex_to_pdf(extracted + "/noproof", main_file)
 
+def processgz(archive):
+    extracted = extract_gz(archive)
+    process_folder(extracted)
+    main_file = "main_expanded.tex"
+    compile_latex_to_pdf(extracted, main_file)
+    compile_latex_to_pdf(extracted + "/noproof", main_file)
+
 def compile_latex_to_pdf(source_folder: str, main_filename: str) -> None:
     """
     Compiles a LaTeX document using pdflatex, ensuring an existing.bbl file is used.
@@ -271,7 +364,7 @@ def compile_latex_to_pdf(source_folder: str, main_filename: str) -> None:
 
     pdflatex_cmd = [
         pdflatex_path,
-        "-interaction=nonstopmode",
+        "-interaction=batchmode",
         f"-jobname={job_name}",
         main_filename
     ]
@@ -282,7 +375,7 @@ def compile_latex_to_pdf(source_folder: str, main_filename: str) -> None:
         # Run pdflatex three times to ensure all references and the bibliography are correctly included.
         for i in range(3):
             #print(f"Running pdflatex (pass {i+1})...")
-            subprocess.run(pdflatex_cmd, cwd=src_path, capture_output=True, text=True, check=True)
+            subprocess.run(pdflatex_cmd, cwd=src_path, capture_output=True, text=True, check=True, encoding='utf-8', errors='ignore')
 
         #print(f"Successfully compiled. Output is at {src_path / (job_name + '.pdf')}")
     except subprocess.CalledProcessError as e:
@@ -293,14 +386,60 @@ def compile_latex_to_pdf(source_folder: str, main_filename: str) -> None:
         print("\n--- STDERR ---", file=sys.stderr)
         print(e.stderr, file=sys.stderr)
 
+def list_folders(folder_path: str):
+    try:
+        p = Path(folder_path)
+        return [item.name for item in p.iterdir() if item.is_dir()]
+    except FileNotFoundError:
+        print(f"Error: Directory not found at '{folder_path}'")
+        return []
+
+def is_successful(paper):
+    return os.path.exists(f"data/{paper}/paper.pdf") and os.path.exists(f"data/{paper}/noproof/paper.pdf")
+
+def recompile(paper):
+    extracted = f"data/{paper}"
+    main_file = "main_expanded.tex"
+    compile_latex_to_pdf(extracted, main_file)
+    compile_latex_to_pdf(extracted + "/noproof", main_file)
+
+def add_to_good(paper):
+    try:
+        os.mkdir(f"good_data/{paper}")
+    except:
+        pass
+    shutil.copy(f"data/{paper}/paper.pdf", f"good_data/{paper}/full.pdf")
+    shutil.copy(f"data/{paper}/noproof/paper.pdf", f"good_data/{paper}/noproof.pdf")
+    shutil.copy(f"data/{paper}/main_expanded.tex", f"good_data/{paper}/full.tex")
+    shutil.copy(f"data/{paper}/noproof/main_expanded.tex", f"good_data/{paper}/noproof.tex")
+
 if __name__ == '__main__':
     folder = "data"
     papers = find_archives_in_folder(folder)
+    papersgz = find_gz_in_folder(folder)
+    good = []
+    bad = []
     cnt = 0
     for paper in papers:
-        print(f"Preparing paper {cnt + 1} / {len(papers)}")
+        print(f"Preparing paper {cnt + 1} / {len(papers)+len(papersgz)}")
         cnt += 1
-        process(paper)
+        #process(paper)
+    for paper in papersgz:
+        print(f"Preparing paper {cnt + 1} / {len(papers)+len(papersgz)}")
+        cnt += 1
+        #processgz(paper)
+    
+    papers = list_folders("data")
+    for paper in papers:
+        if is_successful(paper):
+            good.append(paper)
+        else:
+            bad.append(paper)
+    
+    print(f"Ok: {len(good)}")
+    
+    for p in good:
+        add_to_good(p)
 
 
 

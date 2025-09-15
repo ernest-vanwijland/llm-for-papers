@@ -6,7 +6,7 @@ import os
 import time
 from pathlib import Path
 
-API_KEY = os.environ.get("GEMINI_API_KEY_2")
+API_KEY = os.environ.get("GEMINI_API_KEY")
 API_DRY_RUN = False
 # MODEL_NAME = "gemini-1.5-flash-latest"
 MODEL_NAME = "gemini-2.5-pro"

@@ -55,7 +55,7 @@ def compile_results(CHECKER = None):
     all_result_files = glob.glob("results/*")
     result_files = []
     for filename in all_result_files:
-        if get_checker_name(filename) == checker_name:
+        if filename in glob.glob(f"results/*{checker_name}*"):
             result_files.append(filename)
     results = {
         "total": {

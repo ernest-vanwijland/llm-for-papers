@@ -59,10 +59,9 @@ def get_proof_type(paper, idx, proof):
     return type_of_proof
 # --------------------------------------------------------------
 def paraphrase_proof(proof, paper, idx):
-    
     prompt = f"""
     ### Instructions ###
-    You are given an academic paper, a statement in the paper and the proof of the statement extracted from the paper.
+    You are given a statement from a mathematics paper and the proof of the statement extracted from the paper.
     Your job is to rewrite the proof as a paraphrase in natural language while keeping every mathematical step and justification logically identical.
         Constraints:
         - Preserve correctness rigorously.
@@ -80,12 +79,12 @@ def paraphrase_proof(proof, paper, idx):
     
     {proof}
     """
-    return request([prompt], contents = [full(paper)])
+    return request([prompt], contents = [])
 
 def switch_noncritical_proof(proof, paper, idx):
     prompt = f"""
 ### Instructions ###
-You are given an academic paper, a statement, and its proof extracted from the paper.
+You are given a statement from a mathematics paper, and its proof extracted from the paper.
 Your task is to REORDER **at least one** pair of **independent** units in the proof so that the order of the output differs from the input, while preserving all dependencies and mathematical content.
 
 **Movable units (examples):**
@@ -108,8 +107,7 @@ Output ONLY the proof text, using LaTeX for mathematical notations.
 ### Proof ###
 {proof}
 """
-
-    return request([prompt], contents = [full(paper)])
+    return request([prompt], contents = [])
 
 def rename_vars_proof(proof, paper, idx):
     prompt = f"""
@@ -185,7 +183,7 @@ def compress_justifications_proof(proof, paper, idx):
 def hallucination_proof(proof, paper, idx):
     prompt = f"""
     ### Instructions ###
-    You are given an academic paper, a statement in the paper and the proof of the statement extracted from the paper.
+    You are given a statement from an academic the paper and the proof of the statement extracted from the paper.
     Your job is to introduce a subtle but fatal hallucinated step that appears plausible but is logically unfounded or incorrect.
         Constraints:
         - Keep the rest of the proof intact and plausible.
@@ -201,13 +199,13 @@ def hallucination_proof(proof, paper, idx):
     
     {proof}
     """
-    return request([prompt], contents = [full(paper)])
+    return request([prompt], contents = [])
 
 def suppress_critical_paragraph_proof(proof, paper, idx):
 
     prompt = f"""
 ### Instructions ###
-You are given an academic paper, a statement, and its proof extracted from the paper.
+You are given a statement from an academic paper, and its proof extracted from the paper.
 Your task is to DELETE exactly one **consecutive** block so that the remaining proof looks superficially plausible but is **logically invalid** (a fatal, unrecoverable gap).
 
 **Selection criteria (all required):**
@@ -233,17 +231,17 @@ Output ONLY the proof text, using LaTeX for mathematical notations.
 {proof}
 """
 
-    return request([prompt], contents = [full(paper)])
+    return request([prompt], contents = [])
 
 def add_error_step_proof(proof, paper, idx):
     prompt = f"""
     ### Instructions ###
-    You are given an academic paper, a statement in the paper and the proof of the statement extracted from the paper.
-    Your job is to insert a subtle but fatal error step that appears plausible but is logically incorrect or unjustified.
+    You are given a statement from an academic paper and the proof of the statement extracted from the paper.
+    Your job is to insert a fatal error step that appears plausible but is logically incorrect or unjustified.
         Constraints:
         - Keep the rest of the proof intact and plausible.
         - Ensure the resulting proof is invalid.
-        - Make only a minimal change that causes the flaw.
+        - Make only the change that causes the flaw.
         Output ONLY the proof text, using latex for mathematical notations.
     
     ### Statement ###
@@ -254,7 +252,7 @@ def add_error_step_proof(proof, paper, idx):
     
     {proof}
     """
-    return request([prompt], contents = [full(paper)])
+    return request([prompt], contents = [])
 # ---  ---
 def drop_key_step_proof(proof, paper, idx):
     prompt = f"""
