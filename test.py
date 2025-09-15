@@ -5,7 +5,6 @@ from verifier import *
 from presentation import *
 import os
 import glob
-import multiprocessing
 import concurrent.futures
 from numpy import random
 from test_util import *
@@ -28,11 +27,13 @@ if __name__ == "__main__":
     # 1. Testcase generation
     #generate_parallel(icalp25, "icalp25")
     
+    #generate_parallel(icalp25, "icalp25hallu")
+    
     # 2. Verification
-    #verify_parallel(icalp25, "icalp25", dspy_verifier)
+    #verify_parallel(ten_proofs, "ten_proofs", gpt_verifier, max_workers=3)
     
     # 3. Presentation
-    compile_results(dspy_verifier)
+    compile_results(gpt_verifier)
     
     
 

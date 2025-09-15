@@ -85,7 +85,7 @@ def compile_results(CHECKER = None):
     for filename in result_files:
         for testcase_file, verdict in load_testcase(filename).items():
             testcase = load_testcase(replace_antislash(testcase_file))
-            if testcase == None:
+            if testcase == None :
                 continue
             results["total"]["all"] += 1
             results["total"][testcase["comment"]] += 1

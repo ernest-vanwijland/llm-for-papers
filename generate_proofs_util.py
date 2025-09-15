@@ -184,7 +184,7 @@ def hallucination_proof(proof, paper, idx):
     prompt = f"""
     ### Instructions ###
     You are given a statement from an academic the paper and the proof of the statement extracted from the paper.
-    Your job is to introduce a subtle but fatal hallucinated step that appears plausible but is logically unfounded or incorrect.
+    Your job is to introduce a subtle but fatal hallucinated step that appears plausible but is logically unfounded or incorrect. Make sure your hallucination is a false mathematical truth presented as true, it needs to be a clearly unjustified statement within the proof.
         Constraints:
         - Keep the rest of the proof intact and plausible.
         - Ensure the resulting proof is invalid.

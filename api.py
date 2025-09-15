@@ -4,6 +4,7 @@ import base64
 import mimetypes
 import os
 import time
+from openai import OpenAI
 from pathlib import Path
 
 API_KEY = os.environ.get("GEMINI_API_KEY")
@@ -11,6 +12,41 @@ API_DRY_RUN = False
 # MODEL_NAME = "gemini-1.5-flash-latest"
 MODEL_NAME = "gemini-2.5-pro"
 API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent"
+
+gpt_client = OpenAI(api_key = os.environ.get("OPENAI_API_KEY"))
+
+def openai_request(prompt, system_prompt=None, paper=None, model='gpt-5'):
+    input = [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "input_text",
+                    "text": prompt
+                }
+            ]
+        }
+    ]
+    if paper:
+        file = gpt_client.files.create(
+            file = open(paper, "rb"),
+            purpose = "user_data"
+        )
+        input[0]["content"].append({
+            "type": "input_file",
+            "file_id": file.id
+        })
+    if system_prompt:
+        input.append({
+            "role": "system",
+            "content": system_prompt
+        })
+    response = gpt_client.responses.create(
+        model = 'gpt-5',
+        reasoning={"effort": "high"},
+        input = input
+    )
+    return response.output_text
 
 def extract_text_from_response(api_response):
     if not api_response:
