@@ -2,9 +2,16 @@ from api import *
 from memory_util import *
 from tree import *
 
-def solver_prompt(paper, idx):
-    statement = get_problem_statement(paper, idx)
+def solver_prompt(tree, id):
+    rank = tree.ranking[id]
+    can_use = [sid for sid in tree.ids if tree.ranking[sid] < rank]
+    statement = get_problem_statement(tree.paper, tree.toprove[id])
+    context = "\n".join([f"- {tree.name[sid]}" for sid in can_use])
     prompt = f"""
+    ### List of statements you can assume to be already proved ###
+    
+    {context}
+    
     ### Problem statement ###
     
     {tree.name[id]}:
@@ -12,11 +19,11 @@ def solver_prompt(paper, idx):
     """
     return prompt
 
-def geminiSolver(paper, idx):
-    return request([solver_prompt(paper, idx)], system_prompt=solver_system_prompt, contents = [noproof(paper)])
+def geminiSolver(tree, id):
+    return request([solver_prompt(tree, id)], system_prompt=solver_system_prompt, contents=[noproof(tree.paper)])
 
-def gptSolver(paper, idx):
-    return openai_request(solver_prompt(paper, idx), system_prompt=solver_system_prompt, paper = noproof(paper))
+def gptSolver(tree, id):
+    return openai_request(solver_prompt(tree, id), system_prompt=solver_system_prompt, paper = noproof(tree.paper))
 
 def solver(tree, SOLVER):
     solutions = {}

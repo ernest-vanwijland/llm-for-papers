@@ -104,7 +104,7 @@ class Tree:
             self.ids.append(id)
             self.name[id] = statement["name"]
             self.depends_on[id] = statement["depends_on"]
-            self.toprove[id] = -1
+            self.toprove[id] = statement["toprove"]
             self.ranking[id] = -1
         for level in range(len(self.ids)):
             for id in self.ids:
