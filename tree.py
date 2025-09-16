@@ -2,7 +2,7 @@ from api import *
 from memory_util import *
 import json
 
-prompt = f"""
+build_tree_prompt = f"""
 You are an expert research assistant specializing in parsing mathematical literature. Your task is to analyze the provided mathematical article and generate a dependency tree of its formal statements.
 
 ## Goal
@@ -40,7 +40,7 @@ class Tree:
         print(self.ranking)
     
     def build_tree(self, paper):
-        tree_response = request([prompt], contents = [full(paper)])
+        tree_response = request([build_tree_prompt], contents = [full(paper)])
         beg = 0
         while tree_response[beg] != "{":
             beg += 1
