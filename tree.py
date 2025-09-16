@@ -24,27 +24,102 @@ Each statement object in the list must conform to the following JSON structure:
 
 class Tree:
     paper: str
-    tree_json: str
+    tree_dict: str
     ids: list
     toprove: dict
     name: dict
-    depends_on: list
-    ranking: list
+    depends_on: dict
+    ranking: dict
     
-    def __init__(self, paper, tree_json)
-
-def build_tree(paper):
-    tree_response = openai_request(prompt, paper = full(paper))
-    beg = 0
-    while tree_response[beg] != "{":
-        beg += 1
-    end = len(tree_response) - 1
-    while tree_response[end] != "}":
-        end -= 1
-    tree_dict = json.loads(tree_response[beg:end+1])
+    def print(self):
+        print(self.paper)
+        print(self.ids)
+        print(self.name)
+        print(self.toprove)
+        print(self.depends_on)
+        print(self.ranking)
     
+    def build_tree(self, paper):
+        tree_response = request([prompt], contents = [full(paper)])
+        beg = 0
+        while tree_response[beg] != "{":
+            beg += 1
+        end = len(tree_response) - 1
+        while tree_response[end] != "}":
+            end -= 1
+        tree_dict = json.loads(tree_response[beg:end+1])
+        return tree_dict
+    
+    def __init__(self, paper):
+        self.paper = paper
+        self.tree_dict = self.build_tree(paper)
+        self.ids, self.toprove, self.name, self.depends_on, self.ranking = [], {}, {}, {}, {}
+        for statement in self.tree_dict["statements"]:
+            id = statement["id"]
+            self.ids.append(id)
+            self.name[id] = statement["name"]
+            self.depends_on[id] = statement["depends_on"]
+            self.toprove[id] = -1
+            self.ranking[id] = -1
+        for level in range(len(self.ids)):
+            for id in self.ids:
+                parents_done = True
+                for p in self.depends_on[id]:
+                    if self.ranking[p] == -1:
+                        parents_done = False
+                if parents_done and self.ranking[id] == -1:
+                    self.ranking[id] = level
 
-tree_response = build_tree("2308.05208")
+tree = Tree("2308.05208")
+tree.print()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
