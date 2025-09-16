@@ -1,5 +1,5 @@
 from api import *
-from memory_util import*
+from memory_util import *
 
 def solver_prompt(paper, idx):
     statement = get_problem_statement(paper, idx)
