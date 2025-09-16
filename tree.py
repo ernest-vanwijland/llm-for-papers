@@ -22,6 +22,25 @@ Each statement object in the list must conform to the following JSON structure:
 }}
 """
 
+find_toprove_prompt = f"""
+You are an expert research assistant specializing in parsing mathematical literature. Your task is to analyze the provided mathematical article and generate the correspondence between the statements and the TOPROVE indices.
+
+## Goal
+Read the text and identify all the TOPROVE. For each one, determine which statement in the paper it replaced the proof of. You need to find the correspondence between each TOPROVE id, and the name of the statement it replaced the proof of.
+
+## Output Format
+The output MUST be a single, valid JSON object. This object will contain a single key, "toproves", which is a list of toprove objects. Do not include any text, explanations, or code fromatting before or after the JSON object.
+
+Each statement object in the list must conform to the following JSON structure:
+{{
+"toproves" = [{{
+  "toprove_id": int,
+  "statement": str
+}}
+]
+}}
+"""
+
 class Tree:
     paper: str
     tree_dict: str
@@ -40,15 +59,41 @@ class Tree:
         print(self.ranking)
     
     def build_tree(self, paper):
-        tree_response = request([build_tree_prompt], contents = [full(paper)])
-        beg = 0
-        while tree_response[beg] != "{":
-            beg += 1
-        end = len(tree_response) - 1
-        while tree_response[end] != "}":
-            end -= 1
-        tree_dict = json.loads(tree_response[beg:end+1])
-        return tree_dict
+        tree_file = f"memory/tree_{paper}.json"
+        if not os.path.exists(tree_file):
+            tree_response = request([build_tree_prompt], contents = [full(paper)])
+            beg = 0
+            while tree_response[beg] != "{":
+                beg += 1
+            end = len(tree_response) - 1
+            while tree_response[end] != "}":
+                end -= 1
+            tree_dict = json.loads(tree_response[beg:end+1])
+            
+            toprove_response = request([find_toprove_prompt], contents=[noproof(paper)])
+            beg = 0
+            while toprove_response[beg] != "{":
+                beg += 1
+            end = len(toprove_response) - 1
+            while toprove_response[end] != "}":
+                end -= 1
+            toprove_dict = json.loads(toprove_response[beg:end+1])
+            
+            for tp in toprove_dict["toproves"]:
+                for statement in tree_dict["statements"]:
+                    if statement["name"] == tp["statement"]:
+                        statement["toprove"] = tp["toprove_id"]
+            for statement in tree_dict["statements"]:
+                if "toprove" not in statement.keys():
+                    statement["toprove"] = -1
+            
+            with open(tree_file, 'w', encoding='utf-8') as f:
+                json.dump(tree_dict, f, indent=2, ensure_ascii=False)
+            return tree_dict
+        else:
+            with open(tree_file, 'r', encoding='utf-8') as f:
+                tree_dict = json.load(f)
+            return tree_dict
     
     def __init__(self, paper):
         self.paper = paper
@@ -70,8 +115,7 @@ class Tree:
                 if parents_done and self.ranking[id] == -1:
                     self.ranking[id] = level
 
-tree = Tree("2308.05208")
-tree.print()
+
 
 
 
