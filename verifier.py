@@ -9,6 +9,7 @@ You are a math proof checker.
 ## Input
 
 - List of statements already proved that you can use in the context of where the current proof appears
+- (Optional): List of external references that can be reused
 - Problem statement
 - Correct solution
 - Solution
@@ -32,15 +33,21 @@ The output MUST be a single integer, either 0 if the solution is invalid or 1 if
 """
 
 def verifier(tree, id, solution):
-    #tree.print()
-    #print(tree.toprove[id])
     proof = get_proof(tree.paper, tree.toprove[id])
     rank = tree.ranking[id]
     #print(rank)
     can_use = [sid for sid in tree.ids if tree.ranking[sid] < rank]
     statement = get_problem_statement(tree.paper, tree.toprove[id])
     context = "\n".join([f"- {tree.name[sid]}" for sid in can_use])
-    prompt = f"""
+    references = ""
+    if len(tree.references[id]) > 0:
+        references = f"""
+    ### List of references you can use ###
+        
+    {tree.references[id]}
+        
+    """
+    prompt = references + f"""
     ### List of statements you can assume to be already proved ###
     
     {context}
@@ -61,7 +68,7 @@ def verifier(tree, id, solution):
     
     #print(prompt)
     
-    raw_grade = request([prompt], system_prompt = verifier_prompt, contents = [full(tree.paper)])
+    raw_grade = request(prompt, system_prompt = verifier_prompt, files = [full(tree.paper)])
     #raw_grade = openai_request(prompt, system_prompt = verifier_prompt, paper = full(tree.paper))
     
     if raw_grade == None:
@@ -84,6 +91,10 @@ def majority_verifier(tree, id, solution):
     if cnt[0] > cnt[1]:
         return 0
     return 1
+
+def max_verifier(tree, id, solution):
+    grades = [verifier(tree, id, solution) for _ in range(3)]
+    return max(grades)
 
 
 

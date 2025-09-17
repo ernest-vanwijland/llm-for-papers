@@ -8,6 +8,7 @@ from openai import OpenAI
 from pathlib import Path
 
 API_KEY = os.environ.get("GEMINI_API_KEY")
+API_DRY_RUN = False
 # MODEL_NAME = "gemini-1.5-flash-latest"
 MODEL_NAME = "gemini-2.5-pro"
 API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent"
@@ -61,17 +62,21 @@ def extract_text_from_response(api_response):
         print("Error: Could not parse the expected text from the API response.")
         return None
 
-def request(prompt, system_prompt = "", files=[]):
+def request(prompts, system_prompt = "", model = "", contents=[]):
+    if API_DRY_RUN:
+        print("[DRY RUN] skipping Gemini call")
+        time.sleep(3)
+        return "Dry run response"
     global API_KEY
     headers = {
         'Content-Type': 'application/json',
         'x-goog-api-key': API_KEY  # You can implement a rotation mechanism if needed
     }
-    parts = [{"text": prompt}]
-    for file_path in files:
+    parts = [{"text": prompt} for prompt in prompts]
+    for file_path in contents:
         if file_path and os.path.exists(file_path):
             try:
-                #print(f"Processing file: {file_path}")
+                print(f"Processing file: {file_path}")
                 
                 mime_type, _ = mimetypes.guess_type(file_path)
                 
@@ -112,6 +117,10 @@ def request(prompt, system_prompt = "", files=[]):
         {
             "role": "user",
             "parts": parts
+        },
+        {
+            "role": "model",
+            "parts": [{"text": model}]
         }
         ]
     }

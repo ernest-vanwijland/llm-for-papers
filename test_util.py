@@ -1,8 +1,9 @@
 from api import *
 from memory_util import *
-from generate_proofs import *
+from grader import *
+from solver import *
 from verifier import *
-from presentation import *
+from tree import *
 import os
 import glob
 import multiprocessing
@@ -22,34 +23,6 @@ hundred_proofs = {
     "2502.09440": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     "2502.08328": [11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31, 32, 33, 34]
 }
-
-def get_nb_proofs(proofs):
-    cnt = 0
-    for paper, toprove in proofs.items():
-        for idx in toprove:
-            cnt += 1
-    return cnt
-
-def get_all_proofs(proofs):
-    cnt = 1
-    for paper, toprove in proofs.items():
-        for idx in toprove:
-            print(f"Retrieving proof {paper}/{idx} ({cnt} of {get_nb_proofs(proofs)})")
-            get_proof(paper, idx)
-            cnt += 1
-
-def generate_all_testcases(proofs, subfolder, nb_variants):
-    os.makedirs(f"test/{subfolder}", exist_ok=True)
-    cnt = 1
-    for paper, toprove in proofs.items():
-        for idx in toprove:
-            print(f"Generating variants of proof {paper}/{idx} ({cnt} of {get_nb_proofs(proofs)})")
-            generate_testcases(paper, idx, subfolder, nb_variants)
-            cnt += 1
-
-def prepare_testcases(proofs, subfolder, nb_variants = 1):
-    get_all_proofs(proofs)
-    generate_all_testcases(proofs, subfolder, nb_variants)
 
 def load_testcase(testcase_file):
     if not os.path.exists(testcase_file):           
@@ -77,26 +50,82 @@ def run_checker_on_file(testcase_file, CHECKER):
     print(f"Running checker on {testcase_file}")
     testcase = load_testcase(testcase_file)
     if testcase:
-        result = CHECKER(testcase["paper"], testcase["toprove"], testcase["proof"])
+        tree = Tree(testcase["paper"])
+        id = get_id(tree, testcase["toprove"])
+        result = CHECKER(tree, id, testcase["proof"])
         return testcase_file, result
     return testcase_file, None
 
-def generate_parallel(proofs, subfolder, max_workers=100):
-    """
-    Generates testcases in parallel for all relevant proofs using a thread pool.
-    """
-    tasks = []
-    for paper, toprove in proofs.items():
-        for idx in toprove:
-            tasks.append((paper, idx))
-    random.shuffle(tasks)
-    print(f"Starting parallel generation on {len(tasks)} proofs with {max_workers} workers.")
+def build_tree(paper):
+    return paper, Tree(paper)
+
+def run_solver(tree):
+    return tree.paper, solver(tree, geminiSolver)
+
+def run_grader(tree, solutions):
+    return tree.paper, grader(solutions, tree, verifier)
+
+def run_solver_parallel(trees, name = "tmp", max_workers = 100):
+    print(f"Starting parallel solving on {len(trees.keys())} DAGs with {max_workers} workers.")
+    solutions = {}
+    for paper, tree in trees.items():
+        solutions[paper] = None
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        future_to_task = {executor.submit(generate_testcases, paper, idx, subfolder, 1): (paper, idx) for (paper, idx) in tasks}
-        for future in concurrent.futures.as_completed(future_to_task):
-            paper, idx = future_to_task[future]
-            print(f"Done generating testcases for {paper}/{idx}.")
-    print("Done generating all testcases.")
+        future_to_paper = {executor.submit(run_solver, tree): paper for paper, tree in trees.items()}
+        for future in concurrent.futures.as_completed(future_to_paper):
+            pap = future_to_paper[future]
+            try:
+                paper, solutions_paper = future.result()
+                if solutions_paper is not None:
+                    solutions[paper] = solutions_paper
+                with open(f"results/solutions_{name}.json", 'w', encoding='utf-8') as f:
+                    json.dump(solutions, f, indent=2, ensure_ascii=False)
+            except Exception as exc:
+                print(f'{pap} generated an exception: {exc}')
+    print(f"Saving solutions to results/solutions_{name}.json.")
+    solutions["timestamp"] = __import__('datetime').datetime.now().isoformat()
+    with open(f"results/solutions_{name}.json", 'w', encoding='utf-8') as f:
+        json.dump(solutions, f, indent=2, ensure_ascii=False)
+    return solutions
+
+def run_grader_parallel(trees, solutions, name = "tmp", max_workers = 100):
+    tasks = []
+    for paper, tree in trees.items():
+        if solutions[paper]:
+            tasks.append((tree, solutions[tree.paper]))
+    grades = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_paper = {executor.submit(run_grader, tree, solutions_tree): tree.paper for tree, solutions_tree in tasks}
+        for future in concurrent.futures.as_completed(future_to_paper):
+            pap = future_to_paper[future]
+            try:
+                paper, grades_paper = future.result()
+                if grades_paper is not None:
+                    grades[paper] = grades_paper
+                with open(f"results/grades_{name}.json", 'w', encoding='utf-8') as f:
+                    json.dump(grades, f, indent=2, ensure_ascii=False)
+            except Exception as exc:
+                print(f'{pap} generated an exception: {exc}')
+    print(f"Saving grades to results/grades_{name}.json.")
+    grades["timestamp"] = __import__('datetime').datetime.now().isoformat()
+    with open(f"results/grades_{name}.json", 'w', encoding='utf-8') as f:
+        json.dump(grades, f, indent=2, ensure_ascii=False)
+    return grades
+
+def build_trees_parallel(papers, max_workers = 100):
+    print(f"Starting parallel building on {len(papers)} papers with {max_workers} workers.")
+    trees = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_tree = {executor.submit(build_tree, paper): paper for paper in papers}
+        for future in concurrent.futures.as_completed(future_to_tree):
+            pap = future_to_tree[future]
+            try:
+                paper, tree = future.result()
+                if tree is not None:
+                    trees[paper] = tree
+            except Exception as exc:
+                print(f'{pap} generated an exception: {exc}')
+    return trees
 
 def verify_parallel(papers_and_proofs, testcases, CHECKER, max_workers=100):
     """

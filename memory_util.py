@@ -89,7 +89,7 @@ def get_proof(paper, idx):
     
     {statement}
     """
-    proof = request([prompt], contents = [full(paper)])
+    proof = request(prompt, files = [full(paper)])
     save_proof(paper, idx, proof)
     return proof
 
@@ -137,7 +137,7 @@ def get_toprove(paper):
     memory = load_memory(paper)
     x = memory["nbtoprove"]
     if x == -1:
-        x = int(request([number_of_toprove_prompt], contents = [noproof(paper)]))
+        x = int(request(number_of_toprove_prompt, files = [noproof(paper)]))
         save_toprove(paper, x)
     return x
 
@@ -146,7 +146,7 @@ def get_problem_statement(paper, idx):
     if len(memory["statements"]) <= idx or memory["statements"][idx] == None:
         while len(memory["statements"]) <= idx:
             memory["statements"].append(None)
-        statement = request([problem_statement_prompt + str(idx)], contents = [noproof(paper)])
+        statement = request(problem_statement_prompt + str(idx), files = [noproof(paper)])
         if statement == "NONE":
             return None
         memory["statements"][idx] = statement

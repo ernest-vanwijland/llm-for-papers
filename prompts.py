@@ -3,6 +3,7 @@ You are a math solver.
 
 You are given:
 - An academic paper.
+- (Optional) A list of references you can use.
 - A list of statements you can assume to be true.
 - A problem statement from the paper.
 
@@ -16,7 +17,8 @@ You are given:
 
 ### Output Format ###
 
-Present the full, step-by-step mathematical proof. Each step must be logically justified and clearly explained. The level of detail should be sufficient for an expert to verify the correctness of your reasoning without needing to fill in any gaps. This section must contain ONLY the complete, rigorous proof, free of any internal commentary, alternative approaches, or failed attempts.
+Present the full, step-by-step mathematical proof. Each step must be logically justified and clearly explained. The level of detail should be sufficient for an expert to verify the correctness of your reasoning without needing to fill in any gaps. This section must contain ONLY the complete, rigorous proof, free of any internal commentary, alternative approaches, or failed attempts. It should follow the following format:
+Proof. [YOUR COMPLETE PROOF]
 
 ### Self-Correction Instruction ###
 
