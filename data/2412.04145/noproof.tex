@@ -1,0 +1,1394 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{graphicx}
+\usepackage{amsmath, amssymb, amstext, amsfonts, mathtools}
+\usepackage{amsthm}
+\usepackage{bm}
+\usepackage{thmtools}
+\usepackage{thm-restate}
+
+\usepackage{soul}
+\usepackage{enumitem}
+
+\usepackage{authblk}
+
+\usepackage[pdftex,pdfpagelabels,hyperfigures,pagebackref,bookmarks=false,hyperindex=true]{hyperref}
+
+\hypersetup{
+ plainpages = false,
+ bookmarksopen = true,
+ bookmarksnumbered = true,
+ breaklinks = true,
+ linktocpage,
+ colorlinks = true,
+ linkcolor = blue!70!black,
+ urlcolor  = blue!70!black,
+ citecolor = red!70!black,
+ anchorcolor = green!70!black,
+ pdflang={en},
+ pdftitle={Robust Contraction Decomposition for Minor-Free Graphs and its Applications},
+ pdfauthor={Sayan Bandyapadhyay, William Lochet, Daniel Lokshtanov, D{\'{a}}niel Marx, Pranabendu Misra, Daniel Neuen, Saket Saurabh, Prafullkumar Tale, Jie Xue}
+}
+
+\newtheorem{lemma}{Lemma}
+\newtheorem{lemma*}[lemma]{Lemma*}
+\numberwithin{lemma}{section}
+\newtheorem{theorem}[lemma]{Theorem}
+\newtheorem{theorem*}[lemma]{Theorem*}
+\newtheorem{corollary}[lemma]{Corollary}
+\newtheorem{definition}[lemma]{Definition}
+\newtheorem{observation}[lemma]{Observation}
+\newtheorem{example}[lemma]{Example}
+\newtheorem{fact}[lemma]{Fact}
+
+\newtheorem{claim}[theorem]{Claim}
+
+\newenvironment{claimproof}{\begin{proof}\textcolor{red}{TOPROVE 0}\end{proof}}
+
+\newcommand{\NN}{\mathbb N}
+
+\newcommand{\op}{{\sf op}}
+\newcommand{\glo}{{\sf global}}
+\newcommand{\loc}{{\sf local}}
+
+\newcommand{\tw}{\mathbf{tw}}
+\newcommand{\tor}{\mathsf{tor}}
+
+
+\title{Robust Contraction Decomposition\\for Minor-Free Graphs and its Applications}
+
+\author[1]{Sayan Bandyapadhyay}
+\author[2]{William Lochet}
+\author[3]{Daniel Lokshtanov}
+\author[4]{D{\'{a}}niel Marx}
+\author[5]{Pranabendu Misra}
+\author[6]{Daniel Neuen}
+\author[7]{Saket Saurabh}
+\author[8]{Prafullkumar Tale}
+\author[9]{Jie Xue}
+
+\affil[1]{Portland State University, USA}
+\affil[2]{LIRMM, Université de Montpellier, CNRS, France}
+\affil[3]{University of California, USA}
+\affil[4]{CISPA Helmholtz Center for Information Security, Germany}
+\affil[5]{Chennai Mathematical Institute, India}
+\affil[6]{Max Planck Institute for Informatics, Germany}
+\affil[7]{Institute of Mathematical Sciences, India}
+\affil[8]{Indian Institute of Science Education and Research Bhopal, India}
+\affil[9]{New York University Shanghai, China}
+
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+ We prove a robust contraction decomposition theorem for $H$-minor-free graphs, which states that given an $H$-minor-free graph $G$ and an integer $p$, one can partition in polynomial time the vertices of $G$ into $p$ sets $Z_1,\dots,Z_p$ such that $\tw(G/(Z_i \setminus Z')) = O(p + |Z'|)$ for all $i \in [p]$ and $Z' \subseteq Z_i$.
+ Here, $\tw(\cdot)$ denotes the treewidth of a graph and $G/(Z_i \setminus Z')$ denotes the graph obtained from $G$ by contracting all edges with both endpoints in $Z_i \setminus Z'$.
+    
+ Our result generalizes earlier results by Klein~[SICOMP 2008] and Demaine~et~al.~[STOC 2011] based on partitioning $E(G)$, and some recent theorems for planar graphs by Marx et al.\ [SODA 2022], for bounded-genus graphs (more generally, almost-embeddable graphs) by Bandyapadhyay et al.\ [SODA 2022], and for unit-disk graphs by Bandyapadhyay et al.\ [SoCG 2022].
+
+ The robust contraction decomposition theorem directly results in parameterized algorithms with running time $2^{\widetilde{O}(\sqrt{k})} \cdot n^{O(1)}$ or $n^{O(\sqrt{k})}$ for every vertex/edge deletion problems on $H$-minor-free graphs that can be formulated as \textsc{Permutation CSP Deletion} or \textsc{2-Conn Permutation CSP Deletion}.
+ Consequently, we obtain the first subexponential-time parameterized algorithms for \textsc{Subset Feedback Vertex Set}, \textsc{Subset Odd Cycle Transversal}, \textsc{Subset Group Feedback Vertex Set}, \textsc{2-Conn Component Order Connectivity} on $H$-minor-free graphs.
+ For other problems which already have subexponential-time parameterized algorithms on $H$-minor-free graphs (e.g., \textsc{Odd Cycle Transversal}, \textsc{Vertex Multiway Cut}, \textsc{Vertex Multicut}, etc.), our theorem gives much simpler algorithms of the same running time.
+\end{abstract}
+
+
+\section{Introduction}
+
+Baker's layering technique is a fundamental tool for a certain type of algorithms on planar graphs.
+It was first used implicitly by Baker~\cite{Baker94} and can be formalized as the following statement: given a planar graph $G$ and an integer $p$, we can find in polynomial-time a partitioning $Z_1,\dots,Z_p$ of the vertex set of $G$ such that $G-Z_i$ has treewidth $O(p)$ for every $i \in [p]$.
+This decomposition can be used for problems where we can argue that there exist an $i \in [p]$ such that $Z_i$ is irrelevant to the solution (or has negligible contribution to it) and hence $Z_i$ can be deleted from $G$.
+Then we are left with an instance $G-Z_i$ having treewidth $O(p)$ and techniques for bounded-treewidth graphs can be used.
+This approach has been used in the design of polynomial-time approximation schemes (PTAS) \cite{Baker94,DemaineHK05,KhannaM96} and parameterized algorithms \cite{BuiP92,DornFLRS13,Eppstein99,FominLMPPS16,Grohe03,Tazari12} for planar graphs.
+Moreover, this decomposition algorithm can be further generalized to $H$-minor free graphs \cite{DemaineHK05}.
+
+\paragraph{Contraction Decomposition Theorems.}
+There are many natural problems where a set $Z_i$ cannot be removed even if it is irrelevant to the solution: most notably, problems involving connectivity typically have this property.
+To handle such problems, Klein~\cite{Klein08} introduced a dual version of Baker's layering technique, which is based on contractions of edges.
+This \emph{(Edge) Contraction Decomposition Theorem} was later generalized to $H$-minor free graphs by Demaine, Hajiaghayi, and Kawarabayashi~\cite{DemaineHK11}.
+
+\begin{theorem}[Demaine, Hajiaghayi, and Kawarabayashi~\cite{DemaineHK11}]
+ \label{thm-edge-contraction}
+ Let $H$ be a fixed graph.
+ Given an $H$-minor-free graph $G$ and an integer $p$, one can compute in polynomial time a partition of $E(G)$ into $p$ sets $Z_1,\dots,Z_p$ such that $\tw(G/Z_i) = O(p)$ for all $i \in [p]$, where the constant hidden in $O(\cdot)$ depends on $H$.
+\end{theorem}
+
+Contraction decomposition theorems of this form can be used as a building block in designing approximation schemes for, e.g., the {\sc Traveling Salesman Problem (TSP)} and {\sc Subset TSP}~\cite{BuiP92,DemaineHK11,DemaineHM10,Klein06,Klein08}, and parameterized algorithms for {\sc Bisection}, {\sc $k$-Way Cut}, {\sc Odd Cycle Transversal}, {\sc Subset Feedback Vertex Set} and many other problems \cite{BandyapadhyayLLSX24,KawarabayashiT11,MarxMNT22}.
+
+\paragraph{Subexponential Parameterized Algorithms (Edge Problems).}
+
+To illustrate this, let us briefly discuss how Theorem~\ref{thm-edge-contraction} can be used to obtain a subexponential-time parameterized algorithm for {\sc Edge Multiway Cut} in $H$-minor-free graphs.
+In {\sc Edge Multiway Cut}, we are given a graph $G$, a set $T\subseteq V(G)$ of terminals, and an integer $k$, and the task is to find a set $S\subseteq E(G)$ of at most $k$ edges such that every component of $G \setminus S$ contains at most one terminal.
+
+\begin{enumerate}[label = (\arabic*)]
+ \item A result of Wahlström~\cite{Wahlstrom20} gives a randomized quasipolynomial kernel for the problem, which allows us to assume that $|V(G)|=k^{\textup{polylog}(k)}$.
+ \item Given the decomposition $Z_1,\dots,Z_p$ of Theorem~\ref{thm-edge-contraction} where $p \coloneqq \lceil\sqrt{k}\rceil$, there is an $i \in [p]$ such that $|Z_i \cap S| \leq \sqrt{k}$ for the hypothetical solution $S$ of size $k$.
+ \item Guess this $i \in [p]$ (there are $\sqrt{k}$ possibilities) and the set $Z_i \cap S$ (there are $|V(G)|^{O(\sqrt{k})}=k^{\sqrt{k}\cdot \textup{polylog}(k)}$ possibilities)
+ \item Contracting $Z_i \setminus S$ does not change the problem at hand, since the solution $S$ if not affected.
+ \item\label{i:rob} Since the graph $G/Z_i$ has treewidth $O(\sqrt{k})$, we get that the graph $G/(Z_i\setminus S)$ has treewidth $O(\sqrt{k}+|Z_i\cap S|)=O(\sqrt{k})$ (contracting an edge can decrease treewidth by at most one).
+  Finally, we solve {\sc Edge Multiway Cut} on $G/(Z_i\setminus S)$ in time $2^{O(\sqrt{k}\log k)}\cdot |V(G)|^{O(1)}$ using standard bounded-treewidth techniques.
+\end{enumerate}
+Overall, we obtain a $2^{\sqrt{k}\cdot \textup{polylog}(k)}\cdot n^{O(1)}$ time randomized algorithm for {\sc Edge Multiway Cut}.
+The same approach also works for many other problems \cite{BandyapadhyayLLSJ22,MarxMNT22}.
+
+\paragraph{Subexponential Parameterized Algorithms (Vertex Problems).}
+Let us try to apply a similar technique for the problem {\sc Vertex Multiway Cut}, where instead of deleting a set of edges, we need to delete now a set of vertices.
+There are two main difficulties if we try to apply Theorem~\ref{thm-edge-contraction}.
+First, it would be convenient to have a partition $Z_1,\dots,Z_p$ of \emph{vertices} such that for every $i \in [p]$ contracting $Z_i$ leaves a graph of treewidth $O(p)$.
+Here contracting a vertex set $Z_i$ amounts to contracting all edges that have both endpoints in  the set $Z_i$.
+Second, in Step~\ref{i:rob} above, we exploited that the decomposition of Theorem~\ref{thm-edge-contraction} is \emph{inherently robust}: if $Z_i'$ is obtained from $Z_i$ by omitting a set of $s$ edges, then the treewidth of $G/Z'_i$ is at most $s$ higher than the treewidth of $G/Z_i$.
+
+The following example shows that an analogous statements for contracting vertex sets is not true.
+Let $G$ be obtained from a $k\times k$ grid by adding two universal vertices $x$ and $y$.
+Let $A$ and $B$ be the two bipartition classes of the $k\times k$ grid, and define $Z_1 \coloneqq A \cup \{x\}$ and $Z_2 \coloneqq B \cup \{y\}$.
+Then $G/Z_i$ has treewidth 2 for both $i \in [2]$.
+On the other hand, $G/(Z_1\setminus \{x\}) = G/A = G$ and $G/(Z_2\setminus \{y\}) = G/B = G$ which means the jump in treewidth can be unbounded even after omitting just a single vertex.
+Note that $G$ is $K_7$-minor free, so we cannot hope that a vertex partition version of Theorem~\ref{thm-edge-contraction} is inherently robust even on $H$-minor-free graphs.
+
+\paragraph{Robust Contraction Decomposition Theorem.}
+The above naturally leads to the question of a \emph{robust} vertex contraction decomposition theorem, where omitting vertices from some $Z_i$ increases the treewidth only in a bounded way.
+Such decomposition theorems were recently introduced independently for planar graphs \cite{MarxMNT22} and for bounded-genus graphs (and more generally, almost-embeddable graphs) \cite{BandyapadhyayLLSJ22} by subsets of the authors,
+who used them to obtain the first subexponential-time (parameterized) algorithms for a number of problems, such as {\sc Edge Bipartization}, {\sc Odd Cycle Transversal}, {\sc Edge/Vertex Multiway Cut}, {\sc Edge/Vertex Multicut}, and {\sc Group Feedback Edge/Vertex Set} on the above graph classes.
+More precisely, \cite{BandyapadhyayLLSJ22,MarxMNT22} design parameterized algorithms with running time $f(k)n^{O(\sqrt{k})}$ or even $2^{O(\sqrt{k})}n^{O(1)}$, where $k$ is the size of the solution (and $\widetilde{O}(\cdot)$ hides $\log k$ factors).
+
+The main result of this paper is a \emph{vertex} contraction decomposition theorem on $H$-minor-free graphs that is \emph{robust} in the sense described above.
+
+\begin{restatable}{theorem}{main}
+ \label{thm-contraction}
+ Let $H$ be a fixed graph.
+ Given an $H$-minor-free graph $G$ and an integer $p$, one can compute in polynomial time a partition of $V(G)$ into $p$ sets $Z_1,\dots,Z_p$ such that $\tw(G/(Z_i \setminus Z')) = O(p + |Z'|)$ for all $i \in [p]$ and $Z' \subseteq Z_i$, where the constant hidden in $O(\cdot)$ depends on $H$.
+\end{restatable}
+
+Theorem~\ref{thm-contraction} generalizes the robust vertex contraction theorem for planar graphs \cite{MarxMNT22} and almost-embeddable graphs \cite{BandyapadhyayLLSJ22} to arbitrary $H$-minor-free graphs.
+It also generalizes the edge contraction decomposition (Theorem~~\ref{thm-edge-contraction}) for $H$-minor free graphs by Demaine et al.~\cite{DemaineHK11}.
+
+Combined with the results from~\cite{MarxMNT22}, Theorem~\ref{thm-contraction} directly yields parameterized algorithms of running time $2^{\widetilde{O}(\sqrt{k})} \cdot n^{O(1)}$ or $n^{O(\sqrt{k})}$ for all vertex/edge deletion problems on $H$-minor-free graphs that can be formulated as {\sc Permutation CSP Deletion} or {\sc 2-Conn Permutation CSP Deletion}, two broad classes of problems defined in \cite{MarxMNT22}.
+Roughly speaking, a permutation CSP instance is a binary CSP instance satisfying certain nice properties, and thus corresponds to a graph in which the vertices are variables and the edges are constraints.
+The {\sc Permutation CSP Edge/Vertex Deletion} problem basically asks whether one can delete at most $k$ vertices (resp., edges) from (the graph of) a permutation CSP instance such that every connected component in the resulting graph has a satisfying assignment.
+The {\sc 2-Conn Permutation CSP Edge/Vertex Deletion} problem is defined similarly, but we only care about the satisfiability on every 2-connected component (instead of connected component).
+We refer to Section~\ref{sec-app} for the precise definition of these problems.
+Combining the results from~\cite{MarxMNT22} and Theorem~\ref{thm-contraction}, we get the following result.
+
+\begin{theorem}\label{thm-app}
+ Let $H$ be a fixed graph.
+ Then {\sc Permutation CSP Edge/Vertex Deletion} and {\sc 2-Conn Permutation CSP Edge/Vertex Deletion} on $H$-minor-free instances $(\varGamma,w,\delta,k)$ can be solved in $(|\varGamma|+\delta)^{O(\sqrt{k})}$ time.
+\end{theorem}
+
+The above theorem directly gives us parameterized algorithms of running time exponential in $O(\sqrt{k})$ for many problems on $H$-minor-free graphs.
+Specifically, we obtain the first subexponential-time parameterized algorithms for the following fundamental problems on $H$-minor-free graphs.
+\begin{itemize}
+ \item $n^{O(\sqrt{k})}$ time algorithms for \textsc{Subset Feedback Vertex Set}, \textsc{Subset Odd Cycle Transversal}, \textsc{Subset Group Feedback Vertex Set}, \textsc{2-Conn Component Order Connectivity}, and the edge-deletion version of these problems.
+ \item $2^{\widetilde{O}(\sqrt{k})} \cdot n^{O(1)}$ time algorithms for \textsc{Subset Feedback Vertex Set} and \textsc{Subset Feedback Edge Set}.
+\end{itemize}
+
+Additionally, the main algorithmic results from~\cite{BandyapadhyayLLSJ22} (such as subexponential-time parameterized algorithms for \textsc{Odd Cycle Transversal}, \textsc{Vertex Multiway Cut}, \textsc{Vertex Multicut}, etc.),
+that required a complicated two-layered dynamic programming algorithm over the structural decomposition theorem of Robertson and Seymour~\cite{RobertsonS03a} for $H$-minor free graphs,
+now admit much cleaner and more direct algorithms by exploiting Theorem~\ref{thm-contraction} (these problems belong to the \textsc{Permutation CSP Deletion} category in Theorem~\ref{thm-app}).
+
+\paragraph{Other Relevant Literature.}
+The study of subexponential-time parameterized algorithms on planar and $H$-minor free graphs has been one of the most active sub-areas of parameterized algorithms, which led to exciting results and powerful methods.
+Examples include Bidimensionality~\cite{DemaineFHT05}, applications of Baker's layering technique~\cite{BuiP92,DornFLRS13,Eppstein99,FominLMPPS16,Tazari12}, bounds on the treewidth of the solution~\cite{FominLKPS20,KleinM12,KleinM14,MarxPP18}, and pattern coverage~\cite{FominLMPPS16,Nederlof20a}.
+The central theme of all these results is that planar graphs exhibit the ``\emph{ square root phenomenon}'': parameterized problems whose fastest parameterized algorithm run in time $f(k)n^{O(k)}$ or $2^{O(k)}$ on general graphs admit $f(k)n^{O(\sqrt{k})}$ or even $2^{O(\sqrt{k})}n^{O(1)}$ time algorithms when input is restricted to planar or $H$-minor free graphs.
+However, these techniques do not apply for designing subexponential time parameterized algorithms for cut and cycle hitting problems such as {\sc Multiway Cut}, {\sc Multicut}, or {\sc Odd Cycle Transversal}.
+Robust vertex contraction decomposition theorems, first obtained in \cite{BandyapadhyayLLSJ22,MarxMNT22}, provide the necessary tools to design subexponential-time parameterized algorithms for some of the cut and cycle hitting problems on $H$-minor free graphs.
+
+On the decomposition front, apart from edge contraction decomposition theorems, there are several other kind of decomposition theorems that have been used to design polynomial-time approximation schemes (PTASs) and FPT algorithms on planar graphs or more generally on $H$-minor free graphs.
+Most of these decomposition theorems prove strengthening of the classic Baker's layering technique~\cite{Baker94}.
+This generally yields, in what is known as (Vertex) Edge Decomposition Theorems~\cite{Baker94,DemaineHK05,DeVosDOSRSV04,Dvorak18,Eppstein00} (see~\cite{Panolan0Z19} for a detailed introduction).
+
+Finally, let us also point to some recent developments on the structural theory of $H$-minor-free graphs \cite{KawarabayashiTW20,ThilikosW23}.
+Our current proof of Theorem \ref{thm-contraction} mostly relies on the original Robertson-Seymour decomposition for $H$-minor-free graphs \cite{RobertsonS03a}, and is independent of \cite{KawarabayashiTW20,ThilikosW23}.
+Reformulating some of our arguments in the language of \cite{KawarabayashiTW20,ThilikosW23} may allow us to obtain a more streamlined proof in the future.
+
+
+
+\paragraph{Structure of Paper.}
+The remainder of the paper is structured as follows.
+In Section \ref{sec-overview} we give an informal overview of the proof of Theorem~\ref{thm-contraction}.
+After giving additional preliminaries in Section \ref{sec-pre}, the formal proof of Theorem~\ref{thm-contraction} is given in Section~\ref{sec-proof}.
+Finally, we discuss the algorithmic applications in Section \ref{sec-app}.
+
+
+\subsection{Overview of Proof of Theorem~\ref{thm-contraction}}
+\label{sec-overview}
+
+In this section, we give an informal overview of our proof of Theorem~\ref{thm-contraction}.
+For convenience, we say $Z_1,\dots,Z_p$ is a \emph{robust contraction decomposition (RCD)} of a graph $G$ if $Z_1,\dots,Z_p$ is a partition of $V(G)$ satisfying $\tw(G/(Z_i \setminus Z')) = O(p+|Z'|)$ for all $i \in [p]$ and $Z' \subseteq Z_i$.
+A $p$-RCD simply refers to an RCD of size $p$.
+Our goal is to compute a $p$-RCD of an $H$-minor-free graph $G$ for a given integer $p \geq 1$.
+
+Our starting point is the well-known Robertson-Seymour decomposition for $H$-minor-free graphs.
+The Robertson-Seymour decomposition of an $H$-minor-free graph $G$ is a tree decomposition $(T,\beta)$ of $G$ in which the \emph{torso} of each node $t \in V(T)$ is $h$-\emph{almost-embeddable} and the \emph{adhesion} of each node $t \in V(T)$ is of size at most $h$, for some constant $h$ depending on $H$.
+Here, the adhesion of $t$, denoted by $\sigma(t)$, is the intersection of the bag $\beta(t)$ and the bag of the parent of $t$.
+The torso of $t$, denoted by $\tor(t)$, is a supergraph of $G[\beta(t)]$ (the subgraph of $G$ induced by $\beta(t)$), obtained by adding edges to $G[\beta(t)]$ to make the adhesion of each child of $t$ a clique.
+Almost-embeddable graphs generalize bounded-genus graphs.
+Roughly speaking, an $h$-almost-embeddable graph has its main part embedded in a surface of genus at most $h$, and the remaining part consists of at most $h$ well-structured subgraphs (called \emph{vortices}) and a set of at most $h$ ``bad'' vertices (called \emph{apex vertices} or \emph{apices}).
+In this overview, the reader can feel free to ignore the vortices/apices of an almost-embeddable graph and think about it as a graph embedded in a surface of bounded genus.
+The formal definitions of tree decompositions and almost-embeddable graphs can be found in Section~\ref{sec-pre}.
+
+Intuitively, the Robertson-Seymour decomposition partitions an $H$-minor-free graph into almost-embeddable ``pieces''.
+Since it is known that almost-embeddable graphs admit RCDs \cite{BandyapadhyayLLSJ22}, a natural idea comes:
+Can we exploit Robertson-Seymour decomposition to somehow ``lift'' the RCDs of the almost-embeddable pieces to the $H$-minor-free graph?
+To explore this idea, let us consider an $H$-minor-free graph $G$ and the Robertson-Seymour decomposition $(T,\beta)$ of $G$.
+Since the torsos of $(T,\beta)$ are $h$-almost-embeddable, we can compute a $p$-RCD $Z_1^{(t)},\dots,Z_p^{(t)} \subseteq \beta(t)$ for each torso $\tor(t)$ using the results of \cite{BandyapadhyayLLSJ22}.
+Ideally, if these RCDs are \emph{consistent} in the sense that for every vertex $v \in V(G)$ there exists an index $i \in [p]$ such that $v \in Z_i^{(t)}$ for all nodes $t \in V(T)$ whose bag contains $v$, then we can combine them to obtain a partition $Z_1,\dots,Z_p$ of $V(G)$ where $Z_i = \bigcup_{t \in V(T)} Z_i^{(t)}$ and hope it to be an RCD of $G$.
+(Of course, as we will see later, such a na{\"i}ve construction of $Z_1,\dots,Z_p$ does not work. But it can provide us some useful intuition towards a proof of the theorem.)
+Obtaining consistent RCDs for the torsos is actually not difficult, by properly using the small adhesion size of $(T,\beta)$.
+The basic idea is the following.
+For each node $t \in V(T)$, instead of computing a $p$-RCD for $\tor(t)$, we only compute a $p$-RCD for $\tor(t) - \sigma(t)$, and how the vertices in $\sigma(t)$ belong to the $p$ classes is determined by the RCDs on the ancestors of $t$.
+The decompositions constructed in this way are consistent.
+Furthermore, since $|\sigma(t)| \leq h$, given a $p$-RCD for $\tor(t) - \sigma(t)$, no matter how we assign the vertices in $\sigma(t)$ to the $p$ classes, the resulting decomposition is always a $p$-RCD for $\tor(t)$.
+Thus, we obtain consistent RCDs for the torsos, which give us the aforementioned partition $Z_1,\dots,Z_p$ of $V(G)$.
+The remaining question is then whether $Z_1,\dots,Z_p$ is an RCD of $G$, i.e., whether $\tw(G/(Z_i \setminus Z')) = O(p+|Z'|)$ for all $i \in [p]$ and $Z' \subseteq Z_i$.
+
+The only reason for why $Z_1,\dots,Z_p$ could be an RCD of $G$ is clearly the fact that every $Z_i$ satisfies the RCD condition ``locally'', i.e., when restricted to a torso.
+Specifically, let $i \in [p]$ and $Z' \subseteq Z_i$.
+Set $Z = Z_i \setminus Z'$ for convenience.
+What we want is $\tw(G/Z) = O(p+|Z'|)$.
+For each $t \in V(T)$, we have $Z \cap \beta(t) = Z_i^{(t)} \setminus (Z' \cap Z_i^{(t)})$, and thus $\tw(\tor(t)/(Z \cap \beta(t))) = O(p+|Z'|)$.
+How can we go from the locally bounded treewidth of each $\tor(t)/(Z \cap \beta(t))$ to the global treewidth of $G/Z$?
+The following observation (given in Lemma~\ref{lem-torsotw}) seems useful.
+\begin{itemize}
+    \item[] If a graph admits a tree decomposition $\mathcal{T}$ in which each torso is of treewidth at most $w$, then the graph itself is of treewidth $O(w)$.
+    Indeed, we can ``glue'' the width-$w$ tree decompositions of the torsos along the given tree decomposition $\mathcal{T}$ to obtain a width-$O(w)$ tree decomposition of the graph (mainly because in a torso the adhesions of the children are cliques).
+\end{itemize}
+This observation allows us to go from the treewidth of the torsos to the treewidth of the entire graph.
+At the first glance, it does not directly apply to our situation here, because we are working on the \emph{contracted} graphs instead of the original ones: our goal is to lift the treewidth bound from the \emph{contracted} torsos $\tor(t)/(Z \cap \beta(t))$ to the \emph{contracted} graph $G/Z$.
+However, it is a well-known fact (given in Fact~\ref{fact-inducedtd}) that a tree decomposition of $G$ naturally induces a tree decomposition of the contracted graph $G/Z$ by ``contracting'' each bag.
+Specifically, consider the \emph{quotient} map $\pi\colon V(G) \to V(G/Z)$ which maps each vertex of $G$ to the corresponding vertex of $G/Z$.
+Set $\beta^*(t) = \pi(\beta(t))$ for all $t \in V(T)$.
+Then $(T,\beta^*)$ is a tree decomposition of $G/Z$.
+Intuitively, the tree decomposition $(T,\beta^*)$ should allow us to apply the above observation to lift the treewidth bound from $\tor(t)/(Z \cap \beta(t))$ to $G/Z$, and eventually show that $Z_1,\dots,Z_p$ is an RCD of $G$.
+
+Although the above argument seems promising, a closer inspection reveals that it actually has a fatal issue, which is also the main barrier to proving Theorem \ref{thm-contraction}.
+The issue comes from a somewhat counter-intuitive fact: \emph{the contracted torsos are not identical to the torsos of the contracted graph}!
+Formally, let $\tor^*(t)$ denote the torso of $t \in V(T)$ in the tree decomposition $(T,\beta^*)$ of $G/Z$.
+Then we have $\tor(t)/(Z \cap \beta(t)) \neq \tor^*(t)$ in general, and even worse, the treewidth of $\tor^*(t)$ can be unbounded even if the treewidth of $\tor(t)/(Z \cap \beta(t))$ is bounded.
+The main reason for why this happens is the following.
+The edges of $\tor(t)$ do not necessarily appear in $G$: some of them are manually added to make the adhesions of the children of $t$ cliques (for convenience, we call them \emph{fake edges}).
+When we contract $G$ to $G/Z$, only the edges appearing in $G$ can get contracted.
+However, when we contract $\tor(t)$ to $\tor(t)/(Z \cap \beta(t))$, all fake edges in $\tor(t)[Z \cap \beta(t)]$ also get contracted.
+This over-contracting can make $\tor(t)/(Z \cap \beta(t))$ much ``smaller'' than $\tor^*(t)$.
+To see an example, suppose $G$ is the graph obtained from an $m \times m$ grid by subdividing each edge into two edges (with an intermediate vertex); see Figure~\ref{fig-grid}.
+So we have $n = O(m^2)$.
+Consider a tree decomposition $(T,\beta)$ of $G$ defined as follows.
+The tree $T$ consists of a root with some children.
+The bag of the root contains the $m^2$ grid vertices.
+Each child of the root corresponds to an edge $e$ of the grid, whose bag contains the two endpoints of $e$ (two grid vertices) and the intermediate vertex for subdividing $e$.
+Now the adhesion of each child of the root consists of the two endpoints of the corresponding grid edge.
+Let $t \in V(T)$ be the root and $Z \subseteq V(G)$ consist of the grid vertices.
+Then $\tor(t)$ is an $m \times m$ grid and $\tor(t)/(Z \cap \beta(t)) = \tor(t)/Z$ is a single vertex.
+However, $Z$ is actually an independent set in $G$.
+Thus, $G/Z = G$ and we have $\tor^*(t) = \tor(t)$, which is of treewidth $m$.
+In fact, this simple example not only demonstrates that $\tor^*(t)$ can have much higher treewidth than $\tor(t)/(Z \cap \beta(t))$, but also directly shows that a partition $Z_1,\dots,Z_p$ satisfying the RCD condition locally (i.e., at each torso) may be not a global RCD in general (and thus our previous construction fails).
+Suppose now we have an RCD $Z_1^{(t)},\dots,Z_p^{(t)}$ of $\tor(t)$ for the root $t \in V(T)$.
+For each child $s$ of $t$, we arbitrarily assign the only vertex in $\beta(s) \setminus \sigma(s)$ to a class $Z_i$ different from the classes the two vertices in $\sigma(s)$ belong to.
+Note that, since $|\beta(s)| = 3$, every partition of $\beta(s)$ is actually an RCD of $\tor(s)$.
+In this way, we obtain a partition $Z_1,\dots,Z_p$ of $V(G)$ that is an RCD when restricted to every torso.
+However, each $Z_i$ is an independent set of $G$, and thus $G/Z_i = G$.
+So unless $p = \Omega(n)$, $Z_1,\dots,Z_p$ is not an RCD of $G$.
+
+\begin{figure}
+ \centering
+ \includegraphics[height=3.6cm]{fig-grid.pdf}
+ \caption{An $m \times m$ grid with subdivided edges. The black vertices are the grid vertices.}
+ \label{fig-grid}
+\end{figure}
+
+The main technical contribution in our proof is to break the above barrier by constructing $Z_1,\dots,Z_p$ in a much more sophisticated way.
+On a high-level, we still follow the idea of constructing RCDs locally for each torso and combine them to obtain $Z_1,\dots,Z_p$.
+So in what follows, we always use $Z_1^{(t)},\dots,Z_p^{(t)}$ to denote the restriction of $Z_1,\dots,Z_p$ to $\tor(t)$, i.e., $Z_i^{(t)} \coloneqq Z_i \cap \beta(t)$.
+To avoid ambiguity, for a subset $Z \subseteq V(G)$, we use $(T,\beta_Z^*)$ to denote the tree decomposition of $G/Z$ induced by $(T,\beta)$, and use $\tor_Z^*(t)$ to denote the torso of a node $t \in V(T)$ in $(T,\beta_Z^*)$.
+We have seen that the main reason for why $\tor_Z^*(t)$ can have a much higher treewidth than $\tor(t)/(Z \cap \beta(t))$ is the fake edges in $\tor(t)$.
+So ideally, if $\tor(t)/(Z \cap \beta(t))$ does not contract any fake edge in $\tor(t)$, we are happy.
+But this is unlikely, because in the worst case (e.g., the grid example above) every edge in $\tor(t)$ is fake.
+Fortunately, the fake edges in $\tor(t)$ are not always ``uncontractable''.
+Indeed, if a fake edge in $\tor(t)$ has two endpoints lying in the same connected component of $G[Z]$, then we can safely contract it because its two endpoints are also contracted to one vertex in $G/Z$.
+Therefore, it is enough to guarantee that $\tor(t)/(Z \cap \beta(t))$ only contracts these safe fake edges, which is equivalent to saying that the two endpoints of every edge of $\tor(t)[Z \cap \beta(t)]$ lie in the same connected component of $G[Z]$.
+(If this holds, we should be able to somehow relate $\tw(\tor_Z^*(t))$ to $\tw(\tor(t)/(Z \cap \beta(t)))$ and make the previous proof work.)
+However, this is still too difficult, because we are not dealing with a single set $Z$.
+Instead, we have to take care of $Z = Z_i \setminus Z'$ for all $i \in [p]$ and $Z' \subseteq Z_i$, i.e., all subsets of $Z_1,\dots,Z_p$.
+Even if the construction of $Z_i$ makes every fake edge $uv$ of $\tor(t)[Z_i \cap \beta(t)]$ have its endpoints $u$ and $v$ in the same connected component of $G[Z_i]$, when a fraction $Z' \subseteq Z_i$ is taken away from $Z_i$, it can happen that $u$ and $v$ lie in different connected components of $G[Z_i \setminus Z']$ (for example, when $Z'$ is a cut of $u$ and $v$ in $G[Z_i]$) and thus the fake edge $uv$ is no longer safe for contraction when considering $Z = Z_i \setminus Z'$.
+
+The key observation to get rid of this issue is that we do not necessarily need to make \emph{every} fake edge of $\tor(t)[(Z_i \setminus Z') \cap \beta(t)] = \tor(t)[Z_i^{(t)} \setminus Z']$ safe.
+Indeed, the desired bound for $\tw(\tor_{Z_i \setminus Z'}^*(t))$ and $\tw(G/(Z_i \setminus Z'))$ is $O(p+|Z'|)$, which also depends on $|Z'|$.
+It turns out that as long as $\tor(t)[Z_i^{(t)} \setminus Z']$ only contains $O(|Z'|)$ ``unsafe'' fake edges (i.e., those with two endpoints in different connected components of $G[Z_i \setminus Z']$), we can obtain the bound $\tw(\tor_{Z_i \setminus Z'}^*(t)) = O(p+|Z'|)$.
+To see this, let $Z'' \subseteq (Z_i \setminus Z') \cap \beta(t) = Z_i^{(t)} \setminus Z'$ consist of the endpoints of the $O(|Z'|)$ unsafe fake edges in $\tor(t)[Z_i^{(t)} \setminus Z']$, so we have $|Z''| = O(|Z'|)$.
+Now every edge in $\tor(t)[Z_i^{(t)} \setminus (Z' \cup Z'')]$ has its two endpoints in the same connected component of $G[Z_i \setminus Z']$, and is thus safe.
+Since $\tor(t)/(Z_i^{(t)} \setminus (Z' \cup Z''))$ only contracts safe edges, it can be shown that $\tor_{Z_i \setminus Z'}^*(t)$ is (almost\footnote{More precisely, $\tor_{Z_i \setminus Z'}^*(t)$ is a minor of a graph obtained from $\tor(t)/(Z_i^{(t)} \setminus (Z' \cup Z''))$ by adding few edges.}) a minor of $\tor(t)/(Z_i^{(t)} \setminus (Z' \cup Z''))$.
+Thus, we can bound $\tw(\tor_{Z_i \setminus Z'}^*(t))$ using $\tw(\tor(t)/(Z_i^{(t)} \setminus (Z' \cup Z''))$, where the latter is $O(p+|Z' \cup Z''|) = O(p+|Z'|)$, under the assumption that $Z_1^{(t)},\dots,Z_p^{(t)}$ is an RCD of $\tor(t)$.
+To summarize, $Z_1,\dots,Z_p$ is an RCD of $G$ if the following conditions hold.
+\begin{enumerate}[label = (\Alph*)]
+ \item\label{item:overview-a} $Z_1,\dots,Z_p$ is an RCD when restricted to every torso, i.e., $Z_1^{(t)},\dots,Z_p^{(t)}$ is an RCD of $\tor(t)$.
+ \item\label{item:overview-b} All but at most $O(|Z'|)$ edges in $\tor(t)[Z_i^{(t)} \setminus Z']$ have both endpoints in the same connected component of $G[Z_i \setminus Z']$, for all $t \in V(T)$, $i \in [p]$, and $Z' \subseteq Z_i$.
+\end{enumerate}
+Condition~\ref{item:overview-a} naturally holds as long as we insist on constructing $Z_1,\dots,Z_p$ by combining local RCDs.
+So the crucial question now is how to satisfy condition~\ref{item:overview-b}.
+
+\paragraph{From Global to Local.}
+Condition~\ref{item:overview-b} is not tractable, because it is a global constraint on $Z_1,\dots,Z_p$.
+So we need to somehow reduce it to a local constraint on the RCD of each torso.
+Let us fix a node $t \in V(T)$ and an index $i \in [p]$.
+To have condition~\ref{item:overview-b}, the first thing we need is that (almost) every edge of $\tor(t)[Z_i^{(t)}]$ has its endpoints in the same connected component of $G[Z_i]$, which is the special case $Z' = \emptyset$.
+But only having this is not enough.
+We need in addition that loosing $k$ vertices in $Z_i$ only makes $O(k)$ fake edges become ``unsafe''.
+To achieve this, our main idea is to require the two endpoints of every edge in $\tor(t)[Z_i^{(t)}]$ to be connected in $G[Z_i]$ by \emph{only} the vertices ``strictly below $t$'' in the tree decomposition $(T,\beta)$, that is, the vertices that only appear in the bags of descendants of $t$.
+Formally, for every child $s$ of $t$, denote by $\gamma(s)$ the union of all bags in $T_s$, the subtree of $T$ rooted at $s$.
+Then our requirement is that for every edge $uv$ of $\tor(t)[Z_i^{(t)}]$, $u$ and $v$ lie in the same connected component of $G[((\gamma(s) \setminus \sigma(s)) \cap Z_i) \cup \{u,v\}]$ for every child $s$ of $t$ such that $u,v \in \sigma(s)$.
+Note that every non-fake edge trivially satisfies the requirement.
+
+We show that this requirement is sufficient to guarantee condition~\ref{item:overview-b} above for all $Z' \subseteq Z_i$.
+The definition of tree decompositions guarantees that the sets $\gamma(s) \setminus \sigma(s)$ are disjoint for different children $s$ of $t$.
+We say a child $s$ of $t$ is \emph{bad} if $Z'$ contains at least one vertex in $\gamma(s) \setminus \sigma(s)$.
+By the disjointness of the sets $\gamma(s) \setminus \sigma(s)$, the number of bad children of $t$ is at most $|Z'|$.
+For convenience, we say a child $s$ of $t$ \emph{witnesses} an edge $uv$ of $\tor(t)[Z_i^{(t)}]$ if $u,v \in \sigma(s)$.
+Note that each child $s$ of $t$ can witness at most $O(h^2)$ edges, because $|\sigma(s)| \leq h$.
+Due to our requirement, if an edge $uv$ of $\tor(t)[Z_i^{(t)} \setminus Z']$ violates condition~\ref{item:overview-b} above, i.e., $u$ and $v$ lie in different connected components of $G[Z_i \setminus Z']$, then $Z'$ must contain at least one vertex in $\gamma(s) \setminus \sigma(s)$ for every child $s$ of $t$ satisfying $u,v \in \sigma(s)$, and in particular $(u,v)$ is witnessed by a bad node.
+Since $t$ has at most $|Z'|$ bad children and each of them can witness $O(h^2)$ edges, the total number of edges of $\tor(t)[Z_i^{(t)} \setminus Z']$ violating condition~\ref{item:overview-b} is bounded by $O(|Z'|)$.
+
+Based on the above argument, it now suffices to construct $p$-RCDs for each torso of $(T,\beta)$ such that the partition $Z_1,\dots,Z_p$ obtained by combining these local RCDs satisfies the aforementioned requirement for all $i \in [p]$ and $t \in V(T)$.
+However, the current form of our requirement is global, because whether it is satisfied at a node $t$ depends on the construction at not only $t$ but also \emph{all descendants} of $t$ in $T$.
+So next, let us transform it to a ``local'' form which can be checked by looking at the construction at each torso \emph{independently}.
+We first observe that the following condition implies our previous requirement (which can be shown by a simple induction argument).
+\begin{itemize}
+ \item[] For every edge $uv$ of $\tor(t)[Z_i^{(t)}]$, the endpoints $u$ and $v$ lie in the same connected component of $\tor(s)[(Z_i^{(s)} \setminus \sigma(s)) \cup \{u,v\}]$ for every child $s$ of $t$ such that $u,v \in \sigma(s)$.
+\end{itemize}
+The above is actually equivalent to saying that for every child $s$ of $t$, all $u,v \in \sigma(s) \cap Z_i^{(s)}$ lie in the same connected component of $\tor(s)[(Z_i^{(s)} \setminus \sigma(s)) \cup \{u,v\}]$.
+Importantly, this condition \emph{only} depends on the construction of $Z_1^{(s)},\dots,Z_p^{(s)}$, the RCD of $\tor(s)$.
+If this condition holds on every node of $T$, then our previous requirement is also satisfied for every node of $T$.
+Therefore, we have our new goal.
+For every node $t \in V(T)$, we want the following.
+
+\begin{enumerate}[label = (\Alph*)]
+ \item $Z_1^{(t)},\dots,Z_p^{(t)}$ is an RCD of $\tor(t)$.
+ \item For all $i \in [p]$, any two vertices $u,v \in \sigma(t) \cap Z_i^{(t)}$ lie in the same connected component of $\tor(t)[(Z_i^{(t)} \setminus \sigma(t)) \cup \{u,v\}]$.
+\end{enumerate}
+
+Now the new conditions above are both local, which allows us to consider each torso individually.
+We shall construct the RCDs of the torsos in a top-down manner from the root of $T$ to the leaves.
+Suppose we are at the node $t \in V(T)$ and going to construct the RCD $Z_1^{(t)},\dots,Z_p^{(t)}$ of $\tor(t)$,
+At this point, the RCD at the parent of $t$ has been constructed, so each vertex in $\sigma(t)$ has already been assigned to one of the $p$ classes $Z_1^{(t)},\dots,Z_p^{(t)}$.
+We then compute a $p$-RCD of $\tor(t) - \sigma(t)$ with an additional property that the $i$-th class of the RCD ``connects'' the vertices in $\sigma(t) \cap Z_i^{(t)}$ for all $i \in [p]$.
+Combining this with the partition of $\sigma(t)$ gives us the desired $Z_1^{(t)},\dots,Z_p^{(t)}$ satisfying the above two conditions.
+As long as such a single step can be achieved, we can eventually construct $Z_1,\dots,Z_p$.
+So from now, we can restrict ourselves to one torso.
+
+\paragraph{RCD with a Connectivity Constraint.}
+Before discussing how to construct the desired RCD of $\tor(t) - \sigma(t)$, we need another twist to simplify the task in hand.
+We notice that constructing an RCD of $\tor(t) - \sigma(t)$ satisfying the additional connectivity property is actually \emph{impossible} if we do not add any assumption on how the vertices in $\sigma(t)$ belong to the $p$ classes.
+To see this, consider the following simple example where $\tor(t)$ is a star of 5 vertices, one central vertex connecting with 4 other vertices.
+All vertices are contained in $\sigma(t)$ except the central vertex.
+In $\sigma(t)$, two vertices belong to the class $Z_1^{(t)}$ and the other two vertices belong to $Z_2^{(t)}$.
+Now in order to connect the two vertices in $\sigma(t) \cap Z_1^{(t)}$, the RCD of $\tor(t) - \sigma(t)$ must assign the central vertex to $Z_1^{(t)}$.
+But if this is the case, we fail to connect the two vertices in $\sigma(t) \cap Z_2^{(t)}$.
+Therefore, in this example, it is impossible to construct the desired RCD of $\tor(t) - \sigma(t)$.
+In order to fix this issue, we have to somehow guarantee the ``connectivity task'' that $\sigma(t)$ leaves to us is not too complicated.
+
+Fortunately, using a stronger version of Robertson-Seymour decomposition, we are able to reach a nice situation where only \emph{one} class of vertices in $\sigma(t)$ need to be connected by the RCD of $\tor(t) - \sigma(t)$.
+This version of Robertson-Seymour decomposition, as stated in \cite{DemaineHK05,DeVosDOSRSV04}, guarantees that for every node $t \in V(T)$ and every child $s$ of $t$, the adhesion $\sigma(s)$ contains at most \emph{three} vertices in the embeddable part of $\tor(t)$ (recall that $\tor(t)$ is an $h$-almost-embeddable graph consisting of an embeddable part, vortices, and apices).
+To see why this result helps us, let us consider an ideal case where every torso in the Robertson-Seymour decomposition has no vortices and apices.
+In this case, every adhesion $\sigma(t)$ is of size at most three, because all vertices in the torso $\tor(t')$ of the parent $t'$ of $t$ are in the embeddable part of $\tor(t')$ and thus $\sigma(t)$ can contain at most three of them.
+Since $|\sigma(t)| \leq 3$, there can be at most one class $Z_i^{(t)}$ that contains at least two vertices in $\sigma(t)$.
+Therefore, when constructing the RCD of $\tor(t) - \sigma(t)$, we only need the $i$-th class to connect the vertices in $\sigma(t) \cap Z_i^{(t)}$.
+In the general case where the torsos have vortices and apices, the situation becomes complicated.
+But we can still manage to achieve this, which requires us to construct the RCD of each torso more carefully and then use the ``three-vertex'' property as above.
+
+Now our goal becomes to construct an RCD of $\tor(t) - \sigma(t)$ in which one class is required to connect the corresponding vertices in $\sigma(t)$.
+Essentially, we achieve this by proving the following.
+
+\begin{lemma}[simplified version of Corollary~\ref{cor-decomp2}]
+ \label{lem-simplified}
+ Given a connected $h$-almost-embeddable graph $G$, a set $\varPhi \subseteq V(G)$ of size $c$, and a number $p$, one can compute in polynomial time $p$ disjoint sets $Z_1,\dots,Z_p \subseteq V(G)$ such that the following two conditions hold\footnote{The actual result, Corollary~\ref{cor-decomp2}, is more complicated, in which the sets $Z_1,\dots,Z_p$ have some additional properties and also there is an additional assumption on the almost-embeddable graph $G$. As we are not going to cover these techinical details in this overview, considering this simplified version should be enough.}.
+ \begin{enumerate}[label = (\arabic*)]
+  \item\label{item-simplified-1} $\tw(G/(Z_i \setminus Z')) = O_{h,c}(p+|Z'|)$ for all $i \in [p]$ and $Z' \subseteq Z_i$.
+  \item\label{item-simplified-2} $\varPhi$ is contained in one connected component of $G - \bigcup_{i=1}^p Z_i$.
+ \end{enumerate}
+\end{lemma}
+
+To see why the above lemma achieves our goal, note that $\tor(t) - \sigma(t)$ is $h$-almost-embeddable.
+Furthermore, by constructing the Robertson-Seymour decomposition $(T,\beta)$ carefully, we can always make $\tor(t) - \sigma(t)$ connected and make every vertex in $\sigma(t)$ have a neighbor in $\beta(t) \setminus \sigma(t)$ in the torso $\tor(t)$; see Lemma~\ref{lem-rsdecomp} and Observation~\ref{obs-noadhtos}.
+Without loss of generality, suppose we want to connect the vertices in $\sigma(t) \cap Z_k^{(t)}$ using the $k$-th class of the RCD of $\tor(t) - \sigma(t)$.
+For each $v \in \sigma(t) \cap Z_i^{(t)}$, we mark a vertex $v' \in \beta(t) \setminus \sigma(t)$ that is neighboring to $v$ in $\tor(t)$.
+Let $\varPhi \subseteq \beta(t) \setminus \sigma(t)$ be the set of marked vertices.
+Now apply Lemma~\ref{lem-simplified} with $G = \tor(t) - \sigma(t)$ and the set $\varPhi$.
+We then get the disjoint sets $Z_1,\dots,Z_p \subseteq \beta(t) \setminus \sigma(t)$.
+The vertices in $Z_i$ are assigned to the class $Z_i^{(t)}$ for all $i \in [p]$.
+Finally, the vertices in $(\beta(t) \setminus \sigma(t)) \setminus (\bigcup_{i=1}^p Z_i)$ are assigned to the class $Z_k^{(t)}$.
+Then condition~\ref{item-simplified-1} of Lemma~\ref{lem-simplified} implies that $Z_1^{(t)},\dots,Z_p^{(t)}$ is an RCD of $\tor(t)$ and condition~\ref{item-simplified-2} guarantees that all $u,v \in \sigma(t) \cap Z_k^{(t)}$ lie in the same connected component of $\tor(s)[(Z_k^{(t)} \setminus \sigma(t)) \cup \{u,v\}]$.
+Next, we summarize our ideas for proving Lemma~\ref{lem-simplified}.
+
+\paragraph{Proof Sketch of Lemma~\ref{lem-simplified}.}
+As mentioned at the beginning, the recent work~\cite{BandyapadhyayLLSJ22} already gives RCDs for almost-embeddable graphs, that is, it proves the special case of Lemma~\ref{lem-simplified} without the set $\varPhi$ and condition~\ref{item-simplified-2}.
+Therefore, it is natural to ask whether one can directly generalize (possibly with slight modifications) the proof in \cite{BandyapadhyayLLSJ22} to obtain a proof of Lemma~\ref{lem-simplified}.
+Unfortunately, this is not the case.
+A close look at the proof in \cite{BandyapadhyayLLSJ22} reveals that the construction of $Z_1,\dots,Z_p$ in \cite{BandyapadhyayLLSJ22} ``inherently'' prevents us from having condition~\ref{item-simplified-2} of Lemma~\ref{lem-simplified}.
+To see this, we need to briefly review how \cite{BandyapadhyayLLSJ22} constructs the sets $Z_1,\dots,Z_p$.
+
+For convenience, we discuss the proof of \cite{BandyapadhyayLLSJ22} on a surface-embedded graph instead of an almost-embeddable graph.
+In fact, the most difficult part of the work \cite{BandyapadhyayLLSJ22} also lies in decomposing a surface-embedded graph (specifically, the embeddable part of an almost-embeddable graph), and generalizing to almost-embeddable graphs is somehow easy.
+In \cite{BandyapadhyayLLSJ22}, the construction of $Z_1,\dots,Z_p$ itself is simple, while the analysis of the RCD condition is involved.
+In the first step, it generalizes the \emph{outerplanar layering} for planar graphs to surface-embedded graphs.
+Recall that the outerplanar layering partitions the vertices of a planar graph $G$ into layers $L_1,\dots,L_m \subseteq V(G)$, where $L_i$ consists of the vertices on the outer boundary of $G - \bigcup_{j=1}^{i-1} L_j$.
+Thus, $L_1$ is outer boundary of $G$, $L_2$ is the outer boundary of $G - L_1$, and so forth.
+If $G$ is a graph embedded in a surface $\varSigma$, the same layering procedure still applies.
+Indeed, we can fix a reference point $x_0 \in \varSigma$ and define the outer boundary of a $\varSigma$-embedded graph as the boundary of the face containing $x_0$ (assuming the image of the embedding is disjoint from $x_0$).
+Given this, we can layer $G$ in the same way as above, by defining $L_i$ to be the vertices on the outer boundary of $G - \bigcup_{j=1}^{i-1} L_j$.
+We call this generalization \emph{radial layering} for surface-embedded graphs.
+Now let $L_1,\dots,L_m$ be the radial layering of $G$.
+The analysis in \cite{BandyapadhyayLLSJ22} implies the following property of the layers (though not stated explicitly in \cite{BandyapadhyayLLSJ22}).
+
+\begin{lemma}\label{lem-equi}
+ If $Z = L_{i_1} \cup \cdots \cup L_{i_k}$ where $i_1 < \cdots < i_k$ and $|i_j - i_{j-1}| = O(p)$ for all $j \in [k+1]$ (set $i_0 = 0$ and $i_{k+1} = m$ for convenience), then $\tw(G/(Z \setminus Z')) = O(p+|Z'|)$ for all $Z' \subseteq Z$.
+\end{lemma}
+
+Then \cite{BandyapadhyayLLSJ22} simply defines each set $Z_i$ as the union of equidistant layers with distance $O(p)$ apart, that is, $Z_i = L_{q_i} \cup L_{\Delta+q_i} \cup L_{2 \Delta + q_i} \cup \cdots$ for some number $q_i \in [\Delta]$ where $\Delta = O(p)$.
+If the choices of $q_1,\dots,q_p$ are different, $Z_1,\dots,Z_p$ are disjoint.
+By Lemma~\ref{lem-equi}, $Z_1,\dots,Z_p$ satisfy the RCD condition.
+
+Now let us see what is the difficulty to generalize this construction so that it further satisfies condition~\ref{item-simplified-2} of Lemma~\ref{lem-simplified}.
+Consider the given set $\varPhi$ in Lemma~\ref{lem-simplified}, which is of size $c$.
+We want $\varPhi$ to be contained in the complement $G-\bigcup_{i=1}^{p} Z_i$, and more importantly, $\varPhi$ has to be in one connected component of $G-\bigcup_{i=1}^{p} Z_i$.
+To make $\varPhi$ contained in $G-\bigcup_{i=1}^{p} Z_i$ is easy.
+We can mark the layers $L_i$ intersecting $\varPhi$ as ``bad'' layers.
+There can be at most $c$ bad layers.
+When constructing $Z_1,\dots,Z_p$, we do not include these bad layers.
+According to Lemma~\ref{lem-equi}, we can still guarantee that $Z_1,\dots,Z_p$ satisfy condition~\ref{item-simplified-1} of Lemma~\ref{lem-simplified} even if we miss all bad layers, because the constant hidden in the bound of condition~\ref{item-simplified-1} can depend on $c$.
+However, to further require the vertices in $\varPhi$ lying in the same connected component of $G-\bigcup_{i=1}^{p} Z_i$ is impossible.
+Indeed, one can easily see that each layer $L_i$ is a separator in $G$ that separates the layers $L_1,\dots,L_{i-1}$ from the layers $L_{i+1},\dots,L_m$.
+The layers in $Z_1,\dots,Z_p$ separate the remaining part of $G$ into many ``small'' pieces where each piece consists of at most $O(p)$ consecutive layers.
+This highly-disconnected structure of $G-\bigcup_{i=1}^{p} Z_i$ naturally prevents the vertices in $\varPhi$ from lying in the same connected component, unless the layers containing $\varPhi$ are all close to each other.
+
+Based on the above discussion, in order to satisfy both conditions in Lemma~\ref{lem-simplified}, we need to significantly modify the construction of \cite{BandyapadhyayLLSJ22} with various new ideas.
+As we have seen, in the previous construction, the layers in $Z_1,\dots,Z_p$ serve as ``barriers'' that prevent the vertices in $\varPhi$ from being connected in the complement graph.
+Therefore, a natural idea is to ``break'' these layers a little bit (i.e., remove some vertices from $Z_1,\dots,Z_p$) so that the vertices in $\varPhi$ can go across the barriers to connect with each other.
+However, by doing this, the layers in each $Z_i$ become broken, and thus the new $Z_i$ might violate the RCD condition, i.e., condition~\ref{item-simplified-1} of Lemma~\ref{lem-simplified} (as we have fewer vertices to contract).
+As such, we have to break the layers in some \emph{structured} way such that the vertices in $\varPhi$ can be connected in the complement graph and \emph{simultaneously} the RCD condition of $Z_1,\dots,Z_p$ preserves, which is the main challenge in our construction.
+At this point, it is totally not clear how to achieve this goal.
+So next, we begin with some simple intuitions.
+
+\begin{figure}
+ \centering
+ \includegraphics[height=3.6cm]{fig-monotone.pdf}
+ \caption{Monotone path vs. back-and-forth path}
+ \label{fig-mono}
+\end{figure}
+
+Let us consider the simplest case where $\varPhi$ only contains two vertices $s$ and $t$.
+In this case, it suffices to properly find an $(s,t)$-path $\pi$ in $G$ and then remove the vertices in $Z_1,\dots,Z_p$ on this path.
+Since we do not want to lose the RCD condition of $Z_1,\dots,Z_p$, $\pi$ should break each layer in $Z_1,\dots,Z_p$ as ``little'' as possible.
+So intuitively, a path that visits the layers $L_1,\dots,L_m$ \emph{monotonely} (left part of Figure~\ref{fig-mono}) is preferable to a path that goes back and forth across the layers many times (right part of Figure~\ref{fig-mono}).
+If we do not have any requirement on the embedding of $G$ in $\varSigma$, it is not always possible to find a monotone (or mostly monotone) path connecting $s$ and $t$.
+Thus, at the beginning (before the radial layering), we need to first modify the embedding of $G$ to a nice one, and do everything with respect to the nice embedding.
+For surface graphs, a \emph{$2$-cell} embedding, in which each face is homeomorphic to a disk, is the nice embedding we need.
+One can always compute a $2$-cell embedding for $G$ in polynomial time as long as the genus of $G$ is a constant.
+(For almost-embeddable graphs, however, the situation is more involved, as we are not able to arbitrarily change the embedding of the embeddable part because of the vortices.
+We have to define another type of embedding for which we can safely modify a given embedding of the embeddable part to.)
+Now if $L_1,\dots,L_m$ are the radial layers for a 2-cell embedding of $G$, then one can go from every vertex in a layer $L_j$ to the previous layer $L_{j-1}$ by walking around the boundary of a face in between $L_{j-1}$ and $L_j$.
+It turns out that for every vertex $v \in L_j$ and index $i \leq j$, there exists a path from $v$ to (some vertex in) $L_i$ that visits $L_j,L_{j-1},\dots,L_i$ monotonely.
+Suppose $s \in L_i$ and $t \in L_j$ where $i \leq j$.
+Note that although we can go from $t$ to $L_i$ monotonely, there does not necessarily exist a monotone path from $t$ to $s$.
+So the key idea here is to, instead of using one path connecting $s$ and $t$, construct two monotone paths $\pi_s$ and $\pi_t$, where $\pi_s$ (resp., $\pi_t$) goes from $s$ (resp., $t$) to $L_1$.
+Then we do not include the layer $L_1$ in any of $Z_1,\dots,Z_p$ (which is fine according to Lemma~\ref{lem-equi}).
+Because $L_1$ is the outer boundary of $G$ and the embedding of $G$ is 2-cell, $G[L_1]$ is connected.
+Therefore, $L_1$ together with the two paths $\pi_s$ and $\pi_t$ connects $s$ and $t$.
+The same idea directly genearlizes to the case where $\varPhi$ has more than two vertices.
+For each vertex $v \in \varPhi$, we try to construct a path $\pi_v$ which goes monotonely from $v$ to $L_1$.
+Now $L_1$ together with all the paths connect everything in $\varPhi$.
+It then remains to show how to construct these $c$ monotone paths carefully so that they do not break the layers in $Z_1,\dots,Z_p$ too much.
+
+Since $c$ is treated as a constant in Lemma~\ref{lem-simplified}, if we are able to construct one path, it is not surprising that the same idea generalizes to constructing $c$ paths.
+Thus, in what follows, we focus on the case $c = 1$.
+We have $\varPhi = \{v\}$.
+Since the path $\pi$ from $v$ to $L_1$ we are going to construct is monotone, it crosses each layer $L_i$ at most once, that is, after it leaves $L_i$ for $L_{i-1}$, it never comes back to $L_i$.
+Therefore, we construct each part $L_i \cap \pi$ of $\pi$ from larger $i$ to smaller $i$ iteratively.
+When constructing $L_i \cap \pi$, we basically need to consider how to walk in the layer $L_i$ from an arbitrary starting vertex $s \in L_i$ to an ``exit'' vertex that is adjacent to $L_{i-1}$ so that the walk does not break $L_i$ too much.
+To this end, we have to figure out what ``too much'' means.
+In other words, how much can we break each layer $L_i$ so that $Z_1,\dots,Z_p$ still satisfy the RCD condition?
+By checking the proof of Lemma~\ref{lem-equi} in \cite{BandyapadhyayLLSJ22}, we see that the bound in Lemma~\ref{lem-equi} mainly relies on the following two properties of each layer $L_i$ (where $L_{>i}$ is the union of $L_{i+1},\dots,L_m$ and $L_{\leq i}$ is the union of $L_1,\dots,L_i$).
+\begin{enumerate}[label = (\Roman*)]
+ \item\label{item:layering-1} The neighbors of each connected component of $G[L_{>i}]$ lie in one face of $G[L_{\leq i}]$.
+ \item\label{item:layering-2} For every $L' \subseteq L_i$, each connected component of $G[L_{>i}]$ is adjacent to $O(|L'|)$ vertices in the graph $G/(L_i \setminus L')$.
+\end{enumerate}
+Using the above two properties and the fact that the layers in each of $Z_1,\dots,Z_p$ are only $O(p)$ distance apart, one can finally show that $Z_1,\dots,Z_p$ satisfies the RCD condition.
+Now we have the path $\pi$ that breaks $L_i$.
+So we can only include in $Z_1,\dots,Z_p$ the part $L_i \setminus \pi$.
+In this case, in order to make the proof work, we need the modified version of condition~\ref{item:layering-2} above: for every $L' \subseteq L_i \setminus \pi$, each connected component of $G[L_{>i}]$ is adjacent to $O(|L'|)$ vertices in the graph $G/((L_i \setminus \pi) \setminus L')$.
+However, it is easy to see that this is impossible.
+Consider the simplest case where $L' = \emptyset$.
+We want each connected component of $G[L_{>i}]$ to have $O(1)$ neighbors in $G/(L_i \setminus \pi)$.
+But in the worst case, after $\pi$ reaches $L_i$, it needs to go inside $L_i$ for a long distance in order to arrive at an exit vertex to leave $L_i$ for $L_{i-1}$.
+Therefore, it can happen that $\pi$ contains a large fraction of $L_i$ in which many vertices can be adjacent to the same connected component $C$ of $G[L_{>i}]$.
+As these vertices are not contracted in $G/(L_i \setminus \pi)$, the number of neighbors of $C$ in $G/(L_i \setminus \pi)$ can be unbounded.
+
+Going deeper into the proof of \cite{BandyapadhyayLLSJ22} shows that the reason for why the above two properties help is basically the following.
+These two properties allow us to partition $G$ into two parts $G[L_{\leq i}]$ and $G[L_{> i}]$ such that the connection between these two parts becomes ``weak'' after contracting a large subset of $L_i$, namely, each connected component of $G[L_{> i}]$ is only adjacent to few vertices in $G[L_{\leq i}]$ which lie in one face of $G[L_{\leq i}]$ (before contraction).
+Now because the part in $L_i \cap \pi$ cannot be contracted, we are no longer able to have a weak connection between $G[L_{\leq i}]$ and $G[L_{> i}]$.
+To get rid of this issue, our key idea here is to partition $G$ into two parts in a different way.
+Specifically, when determining the part of $\pi$ contained in $L_i$, we also compute another subset $L_i^+ \subseteq L_i$.
+Then we partition $G$ into two parts $G[L_{\leq i} \setminus L_i^+]$ and $G[L_{> i} \cup L_i^+]$, that is, we move $L_i^+$ from the part $G[L_{\leq i}]$ to the part $G[L_{> i}]$.
+The choice of $L_i^+$ will guarantee the aforementioned weak connection between the two new parts.
+Formally, $L_i^+$ (and $\pi$) satisfies the following properties.
+\begin{enumerate}[label = (\Roman*)]
+ \item The neighbors of each connected component of $G[L_{> i} \cup L_i^+]$ lie in one face of $G[L_{\leq i}]$ (and therefore one face of $G[L_{\leq i} \setminus L_i^+]$).
+ \item For every $L' \subseteq L_i \setminus \pi$, each connected component of $G[L_{> i} \cup L_i^+]$ is adjacent to $O(|L'|)$ vertices in the graph $G/((L_i \setminus \{\pi \cup L_i^+\}) \setminus L')$.
+\end{enumerate}
+Note that such a set $L_i^+$ does not always exist for an arbitrary path $\pi$.
+Therefore, we have to construct $L_i \cap \pi$ and $L_i^+$ simultaneously, and both of them need to be constructed carefully.
+This task is achieved by Lemma~\ref{lem-key}.
+As this step is technical and requires insights for surface-embedded graphs, we are not going to discuss it in detail.
+Essentially, once we are able to construct each part $L_i \cap \pi$ of $\pi$ and the corresponding set $L_i^+$ satisfying the above two conditions, we can combine them to obtain the desired path $\pi$ from $v$ to $L_1$ and show that $\tw(G/((Z_i \setminus \pi) \setminus Z')) = O(p+|Z'|)$ for all $Z' \subseteq Z_i \setminus \pi$.
+The sets $L_i^+$ are only used in the analysis of the treewidth bounds, and the analysis is built on the argument in \cite{BandyapadhyayLLSJ22}.
+The same idea generalizes to the case where we need to construct $c$ paths (with a bit more work).
+With this in hand, we are finally able to prove Lemma~\ref{lem-simplified} for surface-embedded graphs.
+Of course, for almost-embeddable graphs, there are more technical details to be dealt with, but the basic idea remains the same.
+
+\paragraph{Minimal embeddings of almost-embeddable graphs.}
+In the last part of this overview, we discuss an interesting intermediate result achieved in our proof.
+As aforementioned, we can modify the embedding of a (connected) surface graph to a 2-cell embedding.
+However, for an almost-embeddable graph, we cannot require its embeddable part is 2-cell embedded.
+There are two reasons.
+First, when we change the embedding of the embeddable part, the structure of the vortices might be lost.
+Second, even if the graph itself is connected, the subgraph excluding the apices is not necessarily connected, and thus does not admit a 2-cell embedding.
+In order to make our proof work, we define a variant of 2-cell embedding, which we call \emph{minimal embedding}.
+Basically, an almost-embeddable graph $G$ whose embeddable part is embedded with a minimal embedding satisfies the following condition.
+Let $f$ be a face of the embeddable part of $G$, and $\widetilde{\partial} f$ be the subgraph of $G$ consisting of the boundary of $f$ and all vortices contained in $f$.
+Then different connected components of $\widetilde{\partial} f$ belong to different connected components of $G-A$ where $A$ is the set of apices of $G$.
+If $G$ does not have vortices and apices (i.e., $G$ is a surface graph), then the above condition is equivalent to saying that the boundary of every face of $G$ is connected.
+We show that given an almost-embeddable graph $G$, we can compute (in polynomial time) a new almost-embeddable structure for $G$ in which the embeddable part is embedded with a minimal embedding (which is proved in Lemma~\ref{lem-minimal}).
+This result is important for our proof, and might be of independent interest.
+ 
+
+\section{Preliminaries}
+\label{sec-pre}
+
+\paragraph{Basic Notations.}
+Let $G$ be a graph.
+We denote by $V(G)$ and $E(G)$ the vertex set and the edge set of $G$, respectively.
+For $U \subseteq V(G)$, we denote by $G[U]$ the induced subgraph of $G$ on $U$ and denote by $G - U$ the induced subgraph of $G$ on $V(G) \setminus U$.
+Also, we denote by $N_G(U)$ the set of vertices in $V(G) \setminus U$ that are adjacent to at least one vertex in $U$, and write $N_G[U] \coloneqq N_G(U) \cup U$.
+If $U = \{u\}$, we also write $N_G(u)$ and $N_G[u]$ instead of $N_G(\{u\})$ and $N_G[\{u\}]$, respectively.
+
+\paragraph{Tree Decomposition and Treewidth.}
+A \emph{tree decomposition} of a graph $G$ is a pair $(T,\beta)$ where $T$ is a tree and $\beta\colon V(T) \to 2^{V(G)}$ maps each node $t \in V(T)$ to a set $\beta(t) \subseteq V(G)$, called the \emph{bag} of $t$, such that
+\begin{enumerate}[label = (\roman*)]
+ \item $\bigcup_{t \in V(T)} \beta(t) = V(G)$,
+ \item for every edge $uv \in E(G)$, there exists $t \in V(T)$ with $u,v \in \beta(t)$, and
+ \item for every $v \in V(G)$, the set $\{t \in V(T) \mid v \in \beta(t)\}$ forms a connected subset in $T$.
+\end{enumerate}
+The \emph{width} of $(T,\beta)$ is $\max_{t \in V(T)} |\beta(t)| - 1$.
+The \emph{treewidth} of a graph $G$, denoted by $\tw(G)$, is the minimum width of a tree decomposition of $G$.
+It is sometimes more convenient to consider \emph{rooted} trees.
+Throughout this paper, we always view the underlying tree of a tree decomposition as a rooted tree.
+
+Let $(T,\beta)$ be a tree decomposition of a graph $G$.
+The \emph{adhesion} of a non-root node $t \in V(T)$, denoted by $\sigma(t)$, is defined as $\sigma(t) \coloneqq \beta(t) \cap \beta(t')$ where $t'$ is the parent of $t$.
+For convenience, we also define the adhesion of the root of $T$ as the empty set.
+For each node $t \in V(T)$, we define the \emph{$\gamma$-set} of $t$ as $\gamma(t) \coloneqq \bigcup_{s \in V(T_t)} \beta(s)$ where $T_t$ is the subtree of $T$ rooted at $t$.
+The \emph{torso} of $t$, denoted by $\tor(t)$, is the graph obtained from $G[\beta(t)]$ by making $\sigma(s)$ a clique for all children $s$ of $t$, i.e., adding edges between any two vertices $u,v \in \beta(t)$ such that $u,v \in \sigma(s)$ for some child $s$ of $t$.
+The following two facts are well-known.
+
+\begin{fact}\label{fact-partition}
+ Let $(T,\beta)$ be a tree decomposition of $G$.
+ Then $\{\beta(t) \setminus \sigma(t) \mid t \in V(T)\}$ is a partition of $V(G)$.
+\end{fact}
+
+\begin{proof}\textcolor{red}{TOPROVE 1}\end{proof}
+
+\begin{fact}\label{fact-connintorso}
+ Let $(T,\beta)$ be a tree decomposition of $G$.
+ If $U \subseteq V(G)$ is a subset of vertices such that $G[U]$ is connected, then for all $t \in V(T)$, either $\tor(t)[U \cap \beta(t)]$ is connected or every connected component of $\tor(t)[U \cap \beta(t)]$ intersects $\sigma(t)$.
+\end{fact}
+
+\begin{proof}\textcolor{red}{TOPROVE 2}\end{proof}
+
+We shall also need the following useful lemma that relates the treewidth of a graph to the treewidth of the torsos in an arbitrary tree decomposition of the graph.
+
+\begin{lemma} \label{lem-torsotw}
+ If a graph $G$ admits a tree decomposition in which the treewidth of every torso is at most $k$, then $\tw(G) \leq 2k+1$.
+\end{lemma}
+\begin{proof}\textcolor{red}{TOPROVE 3}\end{proof}
+
+\paragraph{Edge Contractions.}
+Edge contraction is a basic operation on graphs.
+When an edge $uv$ of a graph $G$ is contracted, the two endpoints $u$ and $v$ are merged into one vertex whose neighbors are those in $N_G(\{u,v\})$.
+For $U \subseteq V(G)$ we write $G/U$ to denote the graph obtained from $G$ by contracting all edges in $G[U]$, or equivalently, contracting every connected component of $G[U]$ to a single vertex.
+If a graph $G'$ is obtained from $G$ by contracting edges, then each vertex of $G'$ corresponds to a subset of vertices of $G$ and these subsets form a partition of $V(G)$.
+In this case, there is a naturally defined map $\pi\colon V(G) \rightarrow V(G')$ which maps each vertex $v \in V(G)$ to the vertex of $G'$ whose corresponding subset of $V(G)$ contains $v$.
+We call $\pi$ the \emph{quotient map} of the contraction of $G$ to $G'$.
+We need the following simple facts.
+
+\begin{fact}[\cite{BandyapadhyayLLSX24}]\label{fact-inducedtd}
+ Let $(T,\beta)$ be a tree decomposition of $G$, and $G'$ be a graph obtained from $G$ by edge contraction with the quotient map $\pi\colon V(G) \rightarrow V(G')$.
+ Then $(T,\beta^*)$ is a tree decomposition of $G'$, where $\beta^*(t) = \pi(\beta(t))$ for all $t \in V(T)$.
+\end{fact}
+
+\begin{fact}\label{fact-quotient}
+ Let $G$ be a graph and $G'$ be a graph obtained from $G$ by edge contraction with the quotient map $\pi\colon V(G) \rightarrow V(G')$.
+ Also let $U' \subseteq V(G')$.
+ Then $G'[U']$ is connected if and only if $G[\pi^{-1}(U')]$ is connected.
+\end{fact}
+
+\begin{proof}\textcolor{red}{TOPROVE 4}\end{proof}
+
+\paragraph{Graph Minors.}
+A graph $H$ is a \emph{minor} of a graph $G$ (or $G$ contains $H$ as a minor) if $H$ can be obtained from $G$ by deleting vertices, deleting edges, and contracting edges.
+A graph $G$ is \emph{$H$-minor-free} if $H$ is not a minor of $G$.
+The following fact gives us an alternative criterion for determining whether a graph is a minor of another graph.
+
+\begin{fact}[\cite{CyganFKLMPPS15}]\label{fact-minormap}
+ A graph $G$ contains another graph $H$ as a minor if and only if there exists $U \subseteq V(G)$ and a surjective map $\rho\colon U \to V(G')$ satisfying the following condition: for all $U' \subseteq V(G')$ such that $G'[U']$ is connected, the graph $G[\rho^{-1}(U')]$ is connected.
+\end{fact}
+
+\paragraph{Almost-Embeddable Graphs.}
+The class of almost-embeddable graphs is a generalization of the class of bounded-genus graphs, and is related to $H$-minor-free graphs due to the profound work of Robertson and Seymour \cite{RobertsonS03a}.
+A graph $G$ is $h$-\emph{almost-embeddable} if it admits an $h$-almost-embeddable structure described below.
+
+\begin{definition}\label{def-almost}
+ An $h$-\emph{almost-embeddable structure} of a graph $G$ consists of a set $A \subseteq V(G)$ with $|A| \leq h$, a decomposition $G-A = G_0 \cup G_1 \cup \cdots \cup G_r$ for $r \leq h$, an embedding $\eta$ of $G_0$ to a surface $\varSigma$ of (Euler) genus $g$ with $g \leq h$, $r$ disjoint disks $D_1,\dots,D_r$ each of which is contained in a face (can possibly intersect the boundary of the face) of the $\varSigma$-embedded graph $(G_0,\eta)$, and $r$ pairs $(\tau_1,\mathcal{P}_1),\dots,(\tau_r,\mathcal{P}_r)$ such that the following conditions hold for all $i \in [r]$:
+ \begin{itemize}
+  \item $G_1,\dots,G_r$ are mutually disjoint.
+  \item $V(G_0) \cap_\eta D_i = V(G_0) \cap V(G_i)$, where $V(G_0) \cap_\eta D_i$ consists of the vertices in $V(G_0)$ whose image under $\eta$ is contained in the disk $D_i$.
+   Set $q_i = |V(G_0) \cap_\eta D_i| = |V(G_0) \cap V(G_i)|$.
+  \item $\tau_i = (v_{i,1},\dots,v_{i,q_i})$ is a permutation of the vertices in $V(G_0) \cap_\eta D_i$ that is compatible with the clockwise or counterclockwise order along the boundary of $D_i$.
+  \item $\mathcal{P}_i = (\pi_i,\beta)$ is a path decomposition\footnote{Path decomposition is a special case of tree decomposition in which the tree is a path.} of $G_i$ of width at most $h$ where the path $\pi_i = (u_{i,1},\dots,u_{i,q_i})$ of the decomposition is of length $q_i - 1$ and satisfies $v_{i,j} \in \beta(u_{i,j})$ for all $j \in [q_i]$.
+ \end{itemize}
+ Conventionally, we call $A$ the \emph{apex set}, $G_0$ the \emph{embeddable part}, $\eta:G_0 \rightarrow \varSigma$ the \emph{partial embedding}, $G_1,\dots,G_r$ the \emph{vortices} attached to the disks $D_1,\dots,D_r$.
+ Also, we call each pair $(\tau_i,\mathcal{P}_i)$ the \emph{witness pair} of the vortex $G_i$, for $i \in [r]$.
+ The \emph{vortex vertices} of $G$ refers to the vertices in $\bigcup_{i=1}^r V(G_i)$.
+\end{definition}
+ 
+
+\section{Proof of Theorem~\ref{thm-contraction}}
+\label{sec-proof}
+
+In this section, we prove our main theorem, which is restated below.
+
+\main*
+
+\subsection{Useful results for surface-embedded graphs}
+We begin with introducing some basic notions and results about surface-embedded graphs.
+For the purpose of our proof, sometimes it is more convenient to consider graphs embedded in a surface with a reference point.
+Let $(\varSigma,x_0)$ be a pair where $\varSigma$ is a connected closed surface, and $x_0 \in \varSigma$ is a reference point on $\varSigma$.
+A $(\varSigma,x_0)$-embedded graph refers to a $\varSigma$-embedded graph whose image on $\varSigma$ is disjoint from $x_0$, i.e., a graph embedded on $\varSigma \backslash \{x_0\}$.
+For example, plane graphs are exactly $(\varSigma,x_0)$-embedded graphs for $\varSigma = \mathbb{S}^2$, where the reference point $x_0 \in \mathbb{S}^2$ is the ``point at infinity'' of the plane.
+We typically represent a $(\varSigma,x_0)$-embedded graph by a pair $(G,\eta)$, where $G$ is the graph itself and $\eta\colon G \rightarrow \varSigma$ is an embedding of $G$ to $\varSigma$ whose image avoids $x_0$, which we call a $(\varSigma,x_0)$-embedding.
+Let $(G,\eta)$ be a $(\varSigma,x_0)$-embedded graph.
+For any subgraph $G'$ of $G$, $\eta$ induces an $(\varSigma,x_0)$-embedding of $G'$; for convenience, we usually use the same notation ``$\eta$'' to denote this subgraph embedding.
+A \emph{face} of $(G,\eta)$ refers to (the closure of) a connected component of $\varSigma \backslash \eta(G)$, where $\eta(G)$ is the image of $G$ on $\varSigma$ under the embedding $\eta$.
+We denote by $F_\eta(G)$ the set of faces of $(G,\eta)$.
+With the reference point $x_0$, we can define the \emph{outer face} of $(G,\eta)$, which is the (unique) face of $(G,\eta)$ that contains $x_0$.
+The other faces of $(G,\eta)$ are called \emph{inner faces}.
+The \emph{boundary} of a face $f \in F_\eta(G)$, denoted by $\partial f$, is the subgraph of $G$ consisting of all vertices and edges that are incident to $f$ (under the embedding $\eta$).
+Note that $f$ itself is a face in its boundary subgraph $(\partial f, \eta)$, i.e., $f \in F_\eta(\partial f)$.
+We say a face $f \in F_\eta(G)$ is \emph{singular} if its boundary $\partial f$ is not connected.
+The following lemma gives useful properties of the boundary subgraph of a face.
+
+\begin{lemma}\label{lem-degree}
+ Let $o \in F_\eta(G)$ be a face of a $(\varSigma,x_0)$-embedded graph $(G,\eta)$, where $g$ is the genus of $\varSigma$.
+ Then $(\partial o,\eta)$ has $O(g)$ singular faces.
+ Furthermore, every face $f \in F_\eta(\partial o) \backslash \{o\}$ satisfies the following properties.
+ \begin{enumerate}[label = (\arabic*)]
+  \item\label{item:degree-1} $\partial f$ has $O(g)$ connected components.
+  \item\label{item:degree-2} The degree of every vertex of $\partial f$ is $O(g)$.
+  \item\label{item:degree-3} There are $O(g)$ vertices of $\partial f$ whose degrees are at least 3.
+ \end{enumerate}
+\end{lemma}
+
+\begin{proof}\textcolor{red}{TOPROVE 5}\end{proof}
+
+The \emph{vertex-face incidence} (VFI) graph of $(G,\eta)$ is a bipartite graph with vertex set $V(G) \cup F_\eta(G)$ and edges connecting every pair $(v,f) \in V(G) \times F_\eta(G)$ such that $v$ is incident to $f$ (or equivalently, $v$ is a vertex in $\partial f$).
+It is known that the VFI graph of $(G,\eta)$ is always connected \cite{BandyapadhyayLLSJ22}.
+Let $G^*$ be the VFI graph of $(G,\eta)$.
+A \emph{vertex-face alternating} (VFA) path in $(G,\eta)$ refers to a path in $G^*$; it is called ``vertex-face alternating'' because vertices and faces of $(G,\eta)$ appear alternately on the path.
+For two vertices $v,v' \in V(G)$, the \emph{vertex-face distance} between $v$ and $v'$ in $(G,\eta)$ is defined as the shortest-path distance between $v$ and $v'$ in $G^*$.
+In the same way, we can define the \emph{vertex-face distance} between a vertex and a face of $(G,\eta)$, or between two faces of $(G,\eta)$.
+The \emph{vertex-face diameter} of $(G,\eta)$, denoted by $\mathsf{diam}^*(G,\eta)$, is the maximum vertex-face distance between vertices/faces of $(G,\eta)$, or equivalently, the graph diameter of the VFI graph of $(G,\eta)$.
+Following from the classical work \cite{Eppstein00} of Eppstein, it is known that $\tw(G) = O_g(\mathsf{diam}^*(G,\eta))$.
+Recently, Bandyapadhyay et al.\ \cite{BandyapadhyayLLSJ22} generalized this result in the following way.
+Let $w\colon F_\eta(G) \rightarrow \mathbb{N}$ be a weight function on the faces of $(G,\eta)$.
+Consider a simple path $\pi = (a_0,a_1,\dots,a_m)$ in $G^*$, and write $F_\pi = F_\eta(G) \cap \{a_0,a_1,\dots,a_m\}$.
+The \emph{cost} of $\pi$ under the weight function $w$ is defined as $m+\sum_{f \in F_\pi} w(f)$, i.e., the length of $\pi$ plus the total weights of the faces that $\pi$ goes through.
+We define the \emph{$w$-weighted vertex-face distance} between vertices/faces $a,a' \in V(G) \cup F_\eta(G)$ in $(G,\eta)$ as the minimum cost of a path connecting $a$ and $a'$ in $G^*$ under the weight function $w$.
+Note that $w$-weighted vertex-face distances satisfy the triangle inequality, although they do not necessarily form a metric because the $w$-weighted vertex-face distance from a face $f \in F_\eta(G)$ to itself is $w(f)$ rather than 0.
+The \emph{$w$-weighted vertex-face diameter} of $(G,\eta)$, denoted by $\mathsf{diam}_w^*(G,\eta)$, is the maximum $w$-weighted vertex-face distance between vertices/faces of $(G,\eta)$.
+Clearly, when $w$ is the zero function, the $w$-weighted vertex-face distance/diameter coincides with the ``unweighted'' vertex-face distance/diameter defined before.
+Bandyapadhyay et al.\ \cite{BandyapadhyayLLSJ22} generalizes the bound $\tw(G) = O_g(\mathsf{diam}^*(G,\eta))$ by proving the following lemma.
+
+\begin{lemma}[\cite{BandyapadhyayLLSJ22}]\label{lem-twdiam2}
+Let $(G,\eta)$ be a $(\varSigma,x_0)$-embedded graph where the genus of the surface $\varSigma$ is $g$ and $\kappa: F_\eta(G) \rightarrow 2^{V(G)}$ be a map satisfying $\kappa(f) \subseteq V(\partial f)$.
+Then we have $\tw(G^\kappa) = O(\mathsf{diam}_{w_\kappa}^*(G,\eta))$, where $G^\kappa$ is the graph obtained from $G$ by making $\kappa(f)$ a clique for all $f \in F_\eta(G)$ and $w_\kappa: F_\eta(G) \rightarrow \mathbb{N}$ is a weighted function on the faces of $(G,\eta)$ defined as $w_\kappa(f) = |\kappa(f)|$.
+\end{lemma}
+
+The \emph{radial layering} of a $(\varSigma,x_0)$-embedded graph $(G,\eta)$ is a partition $L_1,\dots,L_m$ of $V(G)$ where $L_i$ consists of the vertices which have vertex-face distance $2i-1$ to the outer face of $(G,\eta)$.
+Alternatively, $L_i$ can be defined as the vertices incident to the outer face of $(G - \bigcup_{j=1}^{i-1} L_j, \eta)$.
+The notion of radial layering generalizes the well-known outerplanar layering of plane graphs.
+We have the following simple observation for the radial layering.
+
+\begin{fact}\label{fact-diff1}
+Let $L_1,\dots,L_m$ be the radial layering of a $(\varSigma,x_0)$-embedded graph $(G,\eta)$.
+Then, for any $f \in F_\eta(G)$, $V(\partial f) \subseteq L_{i-1} \cup L_i$ for some $i \in [m]$.
+Also, $N_G[L_i] \subseteq L_{i-1} \cup L_i \cup L_{i+1}$ for all $i \in [m]$.
+\end{fact}
+
+\begin{proof}\textcolor{red}{TOPROVE 6}\end{proof}
+
+For notational convenience, if $L_1,\dots,L_m$ are the radial layers, then we write $L_{\geq a} = \bigcup_{i=a}^m L_i$, $L_{> a} = \bigcup_{i=a+1}^m L_i$, $L_{\leq a} = \bigcup_{i=1}^a L_i$, $L_{< a} = \bigcup_{i=1}^{a-1} L_i$, and $L_a^b = \bigcup_{i=a}^b L_i$.
+We shall use these notations throughout this section.
+Also, we shall assume $L_i = \emptyset$ for all indices $i \leq 0$ and $i >m$.
+
+An \emph{extension} of a $(\varSigma,x_0)$-embedded graph $(G,\eta)$ is another $(\varSigma,x_0)$-embedded graph $(G',\eta')$ where $G'$ is a supergraph of $G$ and $(G,\eta') = (G,\eta)$, i.e., the restriction of $\eta'$ to $G$ is the same as $\eta$.
+We say the extension is \emph{outer-preserving} if the images of all vertices in $V(G') \backslash V(G)$ and all edges in $E(G') \backslash E(G)$ under $\eta'$ are in the inner faces of $(G,\eta)$.
+Thus, an outer-preserving extension has the same outer face and the same outer-face boundary as the original graph.
+
+An embedding $\eta\colon G \rightarrow \varSigma$ is \emph{minimal} if for every face $o \in F_\eta(G)$, the boundary subgraph $(\partial o,\eta)$ satisfies the following condition: $V(\partial f)$ lies in one connected component of $\partial o$ for every $f \in F_\eta(\partial o) \backslash \{o\}$.
+We have the following simple observation.
+
+\begin{fact}\label{fact-minimal}
+Let $\eta\colon G \rightarrow \varSigma$ be a minimal embedding.
+If $G'$ is an induced subgraph of $G$ that is the disjoint union of some connected components of $G$, then the induced embedding $\eta\colon G' \rightarrow \varSigma$ is also a minimal embedding.
+Also, if $G'$ is a disjoint union of $G$ and some isolated vertices and $\eta'\colon G' \rightarrow \varSigma$ is an extension of $\eta$, then $\eta'$ is a minimal embedding.
+\end{fact}
+
+\begin{proof}\textcolor{red}{TOPROVE 7}\end{proof}
+
+Finally, we need to establish an important lemma which allows us the transform a given almost-embeddable structure of a graph to another almost-embeddable structure in which the partial embedding is minimal.
+
+\begin{lemma}\label{lem-minimal}
+Given a graph $G$ with an $h$-almost-embeddable structure, one can compute in polynomial time a new $O_h(1)$-almost-embeddable structure of $G$ in which the partial embedding is minimal.
+Furthermore, every apex in the given structure is still an apex in the new structure, while every vortex vertex in the given structure is either a vortex vertex or an apex in the new structure.
+\end{lemma}
+
+\begin{proof}\textcolor{red}{TOPROVE 8}\end{proof}
+ 
+\subsection{A technical lemma}
+In this section, we prove the following key lemma, which serves as a technical core in our proof.
+
+\begin{lemma} \label{lem-key}
+ Let $(G,\eta)$ be a $(\varSigma,x_0)$-embedded graph, and $L_1,\dots,L_m$ be the radial layering of $(G,\eta)$.
+ Given any $t \in [m]$ with $t \geq 2$ and a set $\varPhi \subseteq L_t$ of size $c$, if all faces of $(G,\eta)$ incident to $L_t$ are non-singular, then one can compute in polynomial time a subset $X \subseteq L_t$ containing $\varPhi$ and another subset $L_t^+ \subseteq L_t \backslash N_G(L_{t-1})$ satisfying the following four conditions (where $o_t$ is the outer face of $(G[L_{\geq t}],\eta)$ and $g$ is the genus of $\varSigma$).
+ \begin{enumerate}[label = (\arabic*)]
+  \item\label{item:rcd-key-1} Every connected component of $G[X]$ intersects $\varPhi$ and is neighboring to $L_{t-1}$.
+  \item\label{item:rcd-key-2} For any outer-preserving extension $(G',\eta')$ of $(\partial o_t,\eta)$, every connected component $C$ of $G'-(L_t \backslash L_t^+)$ satisfies $N_{G'}(C) \subseteq V(\partial f)$ for some $f \in F_\eta(\partial o_t) \backslash \{o_t\}$.
+  \item\label{item:rcd-key-3} $V(\partial f) \cap (X \backslash L_t^+) = O_{g,c}(1)$ for all $f \in F_\eta(\partial o_t) \backslash \{o_t\}$.
+  \item\label{item:rcd-key-4} $\partial f - L_t^+$ only has $O_{g,c}(1)$ connected components for all $f \in F_\eta(\partial o_t) \backslash \{o_t\}$.
+ \end{enumerate}
+\end{lemma}
+
+Let $(G,\eta)$ be a connected $(\varSigma,x_0)$-embedded graph satisfying the properties of the lemma, where $\varSigma$ is a surface of genus $g$.
+Let $L_1,\dots,L_m$ be the radial layering of $(G,\eta)$.
+Fix an index $t \in [m]$ with $t \geq 2$, and assume all faces of $(G,\eta)$ incident to $L_t$ are non-singular.
+Denote by $o_t$ the outer face of $(G[L_{\geq t}],\eta)$.
+
+We say a vertex in $L_t = V(\partial o_t)$ is an \textit{exit vertex} if it is adjacent to a vertex in $L_{t-1}$.
+In the graph $(\partial o_t,\eta)$, each edge $e$ is incident to two (not necessarily different) faces in $F_\eta(\partial o_t)$, which correspond to the two ``sides'' of (the embedding of) $e$.
+Note that one of these two faces must be $o_t$ because all edges in $(\partial o_t,\eta)$ are incident to $o_t$, while the other one can be either $o_t$ or an inner face of $(\partial o_t,\eta)$, which we denote by $f(e)$.
+
+Let $\mathcal{P}$ be the set of all pairs $(f,v)$ where $f \in F_\eta(\partial o_t) \backslash \{o_t\}$ is an inner face of $(\partial o_t, \eta)$ and $v \in V(\partial f)$.
+In what follows, we classify the pairs in $\mathcal{P}$ into three classes: \textit{singular pairs}, \textit{critical pairs}, and \textit{normal pairs}.
+A pair $(f,v) \in \mathcal{P}$ is \textit{singular} if (at least) one of the following conditions holds.
+\begin{enumerate}[label = (\roman*)]
+ \item There is a path in $\partial o_t$ from $v$ to another vertex of $\partial f$ that does not use any edge of $\partial f$, i.e., the path only uses the edges in $E(\partial o_t) \backslash E(\partial f)$.
+ \item There is a path in $\partial o_t$ from $v$ to a vertex of $\partial f'$ for some singular face $f' \in F_\eta(\partial o_t) \backslash \{o_t,f\}$ that only uses the edges in $E(\partial o_t) \backslash E(\partial f)$.
+\end{enumerate}
+A pair $(f,v) \in \mathcal{P}$ is \textit{critical} if it is not singular and there exists a path in $\partial o_t$ from $v$ to an exit vertex that only uses the edges in $E(\partial o_t) \backslash E(\partial f)$.
+In particular, if $(f,v)$ is not singular and $v$ is an exit, then $(f,v)$ is critical.
+Finally, a pair in $\mathcal{P}$ is \textit{normal} if it is neither singular nor critical.
+We first observe that there are only a constant number of singular pairs in $\mathcal{P}$.
+
+\begin{observation} \label{obs-O1singular}
+For each inner face $f \in F_\eta(\partial o_t)$, there are only $O_g(1)$ vertices $v \in V(\partial f)$ such that the pair $(f,v) \in \mathcal{P}$ is singular.
+\end{observation}
+\begin{proof}\textcolor{red}{TOPROVE 9}\end{proof}
+
+Next, we define a notion called \textit{legal paths}.
+Consider a path $\pi = (v_0,v_1,\dots,v_r)$ in $\partial o_t$ and write $e_i = v_{i-1}v_i$ for $i \in [r]$.
+We say $\pi$ is \textit{legal} if for all $i \in [r-1]$ such that $(f(e_i),v_i)$ is a critical pair in $\mathcal{P}$, we have $f(e_{i+1}) \neq f(e_i)$.
+We have the following observation.
+
+\begin{observation}\label{obs-legal}
+Let $\pi$ be a legal path in $\partial o_t$ and denote by $V_\pi \subseteq V(\partial o_t)$ the vertices on $\pi$.
+Then for each face $f \in F_\eta(\partial o_t) \backslash \{o_t\}$, the graph $\partial f [V_\pi \cap V(\partial f)]$ has $O_g(1)$ connected components and there are at most two vertices $v \in V_\pi \cap V(\partial f)$ such that $(f,v)$ is a critical pair.
+\end{observation}
+
+\begin{proof}\textcolor{red}{TOPROVE 10}\end{proof}
+
+\begin{observation}\label{obs-wbpath}
+For any vertex $v \in L_t$, there exists a legal path in $\partial o_t$ from $v$ to an exit vertex of $L_t$, which can be computed in polynomial time in $|L_t|$.
+\end{observation}
+\begin{proof}\textcolor{red}{TOPROVE 11}\end{proof}
+
+Let $\varPhi \subseteq L_t$ be the given set of size $c$ as in Lemma~\ref{lem-key}.
+Suppose $\varPhi = \{v_1,\dots,v_c\}$.
+For each $i \in [c]$, we use Observation~\ref{obs-wbpath} to compute a legal path $\pi_i$ in $\partial o_t$ from $v_i$ to an exit vertex of $L_t$.
+Then we define $X \subseteq L_t$ as the set of all vertices on the paths $\pi_1,\dots,\pi_c$.
+Clearly, $v_1,\dots,v_c \in X$ and every connected component of $G[X]$ is neighboring to $L_{t-1}$ because each of the paths $\pi_1,\dots,\pi_c$ contains an exit vertex of $L_t$.
+In particular, condition \ref{item:rcd-key-1} of Lemma~\ref{lem-key} holds.
+We then define the set $L_t^+$ as follows.
+For every pair $(f,v) \in \mathcal{P}$, we define $Y_{f,v} \subseteq L_t$ as the set of vertices that is reachable from $v$ using only the edges in $E(\partial o_t) \backslash E(\partial f)$.
+Then $L_t^+$ is defined by the union of all $Y_{f,v}$ where $(f,v)$ is a normal pair and $v \in X$.
+By definition, if $(f,v)$ is a normal pair, then none of the vertices in $Y_{f,v}$ is an exit vertex, and therefore $L_t^+ \subseteq L_t \backslash N_G(L_{t-1})$.
+We need to verify that conditions \ref{item:rcd-key-2}-\ref{item:rcd-key-4} of Lemma~\ref{lem-key} are satisfied.
+
+\paragraph{Verifying Condition \ref{item:rcd-key-2} of Lemma~\ref{lem-key}.}
+To see condition \ref{item:rcd-key-2}, we first observe some basic properties of the sets $Y_{f,v}$ defined above for normal pairs $(f,v) \in \mathcal{P}$.
+
+\begin{observation} \label{obs-normalprop}
+Let $(f,v) \in \mathcal{P}$ be a normal pair.
+Then the following properties hold.
+\begin{enumerate}[label = (\alph*)]
+ \item\label{item:normal-properties-1} $Y_{f,v}$ does not contain any exit vertex of $L_t$.
+ \item\label{item:normal-properties-2} $Y_{f,v} \cap V(\partial f) = \{v\}$.
+ \item\label{item:normal-properties-3} For all $f' \in F_\eta(o_t) \backslash \{o_t,f\}$, either $Y_{f,v} \cap V(\partial f') = \emptyset$ or $V(\partial f') \subseteq Y_{f,v}$.
+ \item\label{item:normal-properties-4} For any outer-preserving extension $(G',\eta')$ of $(\partial o_t,\eta)$, we have $N_{G'}(Y_{f,v}) \cap L_t \subseteq V(\partial f)$ and $N_{G'}(Y_{f,v} \backslash \{v\}) \cap L_t = \{v\}$.
+\end{enumerate}
+\end{observation}
+
+\begin{proof}\textcolor{red}{TOPROVE 12}\end{proof}
+
+Let $(G',\eta')$ be an outer-preserving extension of $(\partial o_t,\eta)$.
+For every connected component $C$ of $G' - (L_t \backslash L_t^+)$, we have $N_{G'}(C) \subseteq L_t \backslash L_t^+$.
+We claim that $N_{G'}(C) \subseteq \bigcup_{f \in F_\eta(\partial o_t) \backslash \{o_t\}} V(\partial f)$.
+As $N_{G'}(C) \subseteq L_t$ and $C \subseteq L_t^+ \cup (V(G') \backslash L_t)$, we have $N_{G'}(C) \subseteq (N_{G'}(L_t^+) \cap L_t) \cup (N_{G'}(V(G') \backslash L_t) \cap L_t)$.
+Recall that $L_t^+$ is the union of all $Y_{f,v}$ where $(f,v)$ is a normal pair.
+Thus, by Observation~\ref{obs-normalprop}\ref{item:normal-properties-4}, we have $N_{G'}(L_t^+) \cap L_t \subseteq \bigcup_{f \in F_\eta(\partial o_t) \backslash \{o_t\}} V(\partial f)$.
+For any vertex $v \in V(G') \backslash L_t$, the image of $v$ under $\eta'$ lies in the interior of some face $f \in F_\eta(\partial o_t) \backslash \{o_t\}$, and thus $N_{G'}(\{v\}) \cap L_t \subseteq V(\partial f)$.
+It then follows that $N_{G'}(C) \subseteq \bigcup_{f \in F_\eta(\partial o_t) \backslash \{o_t\}} V(\partial f)$.
+
+Based on this, we further show that $N_{G'}(C) \subseteq V(\partial f)$ for some $f \in F_\eta(\partial o_t) \backslash \{o_t\}$.
+If $N_G(C) = \emptyset$, we are done.
+Also, if $C \cap L_t^+ = \emptyset$, then the images of all vertices in $C$ under $\eta'$ must lie in one face $f \in F_\eta(\partial o_t) \backslash \{o_t\}$ and thus $N_G(C) \subseteq V(\partial f)$.
+So suppose $N_G(C) \neq \emptyset$ and $C \cap L_t^+ \neq \emptyset$.
+We observe the following.
+
+\begin{observation}
+There exists a face $f^* \in F_\eta(\partial o_t) \backslash \{o_t\}$ such that $V(\partial f^*) \nsubseteq C$ and $V(\partial f^*) \cap C \neq \emptyset$.
+\end{observation}
+\begin{proof}\textcolor{red}{TOPROVE 13}\end{proof}
+
+Let $f^* \in F_\eta(\partial o_t) \backslash \{o_t\}$ be the face in the above observation.
+We show that $N_{G'}(C) \subseteq V(\partial f^*)$, which implies \ref{item:rcd-key-2} of Lemma~\ref{lem-key}.
+Define $C^* = V(\partial f^*) \cap C$, which is nonempty by the construction of $f^*$.
+Note that $C^* \subseteq L_t^+$, because $V(\partial f^*) \subseteq L_t$ and $C \subseteq V(G') \backslash (L_t \backslash L_t^+)$.
+We claim that $(f^*,u)$ is normal for all $u \in C^*$.
+Consider a vertex $u \in C^* \subseteq L_t^+$.
+Then $u \in Y_{f,v}$ for some normal pair $(f,v)$.
+If $f \neq f^*$, by Observation~\ref{obs-normalprop}\ref{item:normal-properties-3}, either $Y_{f,v} \cap V(\partial f^*) = \emptyset$ or $V(\partial f^*) \subseteq Y_{f,v}$.
+The former is false because $u \in Y_{f,v} \cap V(\partial f^*)$.
+The latter is false because $V(\partial f^*) \nsubseteq C$ (note that $Y_{f,v} \subseteq C$ as $u \in C$ and $G[Y_{f,v}]$ is connected).
+Thus, $f = f^*$.
+Then by Observation~\ref{obs-normalprop}\ref{item:normal-properties-2}, $Y_{f,v} \cap V(\partial f^*) = Y_{f,v} \cap V(\partial f) = \{v\}$, which implies $u = v$.
+It follows that $(f^*,u) = (f,v)$ is a normal pair.
+Now let $C'$ be the union of $\bigcup_{u \in C^*} Y_{f^*,u}$ and all connected components of $G' - L_t$ that are neighboring to $\bigcup_{u \in C^*} Y_{f^*,u}$ in $G'$.
+Clearly, we have $C' \subseteq C$, because $\bigcup_{u \in C^*} Y_{f^*,u} \subseteq C$ and thus any connected component of $G' - L_t$ neighboring to $\bigcup_{u \in C^*} Y_{f^*,u}$ should be contained in $C$.
+The following observation implies $N_{G'}(C) \subseteq V(\partial f^*)$.
+
+\begin{observation}
+$N_{G'}(C') \subseteq V(\partial f^*)$ and $C' = C$.
+\end{observation}
+\begin{proof}\textcolor{red}{TOPROVE 14}\end{proof}
+
+\paragraph{Verifying Condition \ref{item:rcd-key-3} of Lemma~\ref{lem-key}.}
+Let $f \in F_\eta(\partial o_t) \backslash \{o_t\}$ be a face.
+By the construction of $L_t^+$, we have $v \in L_t^+$ for all vertices $v \in \partial (f) \cap X$ such that $(f,v)$ is normal.
+Therefore, for every $v \in V(\partial f) \cap (X \backslash L_t^+)$, either $(f,v)$ is singular or $(f,v)$ is critical.
+By Observation~\ref{obs-O1singular}, there are only $O_g(1)$ vertices $v \in V(\partial f)$ such that $(f,v)$ is singular.
+So it suffices to bound the number of vertices $v \in V(\partial f) \cap (X \backslash L_t^+)$ such that $(f,v)$ is critical.
+Recall that $X$ consists of the vertices on the legal paths $\pi_1,\dots,\pi_c$.
+By Observation~\ref{obs-legal}, each legal path contains at most two vertices $v \in V(\partial f)$ such that $(f,v)$ is critical.
+So the number of vertices $v \in V(\partial f) \cap (X \backslash L_t^+)$ such that $(f,v)$ is critical is at most $2c$.
+This further implies $V(\partial f) \cap (X \backslash L_t^+) = O_{g,c}(1)$.
+
+\paragraph{Verifying Condition \ref{item:rcd-key-4} of Lemma~\ref{lem-key}.}
+Let $f \in F_\eta(\partial o_t) \backslash \{o_t\}$ be a face.
+We first claim that either $V(\partial f) \subseteq L_t^+$ or $V(\partial f) \cap L_t^+ \subseteq X$.
+Indeed, if there exists a normal pair $(f',v')$ with $f' \neq f$ and $v' \in X$ such that $V(\partial f) \subseteq Y_{f',v'}$, then $V(\partial f) \subseteq L_t^+$.
+Otherwise, by Observation~\ref{obs-normalprop}\ref{item:normal-properties-3}, $Y_{f',v'} \cap V(\partial f) = \emptyset$ for all normal pair $(f',v')$ with $f' \neq f$ and $v' \in X$.
+This implies that any vertex $u \in V(\partial f) \cap L_t^+$ must belong to $Y_{f,v}$ for some normal pair $(f,v)$ with $v \in X$.
+But by Observation~\ref{obs-normalprop}\ref{item:normal-properties-2}, we have $Y_{f,v} \cap V(\partial f) = \{v\}$ and thus $u = v \in X$.
+
+If $V(\partial f) \subseteq L_t^+$, then $V(\partial f) \backslash L_t^+ = \emptyset$ and we are done.
+If $V(\partial f) \cap L_t^+ \subseteq X$, then $V(\partial f) \backslash L_t^+ = (V(\partial f) \backslash X) \cup (V(\partial f) \cap (X \backslash L_t^+))$.
+As shown above, $|V(\partial f) \cap (X \backslash L_t^+)| = O_{g,c}(1)$.
+Thus, to show \ref{item:rcd-key-4} of Lemma~\ref{lem-key}, we only need to show $\partial f - X$ has $O_{g,c}(1)$ connected components.
+Since $X$ consists of the paths $\pi_1,\dots,\pi_c$ and by Observation~\ref{obs-legal} the intersection of each $\pi_i$ and $V(\partial f)$ has $O_g(1)$ connected components (in $\partial f$), we know that $\partial f[V(\partial f) \cap X]$ has $O_{g,c}(1)$ connected components.
+By \ref{item:degree-2} and \ref{item:degree-3} of Lemma~\ref{lem-degree}, the maximum degree of $\partial f$ is $O(g)$ and there are $O(g)$ vertices in $\partial f$ of degree at least 3.
+The following fact then implies that $\partial f - (V(\partial f) \cap X)$ has $O_{g,c}(1)$ connected components (setting $G = \partial f$ and $V = V(\partial f) \cap X$).
+
+\begin{fact}\label{fact-components}
+Let $G$ be a graph of maximum degree $\alpha$ in which there are $\beta$ vertices of degree at least 3.
+Then for every $V \subseteq V(G)$, the graph $G-V$ has at most $O_{\alpha,\beta,\gamma}(1)$ more connected components than $G$, where $\gamma$ is the number of connected components of $G[V]$.
+In particular, deleting $\gamma$ vertices from $G$ can increase the number of connected components by at most $O_{\alpha,\beta,\gamma}(1)$.
+\end{fact}
+
+\begin{proof}\textcolor{red}{TOPROVE 15}\end{proof}
+ 
+\subsection{Decomposing almost-embeddable graphs}
+In this section, based on Lemma~\ref{lem-key}, we prove a result on almost-embeddable graphs (Corollary~\ref{cor-decomp2} below), which roughly states that one can decompose a connected almost-embeddable graph into $p+1$ parts in which the first $p$ parts satisfy the (robust) ``bounded-treewidth contraction'' property and the last part connects a small set of given vertices.
+We begin with apex-free almost-embeddable graphs, and establish the following decomposition lemma.
+
+\begin{lemma} \label{lem-decomp1}
+Given a connected graph $G$ with an apex-free $h$-almost-embeddable structure in which the partial embedding is minimal, a number $p$, and a set $\varPhi \subseteq V(G)$ of size $c$, one can compute in polynomial time $p$ disjoint sets $Z_1,\dots,Z_p \subseteq V(G) \backslash N_G[\mathsf{Vort} \cup \varPhi]$ satisfying the following conditions (where $\mathsf{Vort} \subseteq V(G)$ consists of the vortex vertices in $G$).
+\begin{enumerate}[label = (\arabic*)]
+    \item\label{item:decomp1-1} $\tw(G/(Z_i \backslash Z')) = O_{h,c}(p+|Z'|)$ for all $i \in [p]$ and $Z' \subseteq Z_i$.
+    \item\label{item:decomp1-2} $\varPhi$ is contained in one connected component of $G - \bigcup_{i=1}^p Z_i$.
+\end{enumerate}
+\end{lemma}
+
+Before proving the above lemma, we first observe that it implies a decomposition for (general) almost-embeddable graphs satisfying similar conditions, which is the following corollary.
+
+\begin{corollary} \label{cor-decomp2}
+Given a connected graph $G$ with an $h$-almost-embeddable structure in which the partial embedding is minimal, a number $p$, and a set $\varPhi \subseteq V(G)$ of size $c$, one can compute in polynomial time $p$ disjoint sets $Z_1,\dots,Z_p \subseteq V(G) \backslash (N_G[\mathsf{Vort}] \cup A)$ satisfying the following conditions (where $\mathsf{Vort} \subseteq V(G)$ consists of the vortex vertices and $A \subseteq V(G)$ is the apex set of $G$).
+\begin{enumerate}[label = (\arabic*)]
+    \item\label{item:decomp2-1} $\tw(G/(Z_i \backslash Z')) = O_{h,c}(p+|Z'|)$ for all $i \in [p]$ and $Z' \subseteq Z_i$.
+    \item\label{item:decomp2-2} $\varPhi$ is contained in one connected component of $G'$, where $G'$ denotes the graph obtained from $G - \bigcup_{i=1}^p Z_i$ by deleting all edges $(a,v)$ where $a \in A$ and $v \in (\bigcup_{i=1}^p N_G(Z_i)) \backslash A$.
+    \item\label{item:decomp2-3} $Z_i \cap N_G[(\varPhi \backslash A)] = \emptyset$ for all $i \in [p]$.
+\end{enumerate}
+\end{corollary}
+
+\begin{proof}\textcolor{red}{TOPROVE 16}\end{proof}
+
+The rest of this section is dedicated to proving Lemma~\ref{lem-decomp1}.
+Let $G$ be the graph as in the lemma.
+Suppose $G_0$ is the embeddable part of $G$ and $\eta\colon G_0 \rightarrow \varSigma$ is the minimal partial embedding where $\varSigma$ is a surface of genus $g \leq h$.
+We view $(G_0,\eta)$ as a $(\varSigma,x_0)$-embedded graph by (arbitrarily) picking a reference point $x_0 \in \varSigma$ not in the image of $\eta$.
+Denote by $\mathsf{Vort} \subseteq V(G)$ the set of vortex vertices of $G$.
+Also, let $p$ and $\varPhi$ be as in the lemma.
+For each face $f \in F_\eta(G_0)$, we denote by $\tilde{\partial} f$ the union of $\partial f$ and the vortices of $G$ contained in $f$.
+Clearly, if $f$ is not a vortex face, then $\tilde{\partial} f = \partial f$.
+
+\begin{observation} \label{obs-vortexfaceconn}
+$\tilde{\partial} f$ is connected for all $f \in F_\eta(G_0)$.
+\end{observation}
+
+\begin{proof}\textcolor{red}{TOPROVE 17}\end{proof}
+
+In order to construct the sets $Z_1,\dots,Z_p$, consider the radial layering $L_1,\dots,L_m$ of $(G_0,\eta)$.
+We classify these layers as bad and good layers as follows.
+The first layer $L_1$ is always bad.
+For $i \geq 2$, the layer $L_i$ is bad if $N_G[\varPhi] \cap L_i \neq \emptyset$ or $N_G[\mathsf{Vort}] \cap L_i \neq \emptyset$, and is good otherwise.
+By Fact~\ref{fact-diff1}, if $N_G[\varPhi] \cap L_i \neq \emptyset$, then $L_{i-1} \cup L_i \cup L_{i+1}$ contains at least one vertex in $\varPhi$.
+Therefore, there are at most $3|\varPhi| = 3c$ indices $i \in [m]$ such that $N_G[\varPhi] \cap L_i \neq \emptyset$.
+Again by Fact~\ref{fact-diff1}, each vortex face $f \in F_\eta(G_0)$ is incident to at most two consecutive radial layers $L_i,L_{i+1}$, and hence the vertices in the vortices contained in $f$ are neighboring to at most four radial layers $L_{i-1},L_i,L_{i+1},L_{i+2}$.
+Since the number of vortex faces is at most $h$, there are at most $4h$ indices $i \in [m]$ such that $N_G[\mathsf{Vort}] \cap L_i \neq \emptyset$.
+It follows that the number of bad layers is at most $3c+4h+1$.
+
+Before defining $Z_1,\dots,Z_p$, we first figure out which vertices of $V(G)$ are not included in any $Z_i$ and guarantee that these vertices connect $\varPhi$.
+To this end, we shall iteratively define a sequence of sets $X_m,\dots,X_1$ of vertices in $G$, where $X_i \subseteq L_i$.
+Suppose $X_{t+1},\dots,X_m$ have already been constructed, and we now construct $X_t$.
+If $L_t$ is a bad layer, we simply set $X_t = L_t$.
+Otherwise, $L_t$ is a good layer and we construct $X_t$ as follows.
+Let $\mathcal{C}$ denote the set of connected components of $G[\mathsf{Vort} \cup (\bigcup_{i=t+1}^m X_i)]$.
+For $C \in \mathcal{C}$ with $C \cap \varPhi \neq \emptyset$ and $N_G(C) \cap L_t \neq \emptyset$, we pick a vertex $v_C \in N_G(C) \cap L_t$.
+Set $\varPhi_t = \{v_C \mid C \in \mathcal{C}\}$.
+Observe that $|\varPhi_t| \leq |\varPhi| = c$.
+Indeed, since $L_t$ is good, $L_t \cap \mathsf{Vort} = \emptyset$ and thus $L_t \cap (\mathsf{Vort} \cup (\bigcup_{j=i+1}^m X_j)) = \emptyset$.
+Thus, the number of components $C \in \mathcal{C}$ with $C \cap \varPhi \neq \emptyset$ is at most $|\varPhi \backslash L_t|$, which implies $|\varPhi_t| \leq |\varPhi \backslash L_t| \leq |\varPhi| = c$.
+As $L_t$ is a good layer, all faces of $(G_0,\eta)$ incident to $L_t$ do not contain vortices.
+Since $\eta$ is a minimal embedding, by Observation~\ref{obs-vortexfaceconn}, this further implies that every face of $(G_0,\eta)$ incident to $L_t$ has a connected boundary.
+Thus, we can apply Lemma~\ref{lem-key} on $G_0$ with $\varPhi = \varPhi_t$ to obtain a set $X \subseteq L_t$ containing $\varPhi_t$ and another set $L_t^+ \subseteq L_t$ satisfying the properties in the lemma.
+We then set $X_t = X$.
+
+By our construction, it is clear that $\varPhi \subseteq \mathsf{Vort} \cup (\bigcup_{i=1}^m X_i)$.
+We then prove that all vertices in $\varPhi$ are contained in the same connected component of $G[\mathsf{Vort} \cup (\bigcup_{i=1}^m X_i)]$.
+This is achieved by two steps.
+In the first step, we show that every connected component of $G[\mathsf{Vort} \cup (\bigcup_{i=1}^m X_i)]$ which contains at least one vertex in $\varPhi$ must intersect $L_1$.
+Note that $L_1$ is a bad layer and hence $L_1 = X_1 \subseteq \mathsf{Vort} \cup (\bigcup_{i=1}^m X_i)$.
+In the second step, we then show that all vertices in $L_1$ lie in the same connected component of $G[\mathsf{Vort} \cup (\bigcup_{i=1}^m X_i)]$.
+
+To do the first step, consider a connected component $C$ of $G[\mathsf{Vort} \cup (\bigcup_{i=1}^m X_i)]$ which contains at least one vertex in $\varPhi$.
+We want to show $L_1 \cap C \neq \emptyset$.
+Let $t$ be the smallest index such that $L_t \cap C \neq \emptyset$.
+Assume $t>1$ for a contradiction.
+
+\begin{observation}
+$N_G(C) \cap L_{t-1} \neq \emptyset$.
+\end{observation}
+\begin{proof}\textcolor{red}{TOPROVE 18}\end{proof}
+
+Based on the observation $N_G(C) \cap L_{t-1} \neq \emptyset$, we deduce a contradiction as follows.
+If $L_{t-1}$ is a bad layer, then $X_{t-1} = L_{t-1}$ and thus $N_G(C) \cap X_{t-1} \neq \emptyset$, which contradicts with the fact that $C$ is a connected component of $G[\mathsf{Vort} \cup (\bigcup_{i=1}^m X_i)]$.
+If $L_{t-1}$ is a good layer, recall the set $\varPhi_{t-1}$ we define when constructing $X_{t-1}$.
+As $C$ is disjoint from $L_1,\dots,L_{t-1}$, $C$ is in fact a connected component of $G[\mathsf{Vort} \cup (\bigcup_{i=t}^m X_i)]$.
+Also, we have $C \cap \varPhi \neq \emptyset$ by assumption and $N_G(C) \cap L_{t-1} \neq \emptyset$ as shown above.
+Therefore, $\varPhi_{t-1}$ includes a vertex $v_C \in N_G(C) \cap L_{t-1}$.
+By construction, we have $\varPhi_{t-1} \subseteq X_{t-1}$ and thus $v_C \in X_{t-1}$.
+This implies $N_G(C) \cap X_{t-1} \neq \emptyset$, which contradicts with the fact that $C$ is a connected component of $G[\mathsf{Vort} \cup (\bigcup_{i=1}^m X_i)]$.
+In both cases, we have contradictions, so the assumption $t>1$ is wrong.
+It follows that every connected component of $G[\mathsf{Vort} \cup (\bigcup_{i=1}^m X_i)]$ containing at least one vertex in $\varPhi$ intersects $L_1$.
+
+We now do the second step, where we want to show that all vertices in $L_1$ lie in the same connected component of $G[\mathsf{Vort} \cup (\bigcup_{i=1}^m X_i)]$.
+We have $L_1 = V(\partial o)$, where $o$ is the outer face of $G_0$.
+It follows that $V(\tilde{\partial} o) \subseteq \mathsf{Vort} \cup L_1 = \mathsf{Vort} \cup X_1$.
+Thus, $\tilde{\partial} o$ is a subgraph of $G[\mathsf{Vort} \cup (\bigcup_{i=1}^m X_i)]$, which is connected by Observation~\ref{obs-vortexfaceconn}.
+Combining this with the first step, we can conclude that all vertices in $\varPhi$ are contained in the same connected component of $G[\mathsf{Vort} \cup (\bigcup_{i=1}^m X_i)]$.
+
+Next, we are ready to construct the sets $Z_1,\dots,Z_p$.
+Set $\Delta = p+3c+4h+1$.
+We say a number $q \in [\Delta]$ is \emph{bad} if $q$ is congruent to the index of a bad layer modulo $\Delta$, i.e., $q \equiv i \pmod{\Delta}$ for some $i \in [m]$ such that $L_i$ is a bad layer, and is \emph{good} otherwise.
+As argued before, there are at most $3c+4h+1$ bad layers, and therefore there are at most $3c+4h+1$ bad numbers in $[\Delta]$.
+So we can always find $p$ good numbers $q_1,\dots,q_p \in [\Delta]$.
+We then construct the sets $Z_1,\dots,Z_p$ by simply defining $Z_i$ as the union of $L_q \backslash (X_q \cup L_q^+)$ for all indices $q \in [m]$ congruent to $q_i$ modulo $\Delta$, i.e.,
+\begin{equation}
+ \label{eq:zi}
+ Z_i \coloneqq \bigcup_{j=0}^{\lfloor(m-q_i)/\Delta\rfloor} (L_{j\Delta+q_i} \backslash (X_{j\Delta+q_i} \cup L_{j\Delta+q_i}^+)).
+\end{equation}
+Since the layers $L_1,\dots,L_m$ are disjoint, the sets $Z_1,\dots,Z_p$ are also disjoint.
+Also, $Z_1,\dots,Z_p \subseteq V(G) \backslash N_G[\mathsf{Vort}]$, because $Z_1,\dots,Z_p$ only contain vertices in good layers.
+Furthermore, $\varPhi$ is contained in one connected component of $G - \bigcup_{i=1}^p Z_i$, because $\mathsf{Vort} \cup (\bigcup_{i=1}^m X_i) \subseteq V(G) \backslash \bigcup_{i=1}^p Z_i$ and all vertices in $\varPhi$ are contained in the same connected component of $G[\mathsf{Vort} \cup (\bigcup_{i=1}^m X_i)]$.
+
+Finally, we show that $\tw(G/(Z_i \backslash Z')) = O_{h,c}(p+|Z'|)$ for all $i \in [p]$ and $Z' \subseteq Z_i$, which is the most complicated part in this proof.
+Without loss of generality, it suffices to show $\tw(G/(Z_1 \backslash Z')) = O_{h,c}(p+|Z'|)$ for all $Z' \subseteq Z_1$.
+Let $G_1,\dots,G_r$ be the vortices of $G$ attached to disjoint facial disks $D_1,\dots,D_r$ in $(G_0,\eta)$ with witness pairs $(\tau_1,\mathcal{P}_1),\dots,(\tau_r,\mathcal{P}_r)$, where $r \leq h$.
+We call the faces of $(G_0,\eta)$ containing $D_1,\dots,D_r$ \emph{vortex faces}.
+We first add some ``virtual'' edges to $G_0$ as follows.
+Consider an index $i \in [r]$.
+Suppose $\tau_i = (v_{i,1},\dots,v_{i,\ell_i})$.
+By definition, $v_{i,1},\dots,v_{i,\ell_i}$ are the vertices of $(G_0,\eta)$ that lie on the boundary of $D_i$, sorted in clockwise or counterclockwise order.
+For convenience, we write $v_{i,0} = v_{i,\ell_i}$.
+We then add the edges $(v_{i,j-1},v_{i,j})$ for all $j \in [\ell_i]$ to $G_0$, and call them \emph{virtual} edges.
+Furthermore, we draw these virtual edges along the boundary of the disk $D_i$ (this is possible because $v_1,\dots,v_{\ell_i}$ are sorted along the boundary of $D_i$).
+The images of these virtual edges then enclose the disk $D_i$.
+We do this for all indices $i \in [r]$.
+Let $G_0'$ denote the resulting graph after adding the virtual edges.
+Since $D_1,\dots,D_r$ are disjoint facial disks in $(G_0,\eta)$, the images of the virtual edges do not cross each other or cross the original edges in $(G_0,\eta)$.
+Therefore, the drawing of the virtual edges extends $\eta$ to an embedding of $G_0'$ to $\varSigma$; for simplicity, we still use the notation $\eta$ to denote this embedding.
+By construction, it is clear that $D_1,\dots,D_r$ are faces of $(G_0',\eta)$.
+Note that every face of $(G_0,\eta)$ that does not contain any vortices is preserved in $(G_0',\eta)$, while every vortex face is subdivided into multiple faces in $(G_0',\eta)$ by the virtual edges.
+The next observation states that the part of $(G_0',\eta)$ inside each vortex face has a constant vertex-face diameter.
+
+\begin{observation}\label{obs-invortex}
+Let $f \in F_\eta(G_0)$ be a vortex face and $F \subseteq F_\eta(G_0')$ consist of the faces of $(G_0',\eta)$ contained in $f$.
+Then for any two vertices $v,v' \in V(\partial f)$, there exists a VFA path in $(G_0',\eta)$ from $v$ to $v'$ of length $O(h)$ that does not visit any face in $F_\eta(G_0') \backslash F$.
+\end{observation}
+
+\begin{proof}\textcolor{red}{TOPROVE 19}\end{proof}
+
+The reason for why we construct $G_0'$ is to relate the treewidth of $G/(Z_1 \backslash Z')$ with that of $G_0'/(Z_1 \backslash Z')$.
+In this way, we can reduce the task to bounding $\tw(G_0'/(Z_1 \backslash Z'))$ without considering the vortices/apices of $G$.
+Similar tricks are also used in previous work \cite{BandyapadhyayLLSJ22,DemaineFHT05}.
+
+\begin{observation}\label{obs-GtoG0'}
+$\tw(G/(Z_1 \backslash Z')) = O_h(\tw(G_0'/(Z_1 \backslash Z')))$.
+\end{observation}
+
+\begin{proof}\textcolor{red}{TOPROVE 20}\end{proof}
+
+Now it remains to bound $\tw(G_0'/(Z_1 \backslash Z'))$.
+Recall $Z_1 = \bigcup_{j=0}^{\lfloor(m-q)/\Delta\rfloor} (L_{j\Delta+q} \backslash (X_{j\Delta+q} \cup L_{j\Delta+q}^+))$ for some good number $q \in [\Delta]$ (see Equation \eqref{eq:zi}).
+For notational simplicity, we define $L_i = X_i = L_i^+ = \emptyset$ for all integers $i < 0$ and write $i_j = (j-1) \Delta + q$ for $j \in \mathbb{N}$.
+Then we have $Z_1 = \bigcup_{j=1}^{m'} (L_{i_j} \backslash (X_{i_j} \cup L_{i_j}^+))$ for $m' = \lfloor (m-q)/\Delta \rfloor + 1$.
+For any $j \in [m']$, $L_{i_j}$ is a good layer.
+Hence $X_{i_j}$ and $L_{i_j}^+$ satisfy the conditions in Lemma~\ref{lem-key}.
+Let $o_{i_j}$ be the outer face of $(G_0[L_{\geq i_j}],\eta)$, which is also the outer face of $(G_0'[L_{\geq i_j}],\eta)$.
+Note that $(G_0'[L_{\geq i_j}],\eta)$ is an outer-preserving extension of $(G_0[L_{i_j}],\eta)$.
+So by \ref{item:rcd-key-2} of Lemma~\ref{lem-key}, for every connected component $C$ of $G_0'[L_{i_j}^+ \cup L_{> i_j}]$, $N_{G_0'}(C) \subseteq V(\partial f)$ for some face $f \in F_\eta(\partial o_{i_j}) \backslash \{o_{i_j}\}$.
+
+For each $j \in [m']$ and each face $f \in F_\eta(\partial o_{i_j}) \backslash \{o_{i_j}\}$, we define a set $\kappa(f) \subseteq V(\partial f) \backslash L_{i_j}^+$ as follows.
+Denote by $\mathcal{C}_f$ the set of connected components of $\partial f - (L_{i_j}^+ \cup X_{i_j} \cup Z')$.
+Note that $V(\partial f) \backslash (L_{i_j}^+ \cup X_{i_j} \cup Z') \subseteq Z_1 \backslash Z'$.
+Therefore, every $C \in \mathcal{C}_f$ is contracted into one vertex in $G_0'/(Z_1 \backslash Z')$.
+In each $C \in \mathcal{C}_f$, we keep a representative vertex $\xi_C \in C$.
+We then define $\kappa(f) = \{\xi_C: C \in \mathcal{C}_f\} \cup ((V(\partial f) \backslash L_{i_j}^+) \cap (X_{i_j} \cup Z'))$.
+The following observation bounds the size of $\kappa(f)$.
+
+\begin{observation} \label{obs-kappa}
+$|\kappa(f)| = O_{g,c}(|Z'|)$.
+\end{observation}
+\begin{proof}\textcolor{red}{TOPROVE 21}\end{proof}
+
+In order to bound $\tw(G_0'/(Z_1 \backslash Z'))$, we shall construct a tree decomposition $(T,\beta)$ for $G_0'/(Z_1 \backslash Z')$ in which each torso is of treewidth $O_{g,c}(p+|Z'|)$.
+If such a tree decomposition exists, by Lemma~\ref{lem-torsotw}, we have $\tw(G_0'/(Z_1 \backslash Z')) = O_{g,c}(p+|Z'|)$.
+The construction of $(T,\beta)$ is the following.
+The depth of the tree $T$ is $m'$.
+For all $j \in \{0\} \cup [m']$, the nodes in the $j$-th level of $T$ are one-to-one correspondence to the connected components of $G_0'[L_{i_j}^+ \cup L_{> i_j}]$.
+Note that $G_0'[L_{i_0}^+ \cup L_{> i_0}] = G_0'$ is connected, so there is exactly one node in the $0$-th level of $T$, which is the root of $T$.
+The parents of the nodes are defined as follows.
+Consider a node $t \in V(T)$ in the $j$-th level for $j \geq 1$, and let $C_t$ be the connected component of $G_0'[L_{i_j}^+ \cup L_{> i_j}]$ corresponding to $t$.
+Since $G_0'[L_{i_j}^+ \cup L_{> i_j}]$ is a subgraph of $G_0'[L_{i_{j-1}}^+ \cup L_{> i_{j-1}}]$, $C_t$ is contained in a unique connected component of $G_0'[L_{i_{j-1}}^+ \cup L_{> i_{j-1}}]$, which corresponds to a node $t'$ in the $(j-1)$-th level.
+We then let $t'$ be the parent of $t$.
+For each node $t \in V(T)$, we associate a set $V_t$ to $t$ defined as $V_t \coloneqq C_t \backslash (L_{i_{j+1}}^+ \cup L_{> i_{j+1}})$, where $j \in \{0\} \cup [m']$ is the number such that $t$ is in the $j$-th level of $T$ and $C_t$ is the connected component of $G_0'[L_{i_j}^+ \cup L_{> i_j}]$ corresponding to $t$.
+One can easily verify that $\{V_t \mid t \in V(T)\}$ is a partition of $V(G_0')$.
+In addition, we associate another set $U_t$ to each node $t \in V(T)$ defined as follows.
+If $j = 0$ (i.e., $t$ is the roof of $T$), then set $U_t \coloneqq \emptyset$.
+Otherwise, let $t'$ be the parent of $t$.
+As $(G_0'[L_{\geq i_j}],\eta)$ is an outer-preserving extension of $(\partial o_{i_j},\eta)$, by \ref{item:rcd-key-2} of Lemma~\ref{lem-key}, there exists a face $f \in F_\eta(\partial o_{i_j}) \backslash \{o_{i_j}\}$ with $N_{G_0'}(C_t) \subseteq V(\partial f) \backslash L_{i_j}^+$.
+We then let $U_t \coloneqq V_{t'} \cap \kappa(f)$.
+Note that $|U_t| = O_{g,c}(|Z'|)$, as $|\kappa(f)| = O_{g,c}(|Z'|)$ by Observation~\ref{obs-kappa}.
+Finally, we define $\beta(t) = \pi(V_t \cup U_t)$ as the bag of each node $t \in V(T)$, where $\pi: V(G_0') \rightarrow V(G_0'/(Z_1 \backslash Z'))$ is the quotient map for the contraction of $G_0'$ to $G_0'/(Z_1 \backslash Z')$.
+
+\begin{observation} \label{obs-treedecomp}
+$(T,\beta)$ is a tree decomposition of $G_0'/(Z_1 \backslash Z')$. Furthermore, for all $t \in V(T)$, we have $\sigma(t) = \pi(U_t)$ and thus $|\sigma(t)| = O_{g,c}(|Z'|)$.
+\end{observation}
+\begin{proof}\textcolor{red}{TOPROVE 22}\end{proof}
+
+As $(T,\beta)$ is a tree decomposition of $G_0'/(Z_1 \backslash Z')$, it suffices to show $\tw(\tor(t)) = O_{g,c}(p+|Z'|)$ for all $t \in V(T)$.
+Consider a node $t \in V(T)$ in the $j$-th level of $T$.
+In the above observation, it has been shown that $|\sigma(t)| = O_{g,c}(|Z'|)$.
+So we only need to show $\tw(\tor(t) - \sigma(t)) = O_{g,c}(p+|Z'|)$.
+
+For notational convenience, set $\phi = i_j$ and $\psi = i_{j+1}$.
+What we are going to do is to build a graph that contains $\tor(t) - \sigma(t)$ as a minor, and bound the treewidth of that graph.
+Let $(\varGamma,\eta)$ be a subgraph of $(G_0'[L_\phi^\psi],\eta)$ obtained by removing all edges in $E(L_\psi) \backslash E(\partial o_\psi)$.
+Note that the edges removed are exactly those embedded in the interiors of the faces $f \in F_\eta(\partial o_{\psi}) \backslash \{o_{\psi}\}$.
+This implies that every face in $F_\eta(\partial o_{\psi}) \backslash \{o_{\psi}\}$ is also a face of $(\varGamma,\eta)$.
+Recall the set $\kappa(f) \subseteq V(\partial f) \backslash L_{\psi}^+$ defined for each $f \in F_\eta(\partial o_{\psi}) \backslash \{o_{\psi}\}$.
+For convenience, we set $\kappa(f) = \emptyset$ for all faces $f$ of $(\varGamma,\eta)$ other than the ones in $F_\eta(\partial o_{\psi}) \backslash \{o_{\psi}\}$.
+Clearly, $\kappa(f) \subseteq V(\partial f) = V(\varGamma)$ for all $f \in F_\eta(\varGamma)$.
+We then define $\varGamma^\kappa$ as the graph obtained from $\varGamma$ by making $\kappa(f)$ a clique for all $f \in F_\eta(\varGamma)$.
+
+\begin{observation} \label{obs-kappaminor}
+$\varGamma^\kappa$ contains $\tor(t) - \sigma(t)$ as a minor.
+\end{observation}
+\begin{proof}\textcolor{red}{TOPROVE 23}\end{proof}
+
+Finally, it suffices to show that $\tw(\varGamma^\kappa) = O_{h,c}(p+|Z'|)$.
+By Lemma~\ref{lem-twdiam2}, it suffices to bound $\mathsf{diam}_{w_\kappa}^*(\varGamma,\eta)$, where $w_\kappa: F_\eta(\varGamma) \rightarrow \mathbb{N}$ is the weight function defined as $w_\kappa(f) = |\kappa(f)|$.
+
+\begin{observation}
+$\mathsf{diam}_{w_\kappa}^*(\varGamma,\eta) = O_{h,c}(p+|Z'|)$.
+\end{observation}
+\begin{proof}\textcolor{red}{TOPROVE 24}\end{proof}
+
+Combining the above observation with Lemma~\ref{lem-twdiam2}, we have $\tw(\varGamma^\kappa) = O_{h,c}(p+|Z'|)$.
+By Observation~\ref{obs-kappaminor}, we further have $\tw(\tor(t) - \sigma(t)) = O_{h,c}(p+|Z'|)$ and thus $\tw(\tor(t)) = O_{h,c}(p+|Z'|)$.
+It follows that $\tw(G_0'/(Z_1 \backslash Z')) = O_{h,c}(p+|Z'|)$, according to Lemma~\ref{lem-torsotw}.
+Finally, using Observation~\ref{obs-GtoG0'}, we have $\tw(G/(Z_1 \backslash Z')) = O_{h,c}(p+|Z'|)$, which completes the proof of Lemma~\ref{lem-decomp1}.
+ 
+\subsection{Decomposing minor-free graphs}
+In this section, we complete the proof of our main theorem (Theorem~\ref{thm-contraction}), based on the result of the previous section.
+To this end, we need to introduce the famous Robertson-Seymour decomposition of an $H$-minor-free graph.
+By simply combining the results of \cite{BandyapadhyayLLSJ22,DemaineHK05} with Lemma~\ref{lem-minimal}, we can obtain the following strong version of Robertson-Seymour decomposition.
+
+\begin{lemma}[Robertson-Seymour decomposition] \label{lem-rsdecomp}
+Let $H$ be a fixed graph.
+Any connected $H$-minor-free graph $G$ admits a tree decomposition $(T,\beta)$ satisfying the following two conditions (where $h>0$ is a constant only depending on $H$).
+\begin{enumerate}[label = (RS.\arabic*)]
+    \item\label{item:rs-decomposition-1} For all $t \in V(T)$, $\tor(t)$ admits an $h$-almost-embeddable structure in which the partial embedding is minimal, and for every child $s$ of $t$ in $T$, all but at most three vertices in $\sigma(s)$ are vortex vertices or apices of $\tor(t)$.
+    Also, $|\sigma(t)| \leq h$ and all vertices in $\sigma(t)$ are apices of $\tor(t)$.
+    \item\label{item:rs-decomposition-2} For all $t \in V(T)$, $G[\gamma(t) \backslash \sigma(t)]$ is connected, and $\sigma(t) \subseteq N_G(\gamma(t) \backslash \sigma(t))$.
+\end{enumerate}
+Furthermore, given an $H$-minor-free graph $G$, the tree decomposition (together with the almost-embeddable structures of the torsos) can be computed in polynomial time.
+\end{lemma}
+
+\begin{proof}\textcolor{red}{TOPROVE 25}\end{proof}
+
+Let $G$ be an $H$-minor-free graph.
+Without loss of generality, we can assume $G$ is connected.
+We first compute the tree decomposition $(T,\beta)$ of $G$ in Lemma~\ref{lem-rsdecomp} as well as the almost-embeddable structures of the torsos.
+Condition \ref{item:rs-decomposition-2} of Lemma~\ref{lem-rsdecomp} implies the following property of the tree decomposition $(T,\beta)$.
+
+\begin{observation} \label{obs-noadhtos}
+For all $t \in V(T)$, $\tor(t) - \sigma(t)$ is connected and $\sigma(t) \subseteq N_{\tor(t)}(\beta(t) \backslash \sigma(t))$.
+\end{observation}
+\begin{proof}\textcolor{red}{TOPROVE 26}\end{proof}
+
+In order to construct the sets $Z_1,\dots,Z_p \subseteq V(G)$, we consider every node $t \in V(T)$, and compute $p$ sets $Z_1^{(t)},\dots,Z_p^{(t)} \subseteq \beta(t) \backslash \sigma(t)$ as follows.
+Let $t \in V(T)$ be a node and $A$ be the apex set of $\tor(t)$.
+We say an edge $aa'$ of $\tor(t)[A]$ is \textit{redundant} if there exists a vertex $v \in \beta(t) \backslash A$ adjacent to both $a$ and $a'$ in $\tor(t)$.
+Define $G_t$ as the graph obtained from $\tor(t)$ by removing all redundant edges.
+The next observation shows that $G_t$ ``inherits'' the nice properties of $\tor(t)$ in Observation~\ref{obs-noadhtos}.
+
+\begin{observation} \label{obs-noadhGt}
+For all $t \in V(T)$, $G_t - \sigma(t)$ is connected and $\sigma(t) \subseteq N_{G_t}(\beta(t) \backslash \sigma(t))$.
+\end{observation}
+\begin{proof}\textcolor{red}{TOPROVE 27}\end{proof}
+
+For each $v \in \sigma(t)$, we pick an arbitrary vertex $v' \in \beta(t) \backslash \sigma(t)$ adjacent to $v$ in $G_t$ and call $v'$ the \textit{witness neighbor} of $v$ (by the above observation, such a witness neighbor exists).
+Define $\varPhi^{(t)} \subseteq \beta(t) \backslash \sigma(t)$ as the set of witness neighbors of all vertices in $\sigma(t)$.
+We have $|\varPhi^{(t)}| \leq |\sigma(t)| \leq h$ by \ref{item:rs-decomposition-1} of Lemma~\ref{lem-rsdecomp}.
+Next, we apply Corollary~\ref{cor-decomp2} on $G = G_t - \sigma(t)$ with the set $\varPhi = \varPhi^{(t)}$, and define $Z_1^{(t)},\dots,Z_p^{(t)}$ as the sets $Z_1,\dots,Z_p$ obtained by the corollary.
+Note that $G_t - \sigma(t)$ is obtained from $\tor(t)$ by deleting some apices and some edges between apices, so it inherits the almost-embeddable structure of $\tor(t)$, in which the partial embedding is minimal.
+Also, $G_t - \sigma(t)$ is connected by Observation~\ref{obs-noadhtos}.
+Therefore, Corollary~\ref{cor-decomp2} is applicable on $G_t - \sigma(t)$.
+
+Next, we define a coloring $\mathsf{col}\colon V(T) \rightarrow [p]$ which assigns each node of $T$ one of the colors $1,\dots,p$.
+The coloring is defined in a top-down manner in $T$.
+If $t$ is the root, define $\mathsf{col}(t)$ as an arbitrary number in $[p]$.
+Otherwise, let $t'$ be the parent of $t$ and suppose $\mathsf{col}(t')$ is already defined.
+
+\begin{observation}
+There exists at most one index $i \in [p]$ such that the clique $\tor(t')[\sigma(t)]$ contains an edge of $G_{t'}[Z_i^{(t')}]$.
+\end{observation}
+\begin{proof}\textcolor{red}{TOPROVE 28}\end{proof}
+If there exists some $i \in [p]$ such that $\tor(t')[\sigma(t)]$ contains an edge of $G_{t'}[Z_i^{(t')}]$, we then set $\mathsf{col}(t) = i$; by the above observation, such an index $i$ is unique (if it exists).
+Otherwise, $\tor(t')[\sigma(t)]$ is edge-disjoint from all of $\tor(t')[Z_1^{(t')}],\dots,\tor(t')[Z_p^{(t')}]$.
+In this case, we set $\mathsf{col}(t) = \mathsf{col}(t')$.
+
+Finally, we construct the partition $Z_1,\dots,Z_p$ in Theorem~\ref{thm-contraction} as follows.
+Let $T_i = \mathsf{col}^{-1}(\{i\})$ be the set of nodes of $T$ colored with $i$.
+For each node $t \in V(T)$, let $R^{(t)}$ be the complement of $\bigcup_{i=1}^p Z_i^{(t)}$ in $\beta(t) \backslash \sigma(t)$, i.e., $R^{(t)} \coloneqq (\beta(t) \backslash \sigma(t)) \backslash (\bigcup_{i=1}^p Z_i^{(t)})$.
+We then define
+\begin{equation}
+ Z_i \coloneqq \left(\bigcup_{t \in T} Z_i^{(t)}\right) \cup \left(\bigcup_{t \in T_i} R^{(t)}\right)
+\end{equation}
+for every $i \in [p]$.
+From our construction, one can easily verify the following fact.
+\begin{observation}
+$Z_1,\dots,Z_p$ is a partition of $V(G)$.
+\end{observation}
+\begin{proof}\textcolor{red}{TOPROVE 29}\end{proof}
+
+\begin{observation} \label{obs-connectedbottom}
+Let $i \in [p]$ and $t \in V(T)$.
+For any edge $vv'$ of $\tor(t)[Z_i^{(t)}]$, $v$ and $v'$ lie in the same connected component of $G[(\bigcup_{s \in S} (\gamma(s) \backslash \sigma(s)) \cap Z_i) \cup \{v,v'\}]$, where $S$ consists of all children $s$ of $t$ in $T$ satisfying $v,v' \in \sigma(s)$.
+\end{observation}
+\begin{proof}\textcolor{red}{TOPROVE 30}\end{proof}
+
+Next, we show that $\tw(G/(Z_i \backslash Z')) = O_h(p+|Z'|)$ for all $i \in [p]$ and $Z' \subseteq Z_i$.
+Without loss of generality, we only need to consider the case $i=1$.
+Let $\pi\colon V(G) \rightarrow V(G/(Z_1 \backslash Z'))$ be the quotient map for the contraction of $G$ to $G/(Z_1 \backslash Z')$.
+For each $t \in V(T)$, let $\beta^*(t) = \pi(\beta(t))$.
+By Fact~\ref{fact-inducedtd}, $(T,\beta^*)$ is a tree decomposition of $G/(Z_1 \backslash Z')$.
+We use the notations $\sigma^*(t)$, $\gamma^*(t)$, $\tor^*(t)$ to denote the adhesion, $\gamma$-set, and torso of a node $t \in V(T)$ in the tree decomposition $(T,\beta^*)$, in order to distinguish from those for $(T,\beta)$.
+We observe the following simple fact.
+
+\begin{observation} \label{obs-adhesion}
+For all $t \in V(T)$, $\sigma^*(t) = \pi(\sigma(t))$.
+\end{observation}
+\begin{proof}\textcolor{red}{TOPROVE 31}\end{proof}
+
+By Lemma~\ref{lem-torsotw}, it suffices to show that $\tw(\tor^*(t)) = O_h(p+|Z'|)$ for all $t \in V(T)$.
+Consider a node $t \in V(T)$.
+In order to bound $\tw(\tor^*(t))$, we shall construct a graph of bounded treewidth that contains $\tor^*(t)$ as a minor.
+Define $\mathsf{TOR}(t)$ as the graph obtained from $\tor(t)$ by making $\sigma(t)$ a clique.
+Let $S_\mathsf{bad}$ be the set of children $s$ of $t$ satisfying $(\gamma(s) \backslash \sigma(s)) \cap Z' \neq \emptyset$.
+Note that $|S_\mathsf{bad}| \leq |Z'|$ as the sets $\gamma(s) \backslash \sigma(s)$ are disjoint for the children $s$ of $t$.
+Set $Z'' = Z' \cup (\bigcup_{s \in S_\mathsf{bad}} \sigma(s))$.
+Since $|\sigma(s)| \leq h$ for all $s \in S_\mathsf{bad}$ and $|S_\mathsf{bad}| \leq |Z'|$, by \ref{item:rs-decomposition-1} of Lemma~\ref{lem-rsdecomp}, we have $|Z''| = O_h(|Z'|)$.
+Consider the graph $G^* = \mathsf{TOR}(t)/(Z_1^{(t)} \backslash (Z'' \cap Z_1^{(t)}))$.
+Because $Z_1^{(t)} \subseteq \beta(t) \backslash \sigma(t)$, the vertices in $\sigma(t)$ do not get contracted in $G^*$.
+So the vertices in $\sigma(t)$ are also vertices in $G^*$.
+We observe that $\tw(G^*) = O_h(p+|Z'|)$.
+Indeed, $G^* - \sigma(t)$ is isomorphic to $(\tor(t)-\sigma(t))/(Z_1^{(t)} \backslash (Z'' \cap Z_1^{(t)}))$, and $(G_t - \sigma(t))/(Z_1^{(t)} \backslash (Z'' \cap Z_1^{(t)}))$ can be obtained from $(\tor(t)-\sigma(t))/(Z_1^{(t)} \backslash (Z'' \cap Z_1^{(t)}))$ by deleting the $O_h(1)$ redundant edges.
+Therefore, $(G_t - \sigma(t))/(Z_1^{(t)} \backslash (Z'' \cap Z_1^{(t)}))$ can be viewed as a graph obtained from $G^*$ by deleting $O_h(1)$ vertices and edges, since $\sigma(t) \leq h$ by \ref{item:rs-decomposition-1} of Lemma~\ref{lem-rsdecomp}.
+So the difference between $\tw((G_t - \sigma(t))/(Z_1^{(t)} \backslash (Z'' \cap Z_1^{(t)})))$ and $\tw(G^*)$ is $O_h(1)$.
+Since $|Z''| = O_h(|Z'|)$, by condition \ref{item:decomp2-1} of Corollary~\ref{cor-decomp2}, we have
+\begin{equation*}
+    \tw((G_t - \sigma(t))/(Z_1^{(t)} \backslash (Z'' \cap Z_1^{(t)}))) = O_h(p+|Z'|),
+\end{equation*}
+which implies $\tw(G^*) = O_h(p+|Z'|)$.
+Finally, we show that $G^*$ contains $\tor^*(t)$ as a minor.
+To this end, we need the following observation.
+
+\begin{observation} \label{obs-TORconnected}
+For any $V \subseteq \beta^*(t)$, if $\tor^*(t)[V]$ is connected, then $\mathsf{TOR}(t)[\pi_{|\beta(t)}^{-1}(V)]$ is also connected, where $\pi_{|\beta(t)}: \beta(t) \rightarrow \beta^*(t)$ is the map $\pi$ restricted to $\beta(t)$.
+\end{observation}
+\begin{proof}\textcolor{red}{TOPROVE 32}\end{proof}
+
+\begin{observation}
+$G^*$ contains $\tor^*(t)$ as a minor and thus $\tw(\tor^*(t)) = O_h(p+|Z'|)$.
+\end{observation}
+\begin{proof}\textcolor{red}{TOPROVE 33}\end{proof}
+
+The above observation implies $\tw(G/(Z_1 \backslash Z')) = O_h(p+|Z'|)$ by Lemma~\ref{lem-torsotw}, because $(T,\beta^*)$ is a tree decomposition of $G/(Z_1 \backslash Z')$.
+This completes the proof of Theorem~\ref{thm-contraction}.
+ 
+
+\section{Applications}
+\label{sec-app}
+
+In this section, we briefy discuss some applications of Theorem~\ref{thm-contraction} in parameterized complexity building on \cite{BandyapadhyayLLSJ22,MarxMNT22}.
+Indeed, Theorem~\ref{thm-contraction} directly results in parameterized algorithms of running time $n^{O(\sqrt{k})}$ or $2^{\widetilde{O}(\sqrt{k})} \cdot n^{O(1)}$ for a broad class of vertex/edge deletion problems on $H$-minor-free graphs.
+For example, this includes all problems that can be formulated as {\sc Permutation CSP Deletion} or {\sc 2-Conn Permutation CSP Deletion} \cite{MarxMNT22}.
+
+An instance of the (binary) CSP problem is specified by a triple $\varGamma = (X,D,\mathcal{C})$ where $X$ is a finite set of variables, $D$ is a finite domain, and $\mathcal{C}$ is a set of constraints each of which is of the form $c = (x,y,R)$ where $x,y \in X$ and $R \subseteq D^2$.
+We say $\varGamma$ is a \emph{permutation CSP instance} if for every constraint $c = (x,y,R) \in \mathcal{C}$ it holds that $|\{b \in D \mid (a,b) \in R\}| \leq 1$ and $|\{b \in D \mid (b,a) \in R\}| \leq 1$ for all $a \in D$.
+We write $|\varGamma| = |X| + |D|$ as the \emph{size} of $\varGamma$.
+An \emph{assignment} of $\varGamma$ is a function $\alpha: Y \rightarrow D$ on a subset $Y \subseteq X$, and we say $\alpha$ is \emph{satisfying} if for all $c = (x,y,R) \in \mathcal{C}$ such that $x,y \in Y$, we have $(\alpha(x),\alpha(y)) \in R$.
+A permutation CSP instance $\varGamma = (X,D,\mathcal{C})$ naturally induces a graph $G_\varGamma$ with vertex set $X$ in which two variables $x,y \in X$ are connected by an edge if there exists $c \in \mathcal{C}$ such that $c = (x,y,R)$ for some $R \subseteq D^2$.
+We say the permutation CSP instance $\varGamma$ is $H$-\emph{minor-free} if its underlying graph $G_\varGamma$ is $H$-minor-free.
+For a subset $\mathcal{C}' \subseteq \mathcal{C}$ of constraints, we write $\varGamma - \mathcal{C}' = (X,D,\mathcal{C} \backslash \mathcal{C}')$.
+For a subset $X' \subseteq X$ of variables, we write $\varGamma - X' = (X \backslash X',D,\mathcal{C} \backslash \mathcal{C}_{X'})$, where $\mathcal{C}_{X'} \subseteq \mathcal{C}$ consists of all constraints that involve at least one variable from $X'$.
+
+Let $\varGamma = (X,D,\mathcal{C})$ be a permutation CSP instance.
+A \emph{size constraint} for $\varGamma$ is a pair $(w,\delta)$ where $w\colon X \times D \to \mathbb{N}$ is a weight function and $\delta \in \mathbb{N}$ is a threshold.
+We say an assignment $\alpha\colon Y \to D$ of $\varGamma$ \emph{respects} the size constraint $(w,\delta)$ if $\sum_{y \in Y} w(y,\alpha(y)) \leq \delta$.
+We say $\varGamma$ is \emph{satisfiable} subject to $(w,\delta)$ on a subset $Y \subseteq X$ if there is a satisfying assignment $\alpha\colon Y \to D$ of $\varGamma$ that respects $(w,\delta)$.
+
+\subsection{Permutation CSP Deletion Problems}
+
+In \cite{MarxMNT22} a subset of the authors define the problems {\sc Permutation CSP Vertex Deletion} and {\sc Permutation CSP Edge Deletion}.
+These problems essentially ask whether one can remove from a given permutation CSP instance a small number of variables (resp., constraints), or equivalently vertices (resp., edges) in the underlying graph, such that the resulting instance is satisfiable on every connected component of the underlying graph.
+The formal definitions are the following\footnote{We remark that our definition of (2-connected) permutation CSP deletion is a simplified version of the original definition in \cite{MarxMNT22}, which is already sufficient for our applications.
+The original definition is more complicated and allows multiple size constraints of a more general form.}.
+
+The {\sc Permutation CSP Vertex Deletion} problem is a parameterized problem that takes as input a tuple $(\varGamma,w,\delta,k)$, where $\varGamma = (X,D,\mathcal{C})$ is a permutation CSP instance, $(w,\delta)$ is a size constraint for $\varGamma$, and $k$ is the solution size parameter.
+The goal is to find a subset $X' \subseteq X$ with $|X'| \leq k$ such that $\varGamma - X'$ is satisfiable subject to $(w,\delta)$\footnote{Strictly speaking, $(w,\delta)$ is a size constraint for $\varGamma$ instead of $\varGamma - X'$. But it naturally induces a size constraint for $\varGamma - X'$ by restricting $w$ to $(X \backslash X') \times D$. For convenience, we still denote it by $(w,\delta)$ here.} on every subset $Y \subseteq X \backslash X'$ satisfying that $G_{\varGamma - X'}[Y]$ is a connected component of $G_{\varGamma - X'}$.
+
+Similarly, the {\sc Permutation CSP Edge Deletion} problem takes the same input, but the goal is to find a subset $\mathcal{C}' \subseteq \mathcal{C}$ with $|\mathcal{C}'| \leq k$ such that $\varGamma - \mathcal{C}'$ is satisfiable subject to $(w,\delta)$ on every subset $Y \subseteq X$ satisfying that $G_{\varGamma - \mathcal{C}'}[Y]$ is a connected component of $G_{\varGamma - \mathcal{C}'}$.
+
+\begin{theorem}\label{thm-permCSP}
+ Let $H$ be a fixed graph.
+ Then the {\sc Permutation CSP Vertex Deletion} (or the {\sc Permutation CSP Edge Deletion}) problem on $H$-minor-free instances $(\varGamma,w,\delta,k)$ can be solved in $(|\varGamma|+\delta)^{O(\sqrt{k})}$ time.
+\end{theorem}
+
+\begin{proof}\textcolor{red}{TOPROVE 34}\end{proof}
+
+Many natural problems can be formulated as {\sc Permutation CSP Vertex/Edge Deletion} problems including the following examples (see \cite{MarxMNT22} for more details):
+\begin{itemize}
+ \item {\sc Odd Cycle Transversal}: The input consists of a graph $G$ and a parameter $k$. The goal is to find a subset $S \subseteq V(G)$ of at most $k$ vertices such that $G - S$ contains no odd cycle.
+ \item {\sc Vertex Multiway Cut}: The input consists of a graph $G$, a terminal set $T \subseteq V(G)$, and a parameter $k$. The goal is to find a subset $S \subseteq V(G)$ of at most $k$ vertices such that no two vertices in $T$ lie in the same connected component of $G - S$.
+ \item {\sc Group Feedback Vertex Set}: The input consists of a graph $G$ with a map $\lambda:V(G) \times V(G) \rightarrow \varGamma$ where $\varGamma$ is a group and $\lambda(u,v) = (\lambda(v,u))^{-1}$ and a parameter $k$. The goal is to find a subset $S \subseteq V(G)$ of at most $k$ vertices such that $G - S$ contains no \emph{non-null} cycle where a cycle $(v_0,v_1,\dots,v_r=v_0)$ is non-null if $\prod_{i=1}^r \lambda(v_{i-1},v_i) = \mathbf{1}$.
+ \item {\sc Component Order Connectivity}: The input consists of a graph $G$, a threshold $\delta$, and a parameter $k$. The goal is to find a subset $S \subseteq V(G)$ of at most $k$ vertices such that every component of $G-S$ is of size at most $\delta$.
+ \item The edge-deletion version of the above problems where the goal is to find a subset $S \subseteq E(G)$ of at most $k$ \emph{edges} such that $G-S$ satisfies the corresponding properties.
+\end{itemize}
+
+\begin{corollary}
+ There exist algorithms with running time $n^{O(\sqrt{k})}$ for {\sc Odd Cycle Transversal}, {\sc Vertex Multiway Cut}, {\sc Vertex Multicut}, {\sc Group Feedback Vertex Set}, {\sc Component Order Connectivity}, and the edge-deletion version of these problems on $H$-minor-free graphs, where $n$ is the number of vertices of the input graph and $k$ is the solution-size parameter.
+\end{corollary}
+
+\begin{proof}\textcolor{red}{TOPROVE 35}\end{proof}
+
+Using the minor-preserving (quasi-)polynomial kernels from \cite{MarxMNT22} or the (quasi-)polynomial-size candidate sets given in \cite{BandyapadhyayLLSJ22}, we can also obtain (randomized) subexponential-time FPT algorithms for these problems.
+Here the notation $\widetilde{O}(\cdot)$ hides $\log k$ factors.
+
+\begin{corollary}
+ There exist randomized algorithms with running time $2^{\widetilde{O}(\sqrt{k})} \cdot n^{O(1)}$ for {\sc Odd Cycle Transversal}, {\sc Vertex Multiway Cut}, {\sc Group Feedback Vertex Set} (for a fixed group), and the edge-deletion version of these problems on $H$-minor-free graphs, where $n$ is the number of vertices of the input graph and $k$ is the solution-size parameter.
+\end{corollary}
+
+\subsection{Two-Connected Permutation CSP Deletion Problems}
+
+To extend the scope of problems covered by this approach, \cite{MarxMNT22} also considers the {\sc 2-Conn Permutation CSP Deletion} problem.
+The problem is similar to {\sc Permutation CSP Deletion} defined above, but the satisfiability we care about is on the 2-connected components of the underlying graph (after deletion), instead of connected components.
+
+The {\sc 2-Conn Permutation CSP Vertex Deletion} problem is a parameterized problem that takes as input a tuple $(\varGamma,w,\delta,k)$, where $\varGamma = (X,D,\mathcal{C})$ is a permutation CSP instance, $(w,\delta)$ is a size constraint for $\varGamma$, and $k$ is the solution size parameter.
+The goal is to find a subset $X' \subseteq X$ with $|X'| \leq k$ such that $\varGamma - X'$ is satisfiable subject to $(w,\delta)$\footnote{Strictly speaking, $(w,\delta)$ is a size constraint for $\varGamma$ instead of $\varGamma - X'$. But it naturally induces a size constraint for $\varGamma - X'$ by restricting $w$ to $(X \backslash X') \times D$. For convenience, we still denote it by $(w,\delta)$ here.} on every subset $Y \subseteq X \backslash X'$ satisfying that $G_{\varGamma - X'}[Y]$ is a 2-connected component of $G_{\varGamma - X'}$.
+
+Similarly, the {\sc 2-Conn Permutation CSP Edge Deletion} problem takes the same input, but the goal is to find a subset $\mathcal{C}' \subseteq \mathcal{C}$ with $|\mathcal{C}'| \leq k$ such that $\varGamma - \mathcal{C}'$ is satisfiable subject to $(w,\delta)$ on every subset $Y \subseteq X$ satisfying that $G_{\varGamma - \mathcal{C}'}[Y]$ is a 2-connected component of $G_{\varGamma - \mathcal{C}'}$.
+
+\begin{theorem}\label{thm-2conn}
+ Let $H$ be a fixed graph.
+ Then the {\sc 2-Conn Permutation CSP Vertex Deletion} (or the {\sc 2-Conn Permutation CSP Edge Deletion}) problem on $H$-minor-free instances $(\varGamma,w,\delta,k)$ can be solved in $(|\varGamma|+\delta)^{O(\sqrt{k})}$ time.
+\end{theorem}
+
+\begin{proof}\textcolor{red}{TOPROVE 36}\end{proof}
+
+The following problems can be formulated as 2-connected permutation CSP deletion problems (see \cite{MarxMNT22} for more details):
+\begin{itemize}
+ \item {\sc Subset Feedback Vertex Set}: The input consists of a graph $G$, a terminal set $T \subseteq V(G)$, and a parameter $k$.
+ The goal is to find a subset $S \subseteq V(G)$ of at most $k$ vertices such that every cycle in $G - S$ is disjoint from $T$.
+ \item {\sc Subset Odd Cycle Transversal}: The input consists of a graph $G$, a terminal set $T \subseteq V(G)$, and a parameter $k$. The goal is to find a subset $S \subseteq V(G)$ of at most $k$ vertices such that every odd cycle in $G - S$ is disjoint from $T$.
+ \item {\sc Subset Group Feedback Vertex Set}: The input consists of a graph $G$ with a map $\lambda\colon V(G) \times V(G) \rightarrow \varGamma$ where $\varGamma$ is a group and $\lambda(u,v) = (\lambda(v,u))^{-1}$, a terminal set $T \subseteq V(G)$, and a parameter $k$. The goal is to find a subset $S \subseteq V(G)$ of at most $k$ vertices such that every non-null cycle in $G - S$ is disjoint from $T$.
+ \item {\sc 2-Conn Component Order Connectivity}:  The input consists of a graph $G$, a threshold $\delta$, and a parameter $k$. The goal is to find a subset $S \subseteq V(G)$ of at most $k$ vertices such that every every 2-connected component of $G-S$ is of size at most $\delta$.
+ \item The edge-deletion version of the above problems where the goal is to find a subset $S \subseteq E(G)$ of at most $k$ \emph{edges} such that $G-S$ satisfies the corresponding properties.
+\end{itemize}
+
+\begin{corollary}
+ There exist algorithms with running time $n^{O(\sqrt{k})}$ for {\sc Subset Feedback Vertex Set}, {\sc Subset Odd Cycle Transversal}, {\sc Subset Group Feedback Vertex Set}, {\sc 2-Conn Component Order Connectivity}, and the edge-deletion version of these problems on $H$-minor-free graphs, where $n$ is the number of vertices of the input graph and $k$ is the solution-size parameter.
+\end{corollary}
+
+Using the minor-preserving (quasi-)polynomial kernels for {\sc Subset Feedback Vertex Set} and a reduction from {\sc Subset Feedback Edge Set} to  {\sc Subset Feedback Vertex Set} given in \cite{MarxMNT22}, we can also obtain (randomized) subexponential-time FPT algorithms for these two problems.
+
+\begin{corollary}
+ There exist randomized algorithms with running time $2^{\widetilde{O}(\sqrt{k})} \cdot n^{O(1)}$ for {\sc Subset Feedback Vertex Set} and {\sc Subset Feedback Edge Set} on $H$-minor-free graphs, where $n$ is the number of vertices of the input graph and $k$ is the solution-size parameter.
+\end{corollary}
+ 
+
+\bibliographystyle{plainurl}
+\bibliography{refs}
+
+\end{document}

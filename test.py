@@ -82,8 +82,11 @@ def experiment(papers, name = "tmp"):
 if __name__ == "__main__":
     #experiment(["2502.09440"], name="2502.09440")
     #experiment(["2502.08125"], name="2502.08125")
+    #experiment(["2502.09440", "2502.08125"])
+    experiment(["2502.08328"], name="2502.08328")
     
-    papers = list_folders("data/")
+    papers = os.listdir("data/")
+    #experiment(papers, name = "full_experiment")
     
     
 

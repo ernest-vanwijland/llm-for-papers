@@ -1,0 +1,209 @@
+\documentclass[a4paper,10pt]{amsart}
+
+\usepackage{graphicx}
+\usepackage{dirtytalk}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{accents}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumerate}
+\usepackage{listings}
+\usepackage{complexity}
+\usepackage{blkarray}
+\usepackage{braket}
+\usepackage{lmodern}
+\usepackage[english]{babel}
+\usepackage{enumitem}
+
+\usepackage[font=small,labelfont=bf]{caption}
+\usepackage[font=small,labelfont=normalfont,labelformat=simple]{subcaption}
+\widowpenalty10000
+\clubpenalty10000
+
+\graphicspath{{figs/}}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{construction}[theorem]{Construction}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{question}[theorem]{Question}
+\newtheorem{observation}[theorem]{Observation}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{problem}[theorem]{Problem}
+
+\DeclareMathOperator{\conv}{conv}
+\DeclareMathOperator{\sgn}{sgn}
+
+\def\RR{\mathbb{R}}
+\def\NN{\mathbb{N}}
+
+\def\ZZ{\mathbb{Z}}
+\def\ETR{\exists \RR}
+
+\author
+{
+Raphael Steiner 
+}
+\thanks{Institute for Operations Research, Department of Mathematics, ETH Z\"{u}rich, Switzerland,  \texttt{raphaelmario.steiner@math.ethz.ch}. The research of the author is funded by the Ambizione Grant No. 216071 of the Swiss National Science Foundation.}
+
+\date{\today}
+
+\title{Fractional chromatic number vs. Hall ratio}
+
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Given a graph $G$, its \emph{Hall ratio} $\rho(G)=\max_{H\subseteq G}\frac{|V(H)|}{\alpha(H)}$ forms a natural lower bound on its fractional chromatic number $\chi_f(G)$. A recent line of research studied the fundamental question of whether $\chi_f(G)$ can be bounded in terms of a (linear) function of $\rho(G)$. In a breakthrough-result, Dvo\v{r}\'{a}k, Ossona de Mendez and Wu~\cite[\emph{Combinatorica}, 2020]{dvorak} gave a strong negative answer by proving the existence of graphs with bounded Hall ratio and arbitrarily large fractional chromatic number. In this paper, we solve two natural follow-up problems that were raised by Dvo\v{r}\'{a}k et al.
+
+The first problem concerns determining the growth of $g(n)$, defined as the maximum ratio $\frac{\chi_f(G)}{\rho(G)}$ among all $n$-vertex graphs. Dvo\v{r}\'{a}k et al. obtained the bounds $\Omega(\log\log n) \le g(n)\le O(\log n)$, leaving an exponential gap between the lower and upper bound. We almost fully resolve this problem by proving that the truth is close to the upper bound, i.e., $g(n)=(\log n)^{1-o(1)}$. 
+
+The second problem posed by Dvo\v{r}\'{a}k et al. asks for the existence of graphs with bounded Hall ratio, arbitrarily large fractional chromatic number and such that every subgraph contains an independent set that touches a constant fraction of its edges. We affirmatively solve this second problem by showing that such graphs indeed exist.
+\end{abstract}
+
+\section{Introduction}
+The famous chromatic number $\chi(G)$ of a graph $G$ is among the most fundamental graph parameters, whose importance has motivated the study of several variants as well as lower and upper bounds. One of the most important such variants is the well-known \emph{fractional chromatic number} $\chi_f(G)$ of a graph $G$, which is defined as the optimal value of the LP-relaxation of the natural integer program for the chromatic number. Concretely, $\chi_f(G)$ is defined as the optimal value of the following linear program ($\mathcal{I}(G)$ denotes the collection of independent sets):
+
+\begin{align*}
+\tag{P}
+    \text{min} \sum_{I \in \mathcal{I}(G)}&{x_I} \\
+    \text{s.t.} \sum_{I\in \mathcal{I}(G): v \in I}&{x_I}\ge 1~~(\forall v \in V(G)), \\
+    & x_I \ge 0~~(\forall I \in \mathcal{I}(G)).
+\end{align*}
+
+There are many other (equivalent) ways of defining $\chi_f(G)$, see e.g.~\cite{scheinerman2011fractional}. One of them is obtained by considering the dual linear program of the above primal program (P), which represents $\chi_f(G)$ as the optimal value of 
+
+\begin{align*}
+\tag{D}
+    \text{max} &\sum_{v\in V(G)}{w_v} \\
+    \text{s.t.}~~~~&\sum_{v \in I}{w_v}\le 1~~(\forall I \in \mathcal{I}(G)), \\
+    &~~~~~w_v \ge 0~~(\forall v\in V(G)).
+\end{align*}
+
+Given a non-negative vertex-weight function $w:V(G)\rightarrow [0,\infty)$, let us denote by $\alpha_w(G)$ the maximum total weight of an independent set in $G$, that is,
+$$\alpha_w(G):=\max_{I \in \mathcal{I(G)}}\sum_{v\in I}w(v).$$
+
+From the new LP-representation (D) of $\chi_f(G)$, one deduces rather easily the following equivalent representation of $\chi_f(G)$:
+
+\begin{equation}
+\tag{M} \chi_f(G)=\max_{w:V(G)\rightarrow [0,\infty), w \not\equiv 0}\frac{\sum_{v\in V(G)}{w(v)}}{\alpha_w(G)}.\end{equation}
+
+In other words, $\chi_f(G)$ equals the maximum ratio between the total vertex weight and the largest weight of an independent set over all non-negative weight assignments. If in the above maximum we only consider $\{0,1\}$-weightings of the vertices, then we obtain a natural lower bound on $\chi_f(G)$ that is known as the \emph{Hall ratio} $\rho(G)$, and can be equivalently rewritten as 
+$$\rho(G)=\max_{H\subseteq G}\frac{|V(H)|}{\alpha(H)}.$$
+
+So every graph $G$ satisfies $\rho(G)\le \chi_f(G)\le \chi(G)$, and a fundamental question is to understand how tight the above bounds on the fractional chromatic number are. Concerning the upper bound, it is known since a long time that the inequality can be arbitrarily far from tight. In fact, the well-known \emph{Kneser graphs} are examples of graphs for which the fractional chromatic number can be bounded by a constant, and yet the chromatic number can attain arbitrarily large values at the same time, see~\cite{baranyi,lovasz,scheinerman2011fractional}. In contrast, on the lower bound side the relationship between $\rho(G)$ and $\chi_f(G)$ has remained much less understood until recently, and for many examples of graphs (such as the Kneser graphs and binomial random graphs), the Hall ratio $\rho(G)$ does provide a tight (or almost tight) lower bound for $\chi_f(G)$.
+
+This has motivated several researchers to suspect an inverse relationship between $\chi_f(G)$ and $\rho(G)$. For example, Harris~\cite{harris} conjectured in 2016 that there exists an absolute constant $C>0$ such that every graph $G$ satisfies $\chi_f(G)\le C\rho(G)$, and the same problem was implicitly already posed earlier by Johnson Jr.~\cite{johnson2009} in 2009. Notably, at the time this conjecture was posed, it was not even known whether the fractional chromatic number can be bounded by \emph{any} function of the Hall ratio.
+
+In terms of negative results that separate $\chi_f(G)$ and $\rho(G)$, a first step was taken by Johnson Jr.~\cite{johnson2009} who proved that there exist graphs $G$ for which $\chi_f(G)>\rho(G)$. Strengthening this result, Daneshgar et al.~\cite{daneshgar} and Barnett~\cite{barnett} constructed graphs $G$ such that $\frac{\chi_f(G)}{\rho(G)}\ge \frac{6}{5}$ and $\frac{\chi_f(G)}{\rho(G)}\ge \frac{343}{282}$, respectively. 
+
+Note that the Hall ratio of a graph forms an upper bound on its clique number. Thus, a natural place to look for examples of graphs with small Hall ratio and comparably large fractional chromatic number are the classic constructions of triangle-free graphs with large chromatic number. Interestingly, for one of the most famous such constructions, the iterated Mycielskians, Cropper et al.~\cite{cropper} showed that also their Hall ratios grow to infinity. However, even for this explicit construction, it remains open whether the ratio $\frac{\chi_f(G)}{\rho(G)}$ is bounded.
+
+In a recent breakthrough, Blumenthal et al.~\cite{blumenthal} disproved the conjecture of Harris by constructing graphs $G$ for which the ratio $\frac{\chi_f(G)}{\rho(G)}$ becomes arbitrarily large. Independently, Dvo\v{r}\'{a}k et al.~\cite{dvorak} obtained the even stronger result that there exist graphs $G$ for which $\rho(G)$ is bounded by a constant while $\chi_f(G)$ is arbitrarily large, thus showing that $\chi_f(G)$ cannot be upper bounded by a function of $\rho(G)$. 
+
+\begin{theorem}[Dvo\v{r}\'{a}k, Ossona de Mendez, Wu~\cite{dvorak}]\label{thm:dvorak}
+For every constant $C>0$ there exists a graph $G$ with $\chi_f(G)\ge C$ and $\rho(G)\le 18$.  
+\end{theorem}
+
+While this result resolved the question about a direct qualitative relationship between $\chi_f(G)$ and $\rho(G)$, several interesting related problems remained open. Maybe the most natural next step to take after the result of Dvo\v{r}\'{a}k et al.~stated in Theorem~\ref{thm:dvorak} is to understand how quickly the ratio between $\chi_f(G)$ and $\rho(G)$ can grow as a function of the number of vertices of $G$. This is the first of three problems posed explicitly by Dvo\v{r}\'{a}k et al.~\cite{dvorak}.
+\begin{problem}[Problem~4 in~\cite{dvorak}]\label{prob:4}
+Determine the function $g:\mathbb{N}\rightarrow \mathbb{R}_+$, where 
+$g(n)$ is defined as the maximum of the ratio $\frac{\chi_f(G)}{\rho(G)}$ over all $n$-vertex graphs $G$.
+\end{problem}
+
+Dvo\v{r}\'{a}k et al.~\cite{dvorak} observed that a simple greedy argument can be used to show that $g(n)\le O(\log n)$, and that the construction in their proof of Theorem~\ref{thm:dvorak} yields $g(n)\ge \Omega(\log \log n)$. This leaves an exponential gap between the lower and upper bounds on $g(n)$. As the first main contribution of this paper, we close this gap and almost fully resolve Problem~\ref{prob:4} by showing that $g(n)=(\log n)^{1-o(1)}$. 
+
+\begin{theorem}\label{thm:main}
+    There exists an absolute constant $C>0$ such that for every sufficiently large integer $n$ there exists an $n$-vertex graph $G$ with $\chi_f(G)\ge \frac{\log n}{C\log \log n}$ and $\rho(G)\le C(\log\log n)^2$. Hence, $g(n)=\Omega\left(\frac{\log n}{(\log \log n)^3}\right)$ and thus $g(n)=(\log n)^{1-o(1)}$. 
+\end{theorem}
+
+Another natural problem that is discussed by Dvo\v{r}\'{a}k et al.~\cite{dvorak} is motivated as follows: Theorem~\ref{thm:dvorak} shows that restricting the weight functions in the formula (M) for $\chi_f(G)$ to $\{0,1\}$-functions is in general too restrictive to expect a good approximation of the maximum over all weight-functions. However, one may hope that there exist other natural classes of weight functions that \emph{do} allow for good approximations of the maximum in (M). As a first candidate, Dvo\v{r}\'{a}k et al. proposed to study the class of weight function that are proportional to the degrees of a subgraph. Concretely, given a subgraph $H$ of a graph $G$ let us define a weight function $\mathrm{deg}_H:V(G)\rightarrow \mathbb{N}_0$ by defining $\mathrm{deg}_H(v)$ as the degree of $v$ in $H$ for every $v\in V(H)$ and as $0$ for every $v\in V(G)\setminus V(H)$. Their motivation for studying this class of weight functions came from the insight that at least for the examples they constructed to prove Theorem~\ref{thm:dvorak}, these weight functions would provide good lower bounds for the fractional chromatic number. 
+
+Explicitly, they posed the following open problem.
+
+\begin{problem}[Problem~5 in~\cite{dvorak}]\label{prob:5}
+Do there for some constant $c>0$ exist graphs $G$ of arbitrarily large fractional chromatic number such that $\rho(G)\le c$ and $\alpha_{\mathrm{deg}_H}(H)\ge |E(H)|/c$ for every $H\subseteq G$?
+\end{problem}
+
+Note that for every subgraph $H$ of a graph $G$, we have that the total weight of $\mathrm{deg}_H$ equals $\sum_{v\in V(G)}\mathrm{deg}_H(v)=2|E(H)|$, which explains the phrasing of the previous problem.
+
+As the second main result of this paper, we affirmatively solve Problem~\ref{prob:5} by proving the following result. 
+
+\begin{theorem}\label{thm:main2}
+For every fixed $\delta >0$ and every sufficiently large integer $n$ there exists an $n$-vertex graph $G$ with $\chi_f(G)\ge \frac{\log \log n}{50 \log\log\log n}$, $\rho(G)\le 4+\delta$ and $\alpha_{\mathrm{deg}_H}(G)\ge \frac{|E(H)|}{4+\delta}$ for every subgraph $H\subseteq G$. 
+\end{theorem}
+
+Note that in fact, the statement shown by our Theorem~\ref{thm:main2} is slightly stronger than what was asked for by Problem~\ref{prob:5}, in that $\alpha_{\mathrm{deg}_H}(H)\ge \alpha_{\mathrm{deg}_H}(G)$ for every $H\subseteq G$, and this inequality can be strict.
+
+We remark that in order to keep the presentation as simple as possible, we did not optimize the constant $4+\delta$ in the statement of Theorem~\ref{thm:main2}. With a more careful analysis and at the price of a worse lower bound on the fractional chromatic number, one could replace the constant $4+\delta$ by $3+\delta$ (in both places).
+
+Our proofs of both Theorem~\ref{thm:main} and Theorem~\ref{thm:main2} involve a careful analysis of the Hall ratios and subgraphs of a certain class of unbalanced random graph constructions, which generalize and modify a construction recently used by Janzer, Sudakov and the author~\cite{janzer} in a different context.
+
+Another interesting problem about the Hall ratio was recently posed by Walczak at the BIRS Workshop on New Perspectives in Colouring and Structure (September 29--October 4 2024). The problem asks whether for every $\varepsilon>0$ there exist graphs with arbitrarily large fractional chromatic number and Hall ratio at most $2+\varepsilon$. In the problem statement, Walczak also announced the result (joint with Teiki Rigaud) that the so-called \emph{Burling graphs} have arbitrarily large fractional chromatic number and Hall ratio at most $3$, showing that one can take $\varepsilon=1$.  Improving on this, Davies, Hatzel and Yepremyan (personal communication) recently and independently rediscovered the construction used in our proof of Theorem~\ref{thm:main2}, and showed that there exist graphs with Hall ratio at most $3-\delta$ for some explicit $\delta>0$ and arbitrarily large fractional chromatic number. Hence, one can take $\varepsilon<1$ in the above problem.
+
+\medskip
+
+\paragraph*{\textbf{Notation and Terminology.}} Throughout this paper, we use $\log(x)$ to denote the \emph{natural} logarithm of a positive real number $x$. Given a graph $G$, we denote by $V(G)$ its vertex set and by $E(G)$ its edge set. Given a subset $X\subseteq V(G)$, we denote by $G[X]$ the induced subgraph of $G$ with vertex set $X$ and denote $G-X:=G[V(G)\setminus X]$.
+
+\medskip
+
+\paragraph*{\textbf{Organization.}} The rest of the paper is structured as follows. In Section~\ref{sec:frac} we introduce a general kind of random graph construction (Construction~\ref{con:randomgraph}), and prove a general lower bound on the fractional chromatic number of such graphs that holds under very mild conditions on the setup. In Section~\ref{sec:main1} and~\ref{sec:main2} we then prove two probabilistic lemmas that show that two different special cases of this general type of random graph construction exhibit the additional properties required by Theorem~\ref{thm:main} and Theorem~\ref{thm:main2}, respectively.
+
+\section{Fractional chromatic number}\label{sec:frac}
+
+In this section, we bound the fractional chromatic number of a class of unbalanced random graph constructions, defined as follows.
+
+\begin{construction}\label{con:randomgraph}
+    Let $\mathcal{B}=(B_i)_{i=1}^{k}$ be a collection of pairwise disjoint sets, ordered such that   $|B_1|\ge \dots\ge |B_k|$. We denote by $G_{\mathcal{B}}$ the random graph with vertex set $V(G_{\mathcal{B}}):=\bigcup_{i=1}^{k}{B_i}$ created as follows: All the sets $B_1,\ldots,B_k$ are independent in $G_{\mathcal{B}}$, and for every pair of vertices $u\in B_i, v\in B_j$ with $i>j$, the edge $uv$ is included in $G_{\mathcal{B}}$ independently with probability $1/|B_j|$.
+\end{construction}
+
+Our first lemma below shows that the fractional chromatic number of a random graph as in Construction~\ref{con:randomgraph} with $k$ parts w.h.p. is in $\Omega(k/\log k)$, provided none of the sets $B_i$ is too small\footnote{A special case of this result, for a slight variant of the construction, was already shown in~\cite[Lemma 2.3]{janzer}. However, the proof method that was used for Lemma~2.3 in~\cite{janzer} does not directly transfer to the more general statement formulated in Lemma~\ref{lem:fracchrom}, whose increased generality is needed for the applications in this paper.}. 
+
+\begin{lemma}\label{lem:fracchrom}
+Let $\mathcal{B}=(B_i)_{i=1}^{k}$ with $k\ge 3$ be a collection of disjoint sets with $|B_1|\ge \dots\ge |B_k|\ge k$. Then
+$$\mathbb{P}\left[\chi_f(G_{\mathcal{B}})\le \frac{k}{10\log k}\right] \le \left(1+k^{-\log k}\right)^k-1=O(k^{1-\log(k)}).$$ In particular, we have $\chi_f(G_{\mathcal{B}})> \frac{k}{10\log k}$ with probability tending to $1$ as $k\rightarrow \infty$.
+\end{lemma}
+\begin{proof}\textcolor{red}{TOPROVE 0}\end{proof}
+
+\section{Proof of Theorem~\ref{thm:main}}\label{sec:main1}
+
+In this section, we prove a lemma (Lemma~\ref{lem:smallish} below) about a special case of Construction~\ref{con:randomgraph} in which the part sizes $|B_i|$ are decreasing exponentially with $i$. The lemma states that with constant probability the Hall ratio of such graphs is bounded by a function growing very slowly with $n$.
+
+In the following, we will omit floor and ceilings from asymptotic expressions when they are not essential (so as to not hinder the flow of reading). 
+
+\begin{lemma}\label{lem:smallish}
+Let $n\in \mathbb{N}$,  $k=k(n):=\frac{1}{2}\log_{3}(n)$ and let $B_1,\ldots,B_k$ be pairwise disjoint sets with $|B_i|=n/3^i$ for $i=1,\ldots,k$, where $n$ is sufficiently large. Then $$\mathbb{P}[\rho(G_{\mathcal{B}})\le 300 (\log \log n)^2]>\frac{1}{3}.$$
+\end{lemma}
+\begin{proof}\textcolor{red}{TOPROVE 1}\end{proof}
+
+Using Lemma~\ref{lem:smallish}, we are now ready to prove our first main result, Theorem~\ref{thm:main}. 
+\begin{proof}\textcolor{red}{TOPROVE 2}\end{proof}
+
+\section{Proof of Theorem~\ref{thm:main2}}\label{sec:main2}
+
+In this section, we will prove Theorem~\ref{thm:main2}. To do so, we establish Lemma~\ref{lem:small} below, which states that a special case of Construction~\ref{con:randomgraph} in which the part sizes decrease extremely rapidly with $i$ (much faster than the exponential drop used in the construction for Theorem~\ref{thm:main}) guarantees not only a constant bound on the Hall ratio, but also that for every weighting of the vertices of the graph by the degrees of a subgraph, one can find an independent set taking a constant fraction of the total weight. A similar choice of part sizes was previously shown to be useful in the context of avoiding regular subgraphs~\cite{janzer}. As before, in the following we omit floors and ceilings from asymptotic expressions when they are not crucial. 
+
+\begin{lemma}\label{lem:small}
+Let $n\in \mathbb{N}$,  $k=k(n):=\frac{1}{3}\log_4(\log n)$ and let $B_1,\ldots,B_k$ be pairwise disjoint sets with $|B_i|=n^{1-4^i\varepsilon}$, where $\varepsilon=\varepsilon(n):=\frac{1}{\sqrt{\log n}}$. Then for every fixed constant $\delta>0$, with probability tending to one as $n\rightarrow \infty$, it holds that 
+\begin{enumerate}
+    \item[(a)] $\rho(G_{\mathcal{B}})\le 4+\delta$, and
+    \item[(b)] for every subgraph $H\subseteq G_{\mathcal{B}}$ there exists an independent set $I$ in $G_{\mathcal{B}}$ that touches at least $\frac{|E(H)|}{4+\delta}$ edges of $H$. 
+\end{enumerate}
+\end{lemma}
+\begin{proof}\textcolor{red}{TOPROVE 3}\end{proof}
+
+Using Lemmas~\ref{lem:fracchrom} and~\ref{lem:small}, we now easily obtain the statement of Theorem~\ref{thm:main2}.
+
+\begin{proof}\textcolor{red}{TOPROVE 4}\end{proof}
+
+\paragraph*{\textbf{Acknowledgements.}} The author would like to thank Barnab\'{a}s Janzer, James Davies, Meike Hatzel and Liana Yepremyan for discussions on the topic.
+\bibliographystyle{abbrvurl}
+\bibliography{references}
+
+\end{document}

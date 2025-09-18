@@ -1,0 +1,606 @@
+\documentclass[a4paper,UKenglish,cleveref, autoref, thm-restate,numberwithinsect]{lipics-v2021}
+\nolinenumbers
+
+
+\hideLIPIcs
+\bibliographystyle{plainurl}\usepackage[mathscr]{eucal}
+\usepackage{xspace}
+\newcommand{\T}{\mathcal{T}}
+\newcommand{\bigO}{\mathcal{O}}
+\newcommand{\G}{\mathcal{G}}
+\newcommand{\reg}{\lambda}
+\newcommand{\iddots}{\rotatebox[origin=c]{70}{$\ddots$}}
+\newcommand{\phisym}{\phi_{\rm sym}}
+\newcommand{\fsym}{f_{\rm sym}}
+\newtheorem{hypothesis}[theorem]{Hypothesis}
+\newtheorem{reduction}[theorem]{Reduction}
+\newcommand{\cspk}{\textsf{CSP}_{k}}
+\newcommand{\maxcspk}{\textsf{maxCSP}_{k}}
+\newcommand{\maxcsp}{\textsf{maxCSP}}
+\newcommand{\mincspk}{\textsf{minCSP}_{k}}
+\newcommand{\Fam}{\mathcal{F}}
+\newcommand{\FPT}{\textsf{FPT}\xspace}
+\newcommand{\vars}{\text{vars}}
+\newcommand{\nand}{\textsf{NAND}\xspace}
+\newcommand{\AND}{\textsf{AND}\xspace}
+\newcommand{\xor}{\textsf{XOR}\xspace}
+\newcommand{\OR}{\textsf{OR}\xspace}
+\newcommand{\impl}{\textsf{Implication}\xspace}
+\newcommand*\tageq{\refstepcounter{equation}\tag{\theequation}}
+\newcommand{\tOh}{\tilde{\mathcal{O}}}
+\usepackage{mathtools}
+\DeclarePairedDelimiter\ceil{\lceil}{\rceil}
+\DeclarePairedDelimiter\floor{\lfloor}{\rfloor}
+\usepackage{cancel}
+\usepackage{textgreek}
+\usepackage{apxproof}
+
+\title{The Role of Regularity in (Hyper-)Clique Detection and Implications for Optimizing Boolean CSPs} \titlerunning{The Role of Regularity in (Hyper-)Clique Detection} 
+
+
+
+\author{Nick Fischer}{INSAIT, Sofia University ``St.\ Kliment Ohridski''}{nickrobinfischer@gmail.com}{https://orcid.org/0009-0001-0909-3296}{Partially funded by the Ministry of Education and Science of Bulgaria’s support for INSAIT, Sofia University ``St.\ Kliment Ohridski'' as part of the Bulgarian National Roadmap for Research Infrastructure. Parts of this work were done while the author was at Weizmann Institute of Science.}
+\author{Marvin Künnemann}{Karlsruhe Institute of Technology}{marvin.kuennemann@kit.edu}{}{}
+\author{Mirza Redžić}{Karlsruhe Institute of Technology}{mirza.redzic@kit.edu}{https://orcid.org/0009-0001-7509-1686}{}
+\author{Julian Stieß}{Karlsruhe Institute of Technology}{julian.stiess@kit.edu}{https://orcid.org/0009-0002-7318-2645}{}
+\funding{Research supported by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) – 462679611.}
+\authorrunning{N. Fischer, M. Künnemann, M. Redžić, J. Stieß} 
+
+\Copyright{{Nick Fischer, Marvin Künnemann, Mirza Redžić and Julian Stieß}} 
+
+\ccsdesc[500]{Theory of computation~Problems, reductions and completeness}
+\ccsdesc[500]{Theory of computation~Graph algorithms analysis}
+
+\keywords{fine-grained complexity theory, clique detections in hypergraphs, constraint satisfaction, parameterized algorithms} 
+
+\category{Track A: Algorithms, Complexity and Games} 
+
+\relatedversion{} 
+
+
+
+
+
+\EventEditors{ Keren Censor-Hillel, Fabrizio Grandoni, Joel Ouaknine, and Gabriele Puppis}
+\EventNoEds{4}
+\EventLongTitle{52nd International Colloquium on Automata, Languages, and Programming (ICALP 2025)}
+\EventShortTitle{ICALP 2025}
+\EventAcronym{ICALP}
+\EventYear{2025}
+\EventDate{July 8--11, 2025}
+\EventLocation{Aarhus, Denmark}
+\EventLogo{}
+\SeriesVolume{334}
+\ArticleNo{120}
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Is detecting a $k$-clique in $k$-partite \emph{regular} (hyper-)graphs as hard as in the general case? Intuition suggests yes, but proving this---especially for hypergraphs---poses notable challenges. Concretely, we consider a strong notion of regularity in $h$-uniform hypergraphs, where we essentially require that any subset of at most $h-1$ is incident to a uniform number of hyperedges. Such notions are studied intensively in the combinatorial block design literature. We show that any $f(k)n^{g(k)}$-time algorithm for detecting $k$-cliques in such graphs transfers to an $f'(k)n^{g(k)}$-time algorithm for the general case, establishing a fine-grained equivalence between the $h$-uniform hyperclique hypothesis and its natural regular analogue. 
+
+Equipped with this regularization result, we then fully resolve the fine-grained complexity of optimizing Boolean constraint satisfaction problems over assignments with $k$ non-zeros. Our characterization depends on the maximum degree $d$ of a constraint function. Specifically, if $d\le 1$, we obtain a linear-time solvable problem, if $d=2$, the time complexity is essentially equivalent to $k$-clique detection, and if $d\ge 3$ the problem requires exhaustive-search time under the 3-uniform hyperclique hypothesis. To obtain our hardness results, the regularization result plays a crucial role, enabling a very convenient approach when applied carefully.
+We believe that our regularization result will find further applications in the future.
+\end{abstract}
+
+\section{Introduction}
+In the design of algorithms and hardness reductions, it is often helpful to assume that the involved instances satisfy certain \emph{regularity} conditions. To name a concrete example: For his celebrated Set Cover inapproximability result, Feige~\cite{Feige98} first argues that the 3SAT-5 problem (the highly regular special case of SAT in which every clause contains precisely 3 variables and each variable occurs in precisely 5 clauses) is hard to approximate, and then gives a reduction from 3SAT-5 to Set Cover. We informally refer to the first reduction as a \emph{regularization}. Another notable example of a regularization in parameterized complexity is the $W[1]$-hardness of $k$-Clique detection in \emph{regular} graphs. In fact, this is the first (non-trivial) reduction in the textbook by Cygan et al.~\cite{CyganFKLMPPS15}, and has been independently observed for their respective applications in at least three different works~\cite{Marx06,Cai08,MathiesonS08}.
+
+Conversely, obtaining regularization results can also have \emph{algorithmic} implications. For instance, Zamir~\cite{Zamir23} devises improved exact algorithms for a wide array of problems including graph coloring on \emph{regular} graphs (in fact, even for \emph{almost-regular} graphs). Designing regularizations for these problems would therefore imply breakthroughs for general instances.
+
+In this work we focus on the $k$-Clique and $k$-Hyperclique problems from a fine-grained perspective. Our main result is a surprisingly intricate fine-grained regularization reduction, i.e., we prove that both problems are as hard on regular (hyper-)graphs as they are on general (hyper-)graphs. Equipped with this, we are able to resolve the fine-grained complexity of optimizing Boolean CSPs over weight-$k$ solutions; this, in fact, had been the motivating question for this study. Below, we detail these two contributions separately in Sections~\ref{sec:intro-hyperclique} and~\ref{sec:intro-optCSPs}. 
+
+\subsection{Regularizing (Hyper-)clique Detection}
+\label{sec:intro-hyperclique}
+\subparagraph*{Clique Detection.}
+The \emph{$k$-Clique} problem is to decide if a $k$-partite graph $G = (V_1, \dots, V_k, E)$ contains a \emph{$k$-clique}, i.e., $k$ nodes $v_1 \in V_1, \dots, v_k \in V_k$ such that any pair $(v_i, v_j)$ forms an edge in~$G$.\footnote{Often, the problem is stated for general instead of $k$-partite graphs. However, these formulations are well-known to be equivalent using color-coding techniques, and the restriction to $k$-partite instances often helps in designing reductions.} While the trivial algorithm takes time $\bigO(n^k)$, Ne\v{s}et\v{r}il and Poljak~\cite{NesetrilP85} devised an algorithm running in time $\bigO(n^{(\omega/3) k})$ where $\omega < 2.3714$ denotes the matrix multiplication exponent~\cite{AlmanDWXXZ25}.\footnote{More precisely, the running time bound $\bigO(n^{(\omega/3) k})$ applies only when $k$ is divisible by $3$. For general $k$, the running time is~\smash{$\bigO(n^{\omega(\lfloor k/3 \rfloor, \lceil k/3 \rceil, \lceil (k-1)/3\rceil)})$}, where $\omega(a, b, c)$ is the exponent of rectangular matrix multiplication (i.e., \smash{$\bigO(n^{\omega(a, b, c)})$} is the running time of multiplying an~\smash{$n^a \times n^b$} matrix by an~\smash{$n^b \times n^c$} matrix).} The \emph{$k$-Clique Hypothesis} postulates that this algorithm is essentially optimal (see Section~\ref{sec:preliminaries}). As it generalizes the popular \emph{Triangle} hypothesis (i.e., the special case~\makebox{$k = 3$}, stating that the complexity of Triangle Detection is $n^{\omega\pm o(1)}$), this hardness assumption entails fine-grained lower bounds for an extensive list of problems (see e.g.~\cite{Vassilevska18}), but also for some important lower bounds beyond the Triangle case~\cite{AbboudBW15a,Chang16,BringmannW17}.
+
+\subparagraph*{Hyperclique Detection.}
+The natural generalization to \emph{$h$-uniform hypergraphs}, the \emph{$(k, h)$-Hyperclique} problem, is to decide if a given $k$-partite $h$-uniform hypergraph $G = (V_1, \dots, V_k, E)$ contains a \emph{$k$-hyperclique}, i.e., $k$ nodes $v_1 \in V_1, \dots, v_k \in V_k$ such that all $h$-tuples $x_{i_1}, \dots, x_{i_h}$ form a hyperedge in $G$. In contrast to the $k$-Clique problem in graphs (which coincides with $(k, 2)$-Hyperclique), the $(k, h)$-Hyperclique problem for $h \geq 3$ is not known to admit any significant improvement over the brute-force search time $\bigO(n^k)$. This led to the \emph{($h$-Uniform) $k$-Hyperclique Hypothesis} postulating that time $n^{k-o(1)}$ is necessary in $h$-uniform hypergraphs~\cite{LincolnWW18}. Besides being a natural problem in itself, the relevance of the Hyperclique problem is also due to its close connection to the MAX-3-SAT problem~\cite{LincolnWW18} and due to a recent surge in strong (often matching) conditional lower bounds based on the Hyperclique conjecture~\cite{AbboudBDN18,LincolnWW18,BringmannFK19,CarmeliZBKS20,KunnemannM20,AnGIJKN21,BringmannS21,DalirrooyfardW22,Kunnemann22,GorbachevK23,Zamir23}.
+
+\subparagraph*{(Hyper-)clique Regularization.}
+The starting point of this paper is the following question: Do these hypotheses imply the same time bounds for clique detection in \emph{regular} (hyper)graphs? While it is clear what we mean by \emph{regular graph}, it is less clear how to define a regular $h$-uniform hypergraph. The perhaps simplest definition requires each node to be incident to the same number $r_1$ of hyperedges. However, this notion turns out to be insufficient for our main application. Instead, we consider a significantly stronger variant, in which \emph{every subset of $\ell<h$ vertices}, each taken from a different part of the $k$-partition, is incident to the same number $r_\ell$ of hyperedges (see Section~\ref{sec:preliminaries} for details). This yields essentially the strongest form of regularity that we may wish for in a hypergraph. The existence of such structures is well-studied in combinatorial block design theory; e.g., $k$-partite $3$-uniform hypergraphs that are regular in our sense correspond precisely to group divisible designs with $k$ groups, see~\cite{ColbournD06}.
+
+Our first main contribution is to establish equivalence of the 3-Uniform Hyperclique Hypothesis for general hypergraphs to its special case of regular $k$-partite hypergraphs in the above strong sense.
+
+\begin{theorem}[Hyperclique Regularization, Informal]\label{thm:main1}
+Let $h \geq 2$. The $(k, h)$-Hyperclique problem is solvable in time $f(k) \cdot n^{g(k)}$ on $k$-partite $h$-uniform hypergraphs if and only if it is solvable in time $f'(k) \cdot n^{g(k)}$ on \emph{regular} $k$-partite $h$-uniform hypergraphs.
+\end{theorem}
+
+We are confident that this theorem will be useful in a black-box fashion for future hardness results based on the $k$-Clique or $k$-Hyperclique hypotheses. Moreover, we extend this equivalence also for \emph{counting} $k$-hypercliques, see Section~\ref{sec:regularizing-hypergraphs}.
+
+\medskip
+Let us discuss Theorem~\ref{thm:main1}: While the statement might feel ``obviously true'', to our surprise, proving it turns out to be anything but straightforward. Even for graphs ($h = 2$), we are not aware of a previous proof of this fact. The parameterized reductions in~\cite{Cai08,MathiesonS08,BrandesHK16,CyganFKLMPPS15} are generally not efficient enough as they reduce arbitrary $n$-vertex graphs $G$ with maximum degree $\Delta$ to regular graphs with $\Omega(\Delta n)$ vertices. As $\Delta$ can be as large as $\Theta(n)$, this blow-up is inadmissible for our fine-grained perspective (the resulting conditional lower bounds would have the exponent of $n$ halved).
+
+Having said that, it is possible to regularize graphs by only adding $\bigO(n)$ additional nodes. Specifically, one approach is to increase the degree $\deg(v)$ of each node $v$ by $\Delta-\deg(v)$. To this end we can add $\bigO(n)$ dummy nodes and add an appropriate number of edges between the original nodes and the freshly introduced dummy nodes (while ensuring not to create new $k$-cliques). Afterwards it still remains to regularize the new dummy nodes, which can for instance be solved by balancing the new edges appropriately. The details are tedious and not very insightful.
+
+The real challenge arises for hypergraphs. Recall that the strong regularity guarantee for, say, 3-uniform hypergraphs, is that any pair of vertices (in different vertex parts) must be contained in the same number of hyperedges. Thus, in order to generalize the previous approach we would have to regularize not only the individual dummy nodes, but also all \emph{pairs} of (original, dummy) and (dummy, dummy) nodes. For this reason we essentially make no progress by adding dummy nodes. Put differently, regularizing graphs is a \emph{local} problem (in the sense that we could fix the regularity constraints for each node $v$ by adding some dummy nodes only concerned with $v$), whereas regularizing 3-uniform hypergraphs appears to be a more \emph{global} problem (forcing us to simultaneously regularize all vertex-pairs while not introducing unintended $k$-cliques).
+
+Due to this obstacle, we adopt a very different and conceptually cleaner approach. Let $G$ be a given $k$-partite $h$-uniform hypergraph. The new idea is to construct a regular $k$-partite $h$-uniform hypergraph~$G'$ from a graph product operation that we call the \emph{signed product} of~$G$ with a suitable \emph{signed} hypergraph $T$. A signed hypergraph $T$ has \emph{positive} and \emph{negative} edges $E^+(T)$ and $E^-(T)$, respectively. We define the resulting graph~$G'$ as follows: Its vertex set is $V'= V(G)\times V(T)$, and $(u_1, x_1), \dots, (u_h, x_h)\in V'$ form a hyperedge in $G'$ if and only~if
+\smallskip
+\begin{enumerate}
+\item $\{u_1,\dots,u_h\}\in E(G)$ and $\{x_1,\dots, x_h\}\in E^+(T)$, or
+\item $\{u_1,\dots, u_h\} \notin E(G)$ and $\{x_1,\dots, x_h\}\in E^-(T)$.
+\end{enumerate}
+\smallskip
+We prove (Lemma~\ref{lemma:bichromatic-product}) that $G'$ yields an equivalent, but \emph{regular} instance for $k$-clique if the following conditions hold:
+\smallskip
+\begin{enumerate}[(i)]
+    \item There is some $r \in \mathbb{N}$ such that for all nodes $x_1, \dots, x_{h-1} \in V(T)$ (taken from different parts in the $k$-partition of $T$), the set $\{x_1,\dots, x_{h-1}\}$ is contained in exactly $r$ positive and in exactly $r$ negative edges of $T$, 
+    \item there is a $k$-hyperclique in $T$ involving only positive edges, and
+    \item there is no $k$-hyperclique in $T$ involving a negative edge.
+\end{enumerate}
+\smallskip
+We call a signed hypergraph satisfying these conditions a \emph{template graph}.
+Our task is thus simplified to finding suitable template graphs, which \emph{only depend on $k$ and $h$, not on $n$}.
+
+In a second step, we then show how to construct such template graphs in Lemma~\ref{lemma:template-graph-construction}. We employ a construction akin to Cayley graphs for some appropriate group $\mathcal G$ (concretely, we will pick $\mathcal G = (\mathbb{Z} / h \mathbb{Z})^d$ for some appropriate dimension $d = d(k, h)$). That is, let the nodes of $T$ be $k$ independent copies of $\mathcal G$ denoted $T_1, \dots, T_k$. For each $h$-tuple of vertices, say, $x_1 \in T_1, \dots, x_h \in T_h$, we let $\{x_1, \dots, x_h\}$ be a positive edge if and only if $x_1 + \dots + x_h = a^+$ for some fixed group element $a^+ \in \mathcal G$, and we let $\{x_1, \dots, x_h\}$ be a negative edge if and only if~\makebox{$x_1 + \dots + x_h = a^-$} for some other fixed group element $a^- \in \mathcal G$. The advantage of this construction is that it is immediately clear that the resulting graph~$T$ satisfies the regularity condition (i): For each $x_1 \in T_1, \dots, x_{h-1} \in T_{h-1}$ there is a unique choice~\makebox{$x_h := a^+ - (x_1 + \dots + x_{h-1}) \in T_h$} such that $\{x_1, \dots, x_h\}$ is a positive hyperedge; the same applies to negative edges and all other combinations of parts $T_{i_1}, \dots, T_{i_h}$. We will then pick the elements $a^+$ and $a^-$ in a specific way to guarantee the remaining conditions~(ii) and~(iii). 
+
+\medskip
+Below, in Sections~\ref{sec:intro-optCSPs} and~\ref{sec:intro-outlook}, we discuss applications of Theorem~\ref{thm:main1}.
+
+\subsection{Optimizing Boolean CSPs over Weight-\texorpdfstring{\boldmath$k$}{k} Assignments}
+\label{sec:intro-optCSPs}
+The complexity of constraint satisfaction problems (CSPs) has been intensively studied. Starting with Schaefer's dichotomy theorem for Boolean CSPs~\cite{Schaefer78}, which initiated the eventually successful quest of proving the Dichotomy Conjecture~\cite{Bulatov17,Zhuk17,Zhuk20}, classification results for a number of settings have been proven: This includes, among others, approximability characterizations of natural optimization variants~\cite{Creignou95, KhannaSTW00}, as well as parameterized complexity classifications of solving CSPs parameterized by their \emph{solution size} (aka \emph{weight}) $k$, i.e., the number of non-zeros, see~\cite{Marx05, BulatovM14, KratschMW16}. The parameterized classification of Boolean CSPs due to Marx~\cite{Marx05} has subsequently been refined to a classification of the fine-grained time complexity~\makebox{$f(k)\cdot n^{g(k)}$}, resulting in 4 different regimes~\cite{KunnemannM20}: an FPT regime, a subexponential regime, a clique regime, and a brute-force regime.
+
+In this work, we investigate the fine-grained complexity of \emph{optimizing} Boolean CSPs parameterized by solution size, i.e., optimizing the number of satisfied constraints among assignments of weight $k$. Formally, let $\Fam$ be a finite family of Boolean constraint functions. The problem $\maxcspk(\Fam)$ ($\mincspk(\Fam)$) asks to determine, given a set $\Phi$ of constraints -- each formed by applying some $f\in \Fam$ to a selection of the Boolean variables $x_1,\dots, x_n$ -- the maximum (minimum) number of constraints satisfied by a Boolean assignment that sets precisely $k$ variables to true (a \emph{weight-$k$} assignment). Among others, this class of problems contains the well-studied Densest $k$-Subgraph and Densest $k$-Subhypergraph problem ($\Fam$ consists of the $h$-ary AND), the Partial Vertex Cover in $h$-uniform hypergraphs ($\Fam$ consists of the $h$-ary OR), and the graph problem MaxCut($k$) of maximizing the cut size among cuts with set sizes $k$ and $n-k$, respectively ($\Fam = \{ \xor \}$), studied in e.g.~\cite{Cai08}.
+
+Note that $\maxcspk(\Fam)$ trivially generalizes the previously studied variant $\cspk(\Fam)$, asking whether \emph{all} constraints are satisfiable by a weight-$k$ assignment, that has been fully classified in~\cite{Marx05, KunnemannM20}. Indeed, for some constraint families $\Fam$, the optimization variant $\maxcspk(\Fam)$ turns out to be harder than $\cspk(\Fam)$: $\cspk(\{\xor\})$ is in FPT~\cite{KunnemannM20}, but $\maxcspk(\{\xor\})$ is $W[1]$-hard~\cite{Cai08}. Thus, a classification result for $\maxcspk(\Fam)$ must differ from the classification of $\cspk(\Fam)$, but how significantly? Do we still obtain 4 regimes of tractability?
+
+We shall prove that the answer is No: for $\maxcspk(\Fam)$ we obtain only 3 regimes: (1) a linear-time (rather than FPT) regime, (2) a clique regime, and (3) a brute-force regime. This characterization is governed by a different concept as well: rather than the notion of $\nand_h$-representing and $\impl$-representing families (see~\cite{KunnemannM20}), it is crucial to analyze the maximum \emph{degree} $\deg(f)$ over $f\in \Fam$, where $\deg(f)$ is defined as the degree of the (unique) multilinear polynomial representing $f$ (see Section~\ref{sec:csp-main}).
+
+\begin{theorem}[Informal Version]\label{thm:main2}
+Let $\mathcal{F}$ be constraint family. Let $d \coloneqq \max_{f\in \mathcal{F}} \deg(f)$. Then,
+\begin{itemize}
+   \item  If $d\le 1$, $\maxcspk(\Fam)$ and $\mincspk(\Fam)$ are linear-time solvable,
+   \item if $d = 2$, the time complexity for $\maxcspk(\Fam)$ and $\mincspk(\Fam)$ is $f(k) \cdot n^{\omega (k/3)\pm O(1)}$, conditioned on the $k$-Clique Hypothesis,\footnote{The precise bound is~\smash{$f(k) \cdot n^{\omega(\lfloor k/3 \rfloor, \lceil k/3 \rceil, \lceil (k-1)/3\rceil)\pm o(1)}$} (matching the Ne\v{s}et\v{r}il-Poljak running time for $k$-Clique).}
+   \item if $d \ge 3$, the time complexity for $\maxcspk(\Fam)$ and $\mincspk(\Fam)$ is $f(k) \cdot n^{k\pm o(1)}$, conditioned on the $k$-Hyperclique Hypothesis.
+\end{itemize}
+\end{theorem}
+
+We  briefly mention some corollaries: Let us call a constraint function \emph{non-reducible} if it depends on all of its inputs. We can without loss of generality assume that all $f\in \Fam$ are non-reducible (since each $f\in \Fam$ can be replaced by an equivalent non-reducible function). As discussed, e.g., in Williams~\cite[Section 6.5]{Wil07}, non-reducible functions of degree at most~$2$ must have arity at most 4. Thus, there is only a \emph{finite} list of non-reducible function of degree at most 2, and thus assuming the 3-uniform hyperclique hypothesis, there exists only a finite number of constraint families for which $\maxcspk(\Fam)$ admits algorithms beating brute-force running time $f(k)n^{k\pm o(1)}$. 
+Some interesting degree-$2$ functions (beyond binary arity) include:
+\begin{itemize}
+    \item \textsf{3-NAE} (as well as \textsf{3-AllEqual})
+    \item \textsf{Sort($x_1,x_2,x_3,x_4$)}, i.e., the predicate that is true if and only if the bit string $x_1x_2x_3x_4$ is sorted descending or ascending.
+    \item \textsf{Select}($x_1,x_2,x_3$) on 3 variables, i.e., the predicate \emph{if $x_1$ then $x_2$ else $x_3$}
+\end{itemize}
+
+We remark that a conceptually similar classification result has been proven for optimizing first-order graph formulas~\cite{BringmannCFK22}.
+
+\subparagraph*{Technical Remarks.}
+The algorithmic part of the above theorem is a straightforward adaption of a similar reduction of Weighted Degree-2 CSP to $k$-clique detection given in~\cite[Section 6.5]{Wil07}, see also~\cite{LincolnWW18, BringmannCFK22}. Our main technical contribution for Theorem~\ref{thm:main2} is to prove that this algorithmic technique is essentially the best possible, unless the 3-uniform hyperclique hypothesis can be refuted. 
+
+For ease of presentation, consider first a constraint family $\Fam$ containing a constraint function $f:\{0,1\}^3\to\{0,1\}$ that is \emph{symmetric} and has $\deg(f) = 3$. Let $\alpha,\beta,\gamma,\delta$ be such that $f(x,y,z) = \alpha \cdot xyz + \beta \cdot (xy + yz + xz) + \gamma \cdot (x+y+z) + \delta$ and note that $\alpha \ne 0$. The main idea is the following: Given a $k$-partite regular 3-uniform hypergraph $G=(V_1 \cup \cdots \cup V_k, E)$ with $|V_i| = n$ for $i \in [k]$, we create a Boolean CSP by introducing, for each $\{a,b,c\} \in E(G)$, the constraint $f(x_a,x_b,x_c)$. Since $G$ is regular, there is some $\lambda$ such that any pair of nodes not from the same part is incident to precisely $\lambda$ edges. Thus, a weight-$k$ assignment respecting the $k$-partition, i.e., the 1-variables $x_{i_1},\dots, x_{i_j}$ satisfy $i_j \in V_j$, has an objective value of
+
+\[ \alpha \cdot |\{i_a, i_b, i_c\}\in E|+\beta \cdot \binom{k}{2} \lambda + \gamma \cdot k(k-1)n\lambda + \delta \cdot |E|.\]
+The $\alpha$-term is the only term depending on the choice of the assignment, maximizing the objective (for $\alpha > 0$, $\alpha < 0$ can be handled similarly) if and only if the assignment corresponds to a clique in $G$. 
+For $\beta > 0$, $k$-partite assignments are favorable over non-partite assignments. For $\beta \le 0$, we instead need to make sure that $k$-partite assignments are favorable, by carefully introducing dummy constraints. 
+Finally, we show how to handle $\maxcspk(\Fam)$ if $\Fam$ contains any (not necessarily symmetric) constraint function with degree at least 3.
+
+\subsection{Outlook and Further Applications}
+\label{sec:intro-outlook}
+We believe that reducing from the regular Hyperclique problem will find further applications. One interesting theme is that by plugging our regularization into known reductions, we can in many cases obtain conditional lower bounds for regular instances. For instance, conditioned on the $3$-Uniform $4$-Hyperclique Hypothesis, Dalirrooyfard and Vassilevska Williams~\cite{DalirrooyfardW22} proved that deciding if a graph contains an induced 4-cycle requires time $n^{2-o(1)}$ even in graphs with $\bigO(n^{3/2})$ edges. Composing this reduction with our regularization reduction (in a white-box manner), one can conclude that induced 4-cycle detection takes time $n^{2-o(1)}$ even in \emph{regular} graphs with $\bigO(n^{3/2})$ edges.
+
+\subparagraph*{Regularization for Non-\boldmath$k$-Partite Hypergraphs?}
+An interesting follow-up question to our work is whether we can obtain a similar regularization reduction for the non-$k$-partite Hyperclique problem. This question is of lesser importance for the design of reductions as in most (though not all) contexts it is more convenient to work with the $k$-partite version. Interestingly, already constructing an interesting NO instance to the problem -- i.e., a 3-uniform hypergraph $G = (V, E)$ that is dense (say, has at least $|E| \geq n^{3-o(1)}$ hyperedges), regular (i.e., each pair of distinct vertices $v_1, v_2 \in V$ appears in the same number of hyperedges) and does not contain a 4-clique -- appears very challenging. Even disregarding the 4-clique constraint, constructing (non-$k$-partite) regular hypergraphs falls into the domain of \emph{combinatorial block designs} and is known to be notoriously difficult.
+
+\section{Preliminaries}\label{sec:preliminaries}
+We denote by $[n] = \{1,\dots,n\}$ for $n \in \mathbb N$.
+For an $n$-element $S$ and $0 \leq k \leq n$, we denote by $\binom{S}{k}$ the set of all size $k$ subsets $L \subseteq S$.
+Let $S_n$ denote the set of all permutations of a set on $n$ elements.
+For a hypergraph $G = (V,E)$, let $|G| = |V|+|E|$. 
+A simple graph is $r$-regular, if every vertex is incident to exactly $r$ edges.
+This notion can be generalized in the following way:
+For $h \in \mathbb N$ and $s < h$, an $h$-uniform hypergraph is \emph{$(s, \reg)$-regular} if every possible $s$ tuple of pairwise distinct vertices is contained in exactly $\reg$ edges. 
+Using our notation, the notion of $r$-regularity of a graph can thus be viewed as $(1,r)$-regularity of a $2$-uniform hypergraph.
+
+We will mostly work with balanced, $k$-partite $h$-uniform hypergraphs $G = (V_1\cup\dots \cup V_k, E)$ where
+1) $V_i$ are pairwise disjoint and $|V_i| = |V_j|$ for all $i \neq j \in [k]$
+2) Each edge contains precisely $h$ distinct vertices and
+3) No edge contains two vertices $v,v'$ such that $v,v'\in V_i$ for any $i\in [k]$.
+
+For the purposes of this paper, we will relax the notion of regularity to better fit the $k$-partite setting. 
+In particular, by slight abuse of notation, we say that a $k$-partite $h$-uniform hypergraph $G$ is \emph{$(s, \reg)$-regular} if for each tuple of pairwise distinct indices $i_1,\dots, i_s\in [k]$ and for any choice of vertices $v_1\in V_{i_1},\dots, v_s\in V_{i_s}$, there are precisely $\reg$ many edges $e\in E$ such that $\{v_1,\dots, v_s\} \subseteq e$.
+We call an $h$-uniform hypergraph $G$ \emph{$\reg$-regular} if it is $(h-1,\reg)$-regular.
+
+We state the following simple observation for $(s, \reg)$-regular hypergraphs.
+\begin{observation}\label{obs:reguarity-of-smaller-arities}
+    For $s<h<k$, let $G$ be a $(s, \reg)$-regular $k$-partite $h$-uniform hypergraph. Then for any $s'\leq s$ there exists $\reg'$, such that $G$ is also $(s', \reg')$-regular.
+\end{observation}
+
+\subsection{Hardness Assumptions}
+The \emph{$k$-clique} problem asks, given a graph $G = (V,E)$ with $|V| = n$, to decide if $G$ contains a clique (set of pairwise adjacent vertices) of size $k$. For $k$ divisible by $3$, 
+$k$-clique detection can be solved in time $\bigO(n^{\omega k/3})$~\cite{NesetrilP85} where $\omega < 2.372$~\cite{AlmanDWXXZ25} is the matrix multiplication exponent. 
+Generalizing $k$-clique detection to $h$-uniform hypergraphs $G=(V,E)$ asks to determine if there exists a $k$-(hyper)clique $C \subset V$ of size $k$ such that $\binom{C}{h} \subseteq E$. In contrast to the $2$-uniform case, the matrix multiplication approach fails to generalize to $h\geq 3$ (see~\cite{LincolnWW18} for a discussion) and no known algorithm is significantly faster than $\bigO(n^k)$. 
+Improvements for $k$-hyperclique would entail faster algorithms for problems that are believed to be hard, such as \textsc{Max-$h$-SAT}. 
+This gives raise to the following conjecture:
+\begin{hypothesis}[$h$-Uniform $k$-Hyperclique Hypothesis]
+    Let $\epsilon > 0$ and $k > h$.
+    \begin{enumerate}
+        \item For $h = 2$ there is no $\bigO(n^{({\omega k}/{3}) - \varepsilon})$-time algorithm detecting a $k$-clique in a $k$-partite graph.
+        \item For $h\geq 3$, there is no $\bigO(n^{k - \varepsilon})$-time algorithm detecting a $k$-clique in a $k$-partite $h$-uniform hypergraph.
+    \end{enumerate}
+\end{hypothesis}
+
+\section{Making Hypergraphs Regular} \label{sec:regularizing-hypergraphs}
+In this section we break down in detail the approach to regularize $h$-uniform hypergraphs, while preserving large cliques.
+More precisely, we prove the following main theorem.
+\begin{theorem}\label{th:hc-regularity-construction}
+    Let $h < k$ be constants and let $G$ be an $h$-uniform hypergraph. Then there exists a $k$-partite $h$-uniform hypergraph $G'$ satisfying the following conditions:
+    \begin{enumerate}
+        \item For any $1\leq s<h$, there exists some $\reg$ such that $G'$ is $(s,\reg)$-regular.
+        \item $G'$ contains a clique of size $k$ if and only if $G$ contains a clique of size $k$.
+        \item There exists a computable function $f$, such that $|V(G')| = f(k)\cdot |V(G)|$.
+        \item $G'$ can be computed deterministically in time $\bigO(|G'|)$.
+    \end{enumerate}
+\end{theorem}
+Moreover, as a direct consequence of Theorem \ref{th:hc-regularity-construction}, we get the following theorem for free.
+\begin{theorem}\label{th:regular-hc-hypothesis}
+    Let $h \geq 2$. The $k$-Clique Detection problem is solvable in time $f(k) \cdot n^{g(k)}$ on $k$-partite $h$-uniform hypergraphs if and only if it is solvable in time $f'(k) \cdot n^{g(k)}$ on \emph{regular} $k$-partite $h$-uniform hypergraphs (for some computable functions $f, f'$ and $h\leq g(k)\leq k$).
+\end{theorem}
+In order to prove Theorem \ref{th:hc-regularity-construction} we come up with an appropriate notion of hypergraph product, that we call \emph{signed product}. It takes an arbitrary hypergraph $G$ and regular hypergraph $T(h,k)$ equipped with a sign function and certain properties (we will call such a hypergraph \emph{template hypergraph}) and produces the hypergraph $G'$, satisfying the conditions of the theorem. 
+The proof of Theorem \ref{th:hc-regularity-construction} thus consists of two main parts:
+\begin{enumerate}
+    \item Defining the proper notion of the \emph{signed product} that produces the hypergraph $G'$ satisfying the conditions of the theorem.
+    \item Showing that for any choice of $2\leq h<k$ we can construct a template hypergraph $T(h,k)$.
+\end{enumerate}
+\medskip
+We start by formally defining the notion of a \emph{signed hypergraph}.
+\begin{definition}[Signed Hypergraph]
+    Let $h<k$ be constants. A \emph{signed hypergraph} is a $k$-partite, $h$-uniform hypergraph $T = (T_1 \cup \dots\cup T_k, E, \sigma)$ equipped with a sign function $\sigma: E\to \{1,-1\}$. 
+\end{definition}
+We say an edge $e$ is \emph{positive} if $\sigma(e)=1$ and denote by $E^{+} := \{e\in E\mid \sigma(e) = 1\}$ the set of all positive edges. We define  the set of \emph{negative} edges $E^-$ analogously.
+Using this notation, we equivalently represent a signed hypergraph as a tuple $T = (T_1\cup\dots \cup T_k, E^+,E^-)$.
+
+With the concept of signed hypergraphs set, we are ready to define the \emph{signed product}.
+\begin{definition}[Signed Product]
+    Given an $h$-uniform hypergraph $G=(V,E)$ and a signed hypergraph $T = (T_1\cup\dots\cup T_k, E^+,E^-)$, the \emph{signed product} of $G$ and $T$ is a $k$-partite, $h$-uniform hypergraph $G'$ defined as follows:
+    \begin{itemize}
+        \item $V(G') = V\times (T_1\cup \dots \cup T_k)$.
+        \item Let $\{t_1,\dots,t_h\} \in E^+$. Then for all $u_1,\dots, u_h\in V$ that form an edge in $G$, let $\{(u_1,t_1),\dots, (u_h,t_h)\}$ be an edge in $G'$.
+        \item Let $\{t_1,\dots,t_h\} \in E^-$. Then for all, not necessarily distinct, $u_1,\dots, u_h\in V$ that form a non-edge in $G$, let $\{(u_1,t_1),\dots, (u_h,t_h)\}$ form an edge in $G'$.
+
+    \end{itemize}
+\end{definition}
+Given a hypergraph $G$, in order for our product graph $G'$ to satisfy the properties of {Theorem~\ref{th:hc-regularity-construction}} it is not sufficient to take just any signed hypergraph $T$, but we want our signed hypergraph to have a certain structure. 
+To this end, we introduce the notion of \emph{template hypergraphs}.
+\begin{definition}[Template Hypergraph]
+    For fixed constants $h < k$, we call $T(h,k) = (T_1\cup \dots\cup T_k, E^+,E^-)$ a template hypergraph, if the following properties are satisfied:
+    \begin{enumerate}
+        \item\label{prop:template:1} There exists a positive integer $\reg$, such that the underlying ``monochromatic'' hypergraphs $T^+ := (T_1\cup\dots\cup T_k, E^+)$ and $T^-:=(T_1\cup\dots\cup T_k, E^-)$ are \emph{both} $(h-1, \reg)$-regular.
+        \item\label{prop:template:2} The hypergraph $T^+$ contains a clique of size $k$.
+        \item\label{prop:template:3} No clique of size $h+1$ contains edges from $E^-$.
+    \end{enumerate}
+\end{definition}
+\smallskip
+Equipped with the definitions above, we are now ready to formally state the main lemma of this section.
+\begin{lemma}\label{lemma:bichromatic-product}
+    For any fixed constants $k,h$ with $h<k$, let $G = (V,E')$ be an $h$-uniform hypergraph and $T(h,k) = (T_1\cup \dots \cup T_k, E,\sigma)$ be a template hypergraph. Let $G'$ be the signed product of $G$ and $T(h,k)$. Then $G'$ satisfies all the conditions of Theorem \ref{th:hc-regularity-construction}.
+\end{lemma}
+Before proving this lemma however, let us first prove some auxiliary statements.
+For the rest of this section, let $G$ denote an arbitrary $h$-uniform hypergraph, $T(h,k) = (T_1 \cup\dots,T_k,E^+,E^-)$ a template hypergraph and $G'$ the signed product of $G$ and $T(h,k)$.
+\begin{restatable}{lemma}{lemmaCliqueConservation}\label{lemma:cliques-in-bichromatic-product}
+    Let $(u_1,t_1), \dots, (u_k,t_k)$ be $k$ arbitrary pairwise distinct vertices in $G'$. Let $\pi:[k]\to [k]$ be an arbitrary permutation. The following statements are equivalent:
+    \begin{enumerate}
+      \item The vertices $u_{1}, \dots, u_k$ form a clique in $G$ \emph{and} $t_1, \dots, t_k$ form a clique in $T(h,k)$.
+        \item The vertices $(u_{\pi(1)},t_1), \dots, (u_{\pi(k)},t_k)$ form a clique in $G'$.
+    \end{enumerate}
+\end{restatable}
+\medskip
+\begin{proof}\textcolor{red}{TOPROVE 0}\end{proof}
+
+
+For a hypergraph $X$, let $C_k(X)$ denote the number of cliques of size $k$ in~$X$. 
+Following the approach as in the proof of the previous lemma, we obtain this corollary.
+\begin{corollary}
+    Let $T(h,k), G$ and $G'$ be as above. Then $C_k(G') = k!\cdot C_k(G)\cdot C_k(T(h,k))$.
+\end{corollary}
+\begin{restatable}{lemma}{lemmaBichromaticProductRegularity}\label{lemma:regularity-of-bichromatic-product}
+    Let $T(h,k), G$ and $G'$ be as above. Let $\reg$ be such that both underlying hypergraphs $T^+$ and $T^-$ are $\reg$-regular. Then $G'$ is a $k$-partite $\reg\cdot|V(G)|$-regular hypergraph.
+\end{restatable}
+\begin{proof}\textcolor{red}{TOPROVE 1}\end{proof}
+
+
+\subsection{Constructing Template Hypergraphs} \label{sec:template-graphs}
+In this section we show that for any choice of constants $h<k$ we can efficiently construct a template hypergraph $T(h,k)$, which is the missing ingredient in the proof of Theorem \ref{th:hc-regularity-construction}. In particular, we prove the following lemma
+\begin{lemma}\label{lemma:template-graph-construction}
+    For any fixed constants $h<k$, there exists a template hypergraph $T(h,k)$.
+\end{lemma}
+This template hypergraph can be deterministically constructed in time $\bigO(f(h,k))$ for some computable function $f$. 
+
+We first give the construction, then prove that it fulfills the properties of a template hypergraph.
+For the rest of this section let $h < k$ be constants. Consider the additive group $\G := \left(\mathbb Z/h\mathbb Z\right)^{\binom{k}{h}}$, i.e. the group of all vectors of length $\binom{k}{h}$ over the group $\mathbb Z/h\mathbb Z$. We index the dimensions of these vectors by subsets of $[k]$ of size $h$.
+For any set $S\in \binom{[k]}{h}$, denote by $e_S$ the vector in $\G$ that has a $1$ in the dimension indexed by $S$ and zeros in all other dimensions, and by $\overline 0$ we denote the additive identity in $\G$ (the all-zero vector). 
+
+Consider the $k$-partite signed graph $T(h,k) = (T_1\cup\dots \cup T_k, E^+,E^-)$ where each $T_i$ corresponds to a copy of the group $\G$ and the edges are added as follows.
+For each $S:=\{i_1,\dots, i_h\}\in \binom{[k]}{h}$ and each choice of vertices $v_1\in T_{i_1},\dots, v_h\in T_{i_h}$, we add a positive edge (i.e. $\{v_1,\dots, v_h\}\in E^+$) if the corresponding elements of $\G$ $x_1,\dots, x_h$ satisfy the equality $x_1+\dots + x_h = \overline 0$.
+Moreover, if the corresponding elements satisfy $x_1+\dots + x_h = e_S$, we add a negative edge (i.e. $\{v_1,\dots, v_h\}\in E^-$).
+We proceed to prove that the constructed $T(h,k)$ has the desired properties. We begin by observing that the number of vertices only depends on $k$ and $h$.
+\begin{observation}\label{obs:template-graph-clique}
+    The signed hypergraph $T(h,k)$ has $kh^{\binom k h}$ vertices.
+\end{observation}
+We now state the regularity conditions of the underlying hypergraphs $T^+$ and $T^-$.
+\begin{restatable}[P. \ref{prop:template:1}]{lemma}{LemmaRegularityOfTemplate}\label{lemma:lambda-regularity-of-T}
+    Let $T(h,k)$ be a signed graph as constructed above and let $\reg := k-h+1$. Then the underlying hypergraphs $T^+ := (T_1\cup\dots\cup T_k, E^+)$ and $T^-:=(T_1\cup\dots\cup T_k, E^-)$ are both $\reg$-regular.
+\end{restatable}
+\begin{proof}\textcolor{red}{TOPROVE 2}\end{proof}
+
+It remains to show that the hypergraph $T^+$ contains a clique of size $k$, and that no clique of size $h+1$ contains an edge from $E^-$.
+We begin by showing the latter.
+\begin{lemma}[{P. \ref{prop:template:3}}]\label{lemma:no-negative-edges}
+    Each clique in $T(h,k)$ of size $h+1$ consists exclusively of positive edges.
+\end{lemma}
+\begin{proof}\textcolor{red}{TOPROVE 3}\end{proof}
+We can finally observe that choosing a vertex $v_i\in T_i$ corresponding to the zero element $\overline{0}\in \G$ for each $V_i$ yields a clique of size $k$ in $T(h,k)$. We state this as a separate observation.
+\begin{observation}[{P. \ref{prop:template:2}}]
+    Let $v_1\in T_1,\dots v_k\in T_k$ be the vertices corresponding to the all-zero vector in their respective parts. Then $\{v_1,\dots, v_k\}$ is a clique in the hypergraph $T^+$.
+\end{observation}
+This concludes the proof of Lemma \ref{lemma:template-graph-construction}.
+We are also ready to prove Theorems \ref{th:hc-regularity-construction} and \ref{th:regular-hc-hypothesis}.
+\begin{proof}\textcolor{red}{TOPROVE 4}\end{proof}
+\begin{proof}\textcolor{red}{TOPROVE 5}\end{proof}
+In fact, we can prove an even stronger result, showing that counting cliques of size $k$ in regular hypergraphs is as hard as counting cliques in general hypergraphs. 
+\begin{theorem}\label{thm:counting}
+    For any $h\geq 2$, there exists an algorithm counting the cliques of size $k$ in $k$-partite regular $h$-uniform hypergraphs in time $f(k)n^{g(k)}$ if and only if there exists an algorithm counting the cliques of size $k$ in general $h$-uniform hypergraphs in time $f'(k)n^{g(k)}$.
+\end{theorem}
+In order to prove this theorem, we extend Observation \ref{obs:template-graph-clique} to show that there is in fact a fixed number of cliques in our constructed template graph, only depending on $h$ and $k$.
+Recall that by $\G$ we denote the group $\left(\mathbb Z/h\mathbb Z\right)^{\binom{k}{h}}$. 
+\begin{restatable}{lemma}{LemmaCountingCliquesInTemplateGraph}
+    Let $T(h,k)$ be a template hypergraph as constructed above. The number of cliques of size $k$ in $T(h,k)$ is precisely $|\G| = h^{\binom{k}{h}}$.
+\end{restatable}
+\begin{proof}\textcolor{red}{TOPROVE 6}\end{proof}
+
+The proof of Theorem \ref{thm:counting} now follows directly.
+
+\section{Boolean Constraint Optimization Problems}
+\label{sec:csp-main}
+In this section we present the main application of our construction, 
+namely exploiting the regularity of hyperclique detection to show hardness of certain families of Boolean Constraint Optimization Problems. 
+In particular, we obtain a full classification of the fine-grained complexity of this large class of problems.
+The problems are defined as follows:
+\begin{definition}[Boolean Constraint Optimization Problems ($\maxcspk/\mincspk$)]
+    Let $\Fam$ be a finite Boolean constraint family (i.e. a set of functions $\phi:\{0,1\}^r \to \{0,1\}$). 
+    Given a set $\Phi$ of $m$ Boolean constraints $C$ on variables 
+    $x_1,\dots,x_n$, each of the form $\phi(x_{i_1},\dots, x_{i_r})$, where $\phi\in \Fam$,
+    the problem $\maxcspk(\Fam)$ (resp. $\mincspk(\Fam)$) asks for an assignment $a:\{x_1,\dots, x_n\}\to \{0,1\}$ setting precisely $k$ variables to $1$ that maximizes (resp. minimizes) the number of satisfied constraints in $\Phi$. 
+\end{definition}
+It is well known that each Boolean constraint function corresponds to a unique multilinear polynomial (see e.g. \cite{Wil07}). More precisely, for any Boolean constraint function $\phi:\{0,1\}^r \to \{0,1\}$, there exists a unique multilinear polynomial $f$ such that $f(x_1,\dots, x_r) = \phi(x_1,\dots, x_r)$ for any $x_1,\dots, x_r\in \{0,1\}$.\footnote{E.g. ${\rm OR}_3(x,y,z)$ corresponds to the multilinear polynomial $f(x,y,z)=x+y+z-xy-xz-yz+xyz$}
+We call such a polynomial the \emph{characteristic polynomial of $\phi$}.\footnote{This characterization is faithful in the sense that if two Boolean functions $\phi,\phi'$ have the same characteristic polynomial, they represent the same Boolean function.}
+This characterization allows the concepts defined on multilinear polynomials to transfer to the domain of Boolean constraint functions.
+For a Boolean constraint function $\phi$, we say that $\phi$ has \emph{degree} $d$ if its characteristic polynomial has degree $d$.
+Similarly, the \emph{degree} of Boolean constraint family $\Fam$ is the smallest integer $d$ such that every constraint $\phi\in \Fam$ has degree at most $d$.
+
+We are now ready to state the main theorem that we prove in this section:
+\begin{theorem}[Hardness of the Boolean Constraint Optimization Problems]\label{th:CSP-hardness}
+    Let $\Fam$ be a Boolean constraint family of degree $d$.
+    \begin{itemize}
+        \item If $d = 2$, then for no $\varepsilon>0$ does there exist an algorithm solving $\maxcspk(\Fam)$ (resp. $\mincspk(\Fam)$) in time $\bigO(n^{k(\omega/3 -\varepsilon)})$, unless the $k$-Clique Hypothesis fails.
+        \item If $d \geq 3$, then for no $\varepsilon>0$ does there exist an algorithm solving $\maxcspk(\Fam)$ (resp. $\mincspk(\Fam)$) in time $\bigO(n^{k(1 -\varepsilon)})$, unless the $3$-uniform $k$-Hyperclique Hypothesis fails. \label{item:CSP-hardness-2}
+    \end{itemize}
+\end{theorem}
+\medskip
+We will show in detail the second reduction for families with degree at least $3$, reducing from $3$-uniform $k$-Hyperclique detection, 
+the reduction from $k$-Clique is achieved similarly.
+By simple modifications to the existing algorithms in the literature (see e.g. \cite{LincolnWW18,Wil07}), we can complement these hardness results with the corresponding algorithms to obtain a tight classification of the fine-grained complexity of Boolean Constraint Optimization Problems. The details can be found in the full paper.
+\begin{theorem}[Boolean Constraint Optimization Algorithms]\label{thm:algorithms}
+    Let $\Fam$ be an arbitrary constraint family and let $d$ be the degree of $\Fam$.
+    \begin{itemize}
+        \item If $d\leq 1$, we can solve $\maxcspk(\Fam)$ ($\mincspk(\Fam)$) in linear time $\bigO(m+n)$.
+        \item If $d = 2$, we can solve $\maxcspk(\Fam)$ ($\mincspk(\Fam)$) in time $\bigO(n^{\omega (\lfloor k/3\rfloor,\lceil k/3\rceil,\lceil (k-1)/3\rceil)})$.
+        \item If $d \geq 3$, we can solve $\maxcspk(\Fam)$ ($\mincspk(\Fam)$) in time $\bigO(n^{k})$.
+    \end{itemize}
+\end{theorem}
+We prove all the hardness results and the algorithms for the $\maxcspk$ problem, and remark that there is a canonical reduction showing equivalence between $\maxcspk$ and $\mincspk$.
+\subsection{Hardness Construction} This section is dedicated to proving Theorem \ref{th:CSP-hardness}.
+But first, we will introduce some useful notation and prove some auxiliary results.
+For the rest of this section, let $X$ be a set consisting of $n$ variable, let $\Fam$ be an arbitrary finite constraint family and let $\Phi$ be the given set consisting of $m$ constraints $C_1,\dots, C_m$ over $X$, where each constraint $C_i$ is of type $\phi_i(x_{i_1},\dots, x_{i_{r_i}})$ for some $\phi_i\in \Fam$ and some choice of $x_{i_1},\dots, x_{i_{r_i}}\in X$.
+Let $a:X \to \{0,1\}$ be a function assigning to each variable a Boolean value. By $\Phi(a)$ we denote the number of constraints in $\Phi$ satisfied by $a$. 
+The following observation plays a crucial role in our proof.
+\begin{observation} \label{lemma:char-polynomial}
+    For each constraint $C_i$, let $f_i$ denote the characteristic polynomial of the corresponding function $\phi_i$.
+    For any assignment $a:X\to \{0,1\}$, the equality $\Phi(a) = \sum_{i\in m} f_i(a(x_{i_1}), \dots, a(x_{i_{r_i}}))$ holds.
+\end{observation}
+
+With this, it suffices to find an assignment that maximizes the value of the polynomial obtained by summing over all the characteristic polynomials of the functions corresponding to the constraints. 
+More precisely, given a set $\Phi$ consisting of $m$ constraints $C_1,\dots, C_m$, define the polynomial $P_\Phi$ as 
+\[
+    P_\Phi(x_1,\dots, x_n) = \sum_{i=1}^m f_i(x_{i_1},\dots, x_{i_{r_i}})
+\]
+where $f_i$ denotes, as above, the characteristic polynomial of the function $\phi_i$, corresponding to the constraint $C_i$.
+Using this notation, for any assignment $a$, as a simple consequence of Observation \ref{lemma:char-polynomial}, we have that $\Phi(a) = P_\Phi(a(x_1),\dots, a(x_n))$.
+
+
+First, we prove the following lemma, simplifying our reduction, by allowing us to only focus on showing hardness for the families of degree equal to $3$, such that each constraint also has arity at most $3$ (i.e. each constraint function $\phi \in \Fam$ depends on at most $3$ variables). 
+\begin{restatable}{lemma}{LemmaReducingDegree}\label{lemma:reducing-degree}
+    If there exists a finite constraint family $\Fam$ of degree $d \geq 3$ such that we can solve $\maxcspk(\Fam)$ in time $\bigO(n^{k-\varepsilon})$ for some $\varepsilon>0$, then there exists 
+    a finite constraint family $\Fam'$ of degree $3$, such that each constraint $\phi\in \Fam'$ has arity at most $3$ and such that $\maxcspk(\Fam')$ can be solved in time $\bigO(n^{k-\varepsilon'})$ for some $\varepsilon'>0$.
+\end{restatable}
+\begin{proof}\textcolor{red}{TOPROVE 7}\end{proof}
+
+Equipped with the previous lemma, it thus suffices to show the hardness of the $\maxcspk(\Fam)$ for constraint families $\Fam$ of degree equal to $3$ such that every constraint $\phi\in \Fam$ has arity at most $3$.
+
+In particular, we prove that for any such family, given a $k$-partite regular $3$-uniform hypergraph $G$, we can construct an instance $\Phi$ of $\maxcspk(\Fam)$ and integer $\ell$ such that there exists an assignment $a$ with $\Phi(a) \geq \ell$ if and only if $G$ contains a clique.
+Take an arbitrary function $\phi\in \Fam$ such that $\deg(\phi) =3$ with characteristic polynomial $f$, and define the set \[\phi_{\rm sym}(x,y,z) := \{\phi(\pi(x), \pi(y), \pi(z))\mid \pi \in S_3,\}\] and the polynomial \[\fsym(x,y,z) := \sum_{\pi\in S_3}f(\pi(x), \pi(y),\pi(z)).\]
+\begin{observation}\label{obs:sym-polynomial}
+    Let $\Phi$ be any instance of $\maxcspk(\Fam)$ and construct the instance $\Phi' = \Phi \cup \phisym(x,y,z)$. 
+    Then the corresponding polynomial is $P_{\Phi'} = P_\Phi + \fsym$.
+\end{observation}
+ Moreover, the polynomial $\fsym$ is symmetric, i.e. can be written as \begin{equation}\label{eq:fsym}
+ \fsym(x,y,z) = \alpha \cdot xyz + \beta (xy+xz+yz) + \gamma(x+y+z) + \delta,   
+ \end{equation} 
+ with $\alpha\ne 0$.
+ Thus, instead of the constraint $\phi$, we use the symmetrized set $\phi_{\rm sym}$ instead and its characteristic polynomial given by $\fsym$. 
+
+
+
+ We remark that our reduction will depend on the coefficients of this multilinear polynomial.
+We first consider the coefficient $\alpha$.
+Let $G = (V_1, \dots, V_k, E_G)$ be a $k$-partite $(2,\mu)$-regular $3$-uniform hypergraph, with $|V_i| = \dots = |V_k| = n$ and without loss of generality assume that $\mu = (k-2)q\cdot n$, where $q\in (0,1)$.
+Let $G' = (V_1\cup \dots\cup V_k, E_{G'})$, with the edges defined as follows.
+If $\alpha >0$, let $E_{G'}=E_G$.
+Otherwise, if $\alpha<0$, take $E_{G'}$ as the complement of $E_G$, respecting the $k$-partition (i.e. for pairwise distinct $i,j,\ell$, and $v_i\in V_i, v_j\in V_j, v_\ell\in V_\ell$, let $\{v_i,v_j, v_\ell\}\in E_{G'}$ if and only if $\{v_i,v_j, v_\ell\}\notin E_G$).
+We can observe that $G'$ is a $k$-partite $(2,\lambda)$-regular $3$-uniform hypergraph with $\lambda = \Omega(n)$.
+\begin{observation}\label{obs:regularity-of-G'}
+    $G'$ is a $k$-partite $(2,\lambda)$-regular $3$-uniform hypergraph, where $\lambda$ is as follows:
+    \begin{enumerate}
+        \item If $\alpha>0$, then $\lambda = (k-2)q\cdot n$.
+        \item If $\alpha<0$, then $\lambda = (k-2)(1-q)\cdot n$.
+    \end{enumerate}
+\end{observation}
+\medskip
+We say that an assignment $a$ of variables in $X$ is \emph{$k$-partite} if for each vertex part $V_i$ in $G$, $a$ sets precisely one variable $v_i\in V_i$ to $1$ and all the others to $0$. 
+We now consider the sign of the coefficient $\beta$, and make a case distinction based on this value.
+\subparagraph*{{Case 1: $\beta>0$}} 
+\begin{construction}\label{construction:b>0}
+    Let $X = V(G')$ be the set of $kn$ variables.
+    Now for each edge $\{u,v,w\}$ in $G'$, add to $\Phi$ the constraint $\phi(u,v,w)$.
+    No other constraints are added to $\Phi$.
+\end{construction}
+Our goal is to prove that if there exists a $k$-clique in the hypergraph $G$, then any weight-$k$ assignment $a$ that maximizes $\Phi(a)$ sets the vertices in $G$ that correspond to this $k$-clique to $1$ and all other vertices to $0$. 
+The strategy that we take to prove this is to first prove that any weight-$k$ assignment that maximizes $\Phi(a)$ has to be $k$-partite. We then prove that among all the $k$-partite assignments, the one that maximizes the value of $\Phi(a)$ corresponds to a $k$-clique in $G$ (i.e. either a $k$-clique, or an independent set in $G'$, depending on sign of $\alpha$). 
+\begin{restatable}{lemma}{LemmaSolutionAnyAssignmentI}\label{lemma:solution-any-assignment}
+    Let $a$ be any weight-$k$ assignment of the variables in $X$ and let $S$ be the set of vertices that correspond to the variables set to $1$ by $a$.
+    Denote by $k_i$ the value $|S\cap V_i|$, and let $m(S)$ denote the number of edges in the induced subhypergraph $G'[S]$.
+    Then we have that 
+    \[
+    \Phi(a) = m(S)\alpha + \sum_{(i,j)\in \binom{[k]}{2}} k_ik_j \lambda \beta + c,
+    \]
+    where $c$ does not depend on the assignment $a$.
+\end{restatable}
+\begin{proof}\textcolor{red}{TOPROVE 8}\end{proof}
+
+As an immediate consequence of the last lemma, we get the number of satisfied constraints by any $k$-partite assignment $a$, just by plugging in $k_i=1$ for each $i\in [k]$.
+\begin{corollary}\label{cor:solution-k-partite-assignment}
+    Let $a$ be any $k$-partite assignment of the variables in $X$ and let $S, m(S)$ be defined as above and $u$ be an arbitrary vertex in $G'$.
+    Then
+    \[
+    \Phi(a) = m(S)\alpha + \binom{k}{2} \lambda \beta + k \deg(u) \gamma + |E(G)| \delta,
+    \]
+\end{corollary}
+We now prove that any $k$-partite assignment is favorable over any non-partite assignment.
+\begin{restatable}{lemma}{LemmakPartiteOptimalityI}\label{lemma:optimality-of-k-partite-assignment}
+    Let $a$ be a $k$-partite assignment and let $a'$ be any non-$k$-partite assignment of weight $k$.
+    Let $S$ and $S'$ be the sets of vertices that correspond to the variables set to $1$ by $a$ and $a'$ respectively.
+    Then $\Phi(a)>\Phi(a')$.
+\end{restatable}
+\begin{proof}\textcolor{red}{TOPROVE 9}\end{proof}
+
+We are now ready to prove that if we can efficiently solve the instance $\maxcspk(\Fam)$, we can also efficiently decide if the given hypergraph $G$ contains a $k$-clique.
+\begin{restatable}{lemma}{LemmaCaseIMainLemma}\label{lemma:case-1-main-lemma}
+    There exists a weight-$k$ assignment $a$ and an integer $\tau$, such that $\Phi(a)\geq \tau$ if and only if $G$ contains a clique of size $k$. Moreover, $\tau$ can be computed in constant time.
+\end{restatable}
+\begin{proof}\textcolor{red}{TOPROVE 10}\end{proof}
+\subparagraph*{{Case 2: $\beta<0$}}
+\begin{construction}\label{construction:b<0}
+    Let $X = V(G')$ be the set of $kn$ variables.
+    For each edge $\{u,v,w\}$ in $G'$, add $\phi(u,v,w)$ to $\Phi$.
+    Furthermore, for each $i\in [k]$ and each pair of distinct vertices $u,v\in V_i$, add $\phi(u,v,w)$ to $\Phi$ for any $w\in V(G')\setminus\{u,v\}$.
+\end{construction}
+Following the general structure of the first case, we first count the number of constraints satisfied by some assignment $a$ and then show that any optimal assignment is $k$-partite.
+\begin{restatable}{lemma}{LemmaCaseIIPolynomial}\label{lemma:case2-any-assignment}
+    Let $a$ be any weight-$k$ assignment and let $S$ be the set of vertices that correspond to the variables set to $1$ by $a$.
+    Denote by $k_i$ the value $|S\cap V_i|$, and let $m(S)$ denote the number of edges in the induced subhypergraph $G'[S]$.
+    Then the following equality holds:
+    \begin{align*}
+    \Phi(a) &= \alpha\cdot \left(m(S) + \sum_{i\in [k]}\binom{k_i}{3} + \sum_{i,j\in\binom{[k]}{2}}\left(\binom{k_i}{2}k_j + \binom{k_j}{2}k_i\right)\right) 
+    \\ &+ \beta \cdot\left(\sum_{(i,j)\in \binom{[k]}{2}} k_ik_j (\lambda + 2n-k_i-k_j) + \sum_{i\in [k]} \left(\binom{k_i}{2}(kn-2)\right)\right)  + c
+\end{align*}
+    where $c$ is a value that does not depend on the choice of $a$.
+\end{restatable}
+\begin{proof}\textcolor{red}{TOPROVE 11}\end{proof}
+
+We can now argue that for any $k$-partite assignment $a$ and any assignment $a'$ that is not $k$-partite, the inequality $\Phi(a)>\Phi(a')$ is satisfied.
+\begin{restatable}{lemma}{LemmakPartiteOptimalityII}\label{lemma:case2-optimality-of-k-partite-assignment}
+    Let $a$ be any $k$-partite assignment of the constraint in $\Phi$ and let $a'$ be any non-$k$-partite assignment of weight $k$.
+    Let $S$ and $S'$ be the sets of vertices that correspond to the variables set to $1$ by $a$ and $a'$ respectively.
+    Then $\Phi(a)>\Phi(a')$.
+\end{restatable}
+\begin{proof}\textcolor{red}{TOPROVE 12}\end{proof}
+We now focus on $k$-partite assignments only, and show that among all $k$-partite assignments, the one that maximizes the value of $\Phi(a)$ corresponds to a $k$-clique in $G$ (if it exists).
+
+\begin{lemma}\label{lemma:case-2-main-lemma}
+    There exists a weight-$k$ assignment $a$ and an integer $\tau$ such that $\Phi(a)\geq \tau$ if and only if $G$ contains a clique of size $k$. Moreover, $\tau$ can be computed in constant time.
+\end{lemma}
+\begin{proof}\textcolor{red}{TOPROVE 13}\end{proof}
+\subparagraph*{{Case 3: $\beta=0$}} 
+For Case 3, we employ the constructions used in the previous cases
+\begin{construction}\label{construction:b=0}
+    Let $X = V(G')$ be the set of $kn$ variables.
+    We make a case distinction based on the value of $\alpha$:
+    \begin{enumerate}
+        \item If $\alpha>0$, then let $\Phi$ be as in Construction \ref{construction:b>0}.
+        \item If $\alpha<0$, then let $\Phi$ be as in Construction \ref{construction:b<0}.
+    \end{enumerate}
+\end{construction}
+\medskip
+For any weight $k$-assignment, we can compute the value $\Phi(a)$, by plugging in $\beta=0$ into the corresponding construction.
+\begin{lemma}
+    Let $\Phi$ be a $\maxcspk(\Fam)$ instance as above, and let $a$ be any assignment of weight $k$. 
+    Then the following equalities hold.
+    \begin{enumerate}
+        \item If $\alpha>0$, 
+        \[
+            \Phi(a) = m(S)\alpha + c  .   
+        \]
+        \item  If $\alpha<0$,
+        \[
+        \Phi(a) = \alpha\cdot \left(m(S) + \sum_{i\in [k]}\binom{k_i}{3} + \sum_{i,j\in\binom{[k]}{2}}\left(\binom{k_i}{2}k_j + \binom{k_j}{2}k_i\right)\right) +  c,
+        \]
+        where $c$ is a value that does not depend on the choice of the weight-$k$ assignment $a$.
+    \end{enumerate}
+\end{lemma}
+We can now show that if we can efficiently find the assignment $a$ that maximizes the value $\Phi(a)$, then we can also efficiently decide if the hypergraph $G$ contains a clique of size $k$.
+\begin{restatable}{lemma}{LemmaCaseIIIMain}\label{lemma:main-lemma-case-3}
+    There exists a number $\tau$ and an assignment $a$ of weight $k$, such that $\Phi(a)\geq \tau$ if and only if the hypergraph $G$ contains a clique of size $k$. Moreover, we can compute $\tau$ in constant time.
+\end{restatable}
+\begin{proof}\textcolor{red}{TOPROVE 14}\end{proof}
+
+We can finally prove Theorem \ref{th:CSP-hardness}.
+\begin{proof}\textcolor{red}{TOPROVE 15}\end{proof}
+
+\subsection{Algorithmic Results}
+Algorithms for $\maxcspk(\Fam)$ have already been studied from a parametrized viewpoint. In \cite{Cai08}, Cai showed for the three families $\{\xor\},\{\OR\}$ and $\{\AND\}$, each of degree $2$,
+that they can be solved in time $\bigO(f(k) n^{\omega \lfloor k/3 \rfloor + 1 + k \mod 3})$ by reducing them to finding a maximum-weight triangle. 
+In this section, we extend this with an algorithm for families of all degrees, generalizing Cai's running time for degree $2$ families.
+
+First, we take a look at the unconstrained version $\maxcsp(\Fam)$, that asks for assignments of any weight.
+Ryan Williams first presented an algorithm for this version in \cite{Wil07}, where $\Fam$ was of degree $2$, reducing the problem to $k$-clique.
+Subsequently, this result was generalized to $h$-uniform $\ell$-hyperclique for all families of degree $h>2$ by Lincoln, {Vassilevska Williams} and Williams in \cite{LincolnWW18}.
+The approach and techniques employed can be transferred nicely into the weight $k$ setting with minor modifications.
+We give a short summary of the general algorithm, explain the modifications to accommodate the constrained setting and what changes in the analysis, 
+to obtain algorithms for all constraint families of degree $h$.
+
+\begin{proof}\textcolor{red}{TOPROVE 16}\end{proof}
+
+
+
+
+
+
+
+
+
+
+
+\section{Further Application: Strengthening Known Reductions}
+Another application that makes regularizing the hyperclique problem appealing is that
+it might prove easier to show conditional hardness lower bounds when one can assume this strong regularity. 
+This could not only be useful for new lower bounds, but also simplify existing proofs.
+
+A point in case, where our technique obtains a lower bound for a regular version of the problem is the following:
+Under the $3$-Uniform $4$-Hyperclique hypothesis it has been shown in~\cite{DalirrooyfardW22} that detecting induced $4$-cycles requires quadratic time for graphs with $\mathcal{O}(n^{3/2})$ edges.
+Without any changes to the original reduction, we obtain the following by regularizing.
+\begin{theorem}
+    For no $\varepsilon > 0$ does there exist an algorithm detecting an induced $4$-cycle in a $r$-regular graph $G$ for $r \in \mathcal{O}(\sqrt n)$ (with $\mathcal{O}(n^{3/2})$ edges) in time $\mathcal{O}(n^{2 - \varepsilon})$ unless the $3$-uniform $k$-hyperclique hypothesis fails.
+\end{theorem}
+\begin{proof}\textcolor{red}{TOPROVE 17}\end{proof}
+Trying to regularize a graph $G$ without adding induced $4$-cycles by adding dummy vertices does not seem very straight forward.
+While approaches, such as taken in \cite{Cai08}, do indeed regularize the given graph without adding new $4$-cycles by only adding edges between a dummy node and vertices that are not in the same component,
+they might blow-up in size, as they are dependent on the maximum degree of the original graph.
+Only adding dummy nodes on the other hand is not easily done, as connecting two non-adjacent vertices to a single dummy node might already introduce a $4$-cycle,
+indicating that there is no obvious way that achieves regularity for this problem with only a small amount of dummy nodes added.
+
+\bibliography{article}
+
+\end{document}

@@ -1,0 +1,527 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage{a4wide}
+\usepackage[UKenglish]{babel}
+\usepackage[UKenglish]{isodate}
+\usepackage{amsmath,amssymb,amsthm,mathtools,bbm}
+\usepackage{bm}
+\usepackage[svgnames,table]{xcolor}
+\definecolor{myBlue}{RGB}{27, 82, 140}
+\usepackage{microtype}
+\usepackage{thm-restate}
+\usepackage{enumitem}
+\usepackage{complexity}
+\usepackage{hyperref}
+\usepackage[nameinlink]{cleveref}
+\usepackage{nameref}
+\hypersetup{colorlinks,allcolors=myBlue}
+
+\renewcommand{\vec}[1]{\ensuremath{\mathbf{#1}}}
+\renewcommand\emptyset\varnothing
+
+\newcommand{\2}{\vec{2}}
+\newcommand{\1}{\vec{1}}
+\newcommand{\0}{\vec{0}}
+\renewcommand{\A}{\ensuremath{\mathbf{A}}}
+\newcommand{\B}{\ensuremath{\mathbf{B}}}
+\newcommand{\X}{\ensuremath{\mathbf{X}}}
+\newcommand{\Y}{\ensuremath{\mathbf{Y}}}
+\newcommand{\KK}{\ensuremath{K}}
+\DeclareMathOperator{\sel}{sel}
+\DeclareMathOperator{\ar}{ar}
+\DeclareMathOperator{\KG}{KG}
+\DeclareMathOperator{\PCSP}{PCSP}
+\DeclareMathOperator{\Pol}{Pol}
+\DeclareMathOperator{\CSP}{CSP}
+\DeclareMathOperator{\NAE}{\mathbf{NAE}}
+\DeclareMathOperator{\BNAE}{\mathbf{BNAE}}
+\DeclareMathOperator{\CF}{\mathbf{CF}}
+\DeclareMathOperator{\LO}{\mathbf{LO}}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{observation}[theorem]{Observation}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{claim}[theorem]{Claim}
+
+\newlist{lemenumerate}{enumerate}{1}
+\setlist[lemenumerate]{label=(\roman*),ref=\thelemma\,(\roman*)}
+\crefname{lemenumeratei}{lemma}{lemmas}
+
+\usepackage{todonotes}
+\newcommand{\SZ}[1]{\todo[color=blue!40]{#1}}
+\newcommand{\TVN}[1]{\todo[color=green!40]{#1}}
+\newcommand{\ZV}[1]{\todo[color=orange!40]{#1}}
+
+
+\begin{document}
+
+\title{Complexity of approximate conflict-free,  linearly-ordered,\\and nonmonochromatic hypergraph colourings\thanks{An extended abstract of this work will appear in the Proceedings of ICALP 2025. This work was supported by UKRI EP/X024431/1 and a Clarendon Fund Scholarship. For the purpose of Open Access, the authors have applied a CC BY public copyright licence to any Author Accepted Manuscript version arising from this submission. All data is provided in full in the results section of this paper.}}
+
+\author{Tamio-Vesa Nakajima\\
+University of Oxford\\
+\texttt{tamio-vesa.nakajima@cs.ox.ac.uk}
+\and
+Zephyr Verwimp\\
+University of Oxford\\
+\texttt{zephyr.verwimp@cs.ox.ac.uk}
+\and
+Marcin Wrochna\\
+University of Warsaw\\
+\texttt{m.wrochna@mimuw.edu.pl}
+\and
+Stanislav \v{Z}ivn\'y\\
+University of Oxford\\
+\texttt{standa.zivny@cs.ox.ac.uk}
+}
+
+\date{\today}
+\maketitle
+\begin{abstract}
+Using the algebraic approach to promise constraint satisfaction problems, we establish complexity classifications of three natural variants of hypergraph colourings: standard nonmonochromatic colourings, conflict-free colourings, and linearly-ordered colourings.
+
+Firstly, we show that finding an $\ell$-colouring of a $k$-colourable $r$-uniform hypergraph is \NP-hard for all constant $2\leq k\leq \ell$ and $r\geq 3$. This provides a shorter proof of a celebrated result by Dinur et al. [FOCS'02/Combinatorica'05]. 
+
+Secondly, we show that finding an $\ell$-conflict-free colouring of an $r$-uniform hypergraph that admits a $k$-conflict-free colouring is \NP-hard for all constant $2\leq k\leq\ell$ and $r\geq 4$, except for $r=4$ and $k=2$ (and any $\ell$); this case is solvable in polynomial time. The case of $r=3$ is the standard nonmonochromatic colouring, and the case of $r=2$ is the notoriously difficult open problem of approximate graph colouring.
+
+Thirdly, we show that finding an $\ell$-linearly-ordered colouring of an $r$-uniform hypergraph that admits a $k$-linearly-ordered colouring is \NP-hard for all constant $3\leq k\leq\ell$ and $r\geq 4$, thus improving on the results of Nakajima and \v{Z}ivn\'y~[ICALP'22/ACM TocT'23].
+\end{abstract}
+
+\section{Introduction}\label{sec:intro}
+
+\paragraph{Graph colouring}
+Graph colouring is one of the most studied computational problems: Given a graph $G$ and an integer $k$, is there a $k$-colouring, i.e., an assignment of one of $k$ colours to the vertices of the graph so that adjacent vertices are assigned different colours? 
+
+Deciding the existence of a 3-colouring is one of Karp's 21 \NP-complete problems~\cite{Karp1972}. Since finding a graph colouring with the smallest number of colours is \NP-hard, there has been much interest in the \emph{approximate graph colouring} (AGC) problem: Given a graph $G$ that admits a colouring with $k$ colours, find a colouring with $\ell$ colours for some $k\leq\ell$.
+It is believed that for every constant $3 \leq k \leq \ell$, this problem remains \NP-hard~\cite{GJ76}. While some conditional results are known (i.e.~AGC is \NP-hard if we assume the \emph{$d$-to-1 conjecture with perfect completeness}~\cite{GS20:icalp}), proving unconditional results seems elusive. The strongest results known so far are for $\ell = 2k - 1$~\cite{BBKO21} and $\ell = \binom{k}{\lfloor k / 2 \rfloor} - 1$~\cite{KOWZ23} (the first result is stronger for $k = 3, 4$, and equal to the second for $k = 5$). As progress on proving the hardness of AGC seems to have hit a barrier, it is natural to try to attack variants of AGC, to see if any of the ideas and insights from those problems could apply to the AGC. In this paper,  we will focus on hypergraph generalisations of graph colourings.
+
+\medskip
+Recall that a \emph{hypergraph} is a pair $(V, E)$, where $V$ is the vertex set and $E \subseteq 2^V$ the edge set. A hypergraph is called \emph{$r$-uniform} if all the edges have size $r$. Thus, a 2-uniform hypergraph is a graph.
+A  colouring of a graph $(V,E)$ is an assignment of colours $c(v)$ to the vertices $v \in V$ such that for every edge $\{u,v\} \in E$ we have $c(u) \neq c(v)$. 
+Put differently in three different but equivalent ways, for every edge $\{u,v\}\in E$ we have that
+(i) the set $ \{ c(u), c(v) \}$ contains at least 2 elements,
+or (ii) some colour in the multiset $\{\{ c(u), c(v) \}\}$ appears exactly once,
+or (iii) the largest colour in the multiset $\{\{ c(u), c(v) \}\}$ appears exactly once.\footnote{This notion assumes that the colours are taken from a totally ordered set, e.g.,~the natural numbers.}
+When these three definitions are applied to hypergraphs, we get three different notions, namely nonmonochromatic (NAE) colourings, conflict-free (CF) colourings, and linearly-ordered (LO) colourings.
+Note that any LO colouring is a CF colouring, and any CF colouring is an NAE colouring. 
+The three notions of colourings are different already for 4-uniform\footnote{For 3-uniform hypergraphs, NAE and CF colourings coincide, but LO colourings are different.} 
+hypergraphs.\footnote{Indeed, the edge $\{a, b, c, d\}$ could be assigned colours $\{\{1, 1, 2, 2\}\}$ in an NAE colouring, but not in the other two; whereas the edge could be assigned colours $\{\{1, 2, 2, 2\}\}$ in a CF colouring, but not in an LO colouring.}
+
+
+
+\paragraph{Promise CSPs}
+We will now review the most relevant literature on the three variants of hypergraph colourings.
+It will be convenient to present the existing results in the framework of so-called \emph{promise constraint satisfaction problems} (PCSPs)~\cite{BG21:sicomp}, as we shall use the tools developed for understanding the computational complexity of PCSPs~\cite{BBKO21}.
+Constraint satisfaction problems (CSPs) are problems that can be cast as homomorphisms between relational structures. We will only need a special case of relational structures that contain only one relation. Formally, a \emph{relational structure} $\A=(A,{R^{\A}})$ is a pair, where $A$ is the universe of $\A$ and $R^\A\subseteq A^r$ is an $r$-ary relation. By abuse of language, we call $r$ the \emph{arity} of $\A$.
+
+An example of a relational structure is a graph or an $r$-uniform hypergraph, where the universe is the vertex set and the relation is the edge set --- the arity of the relation is 2 for graphs and $r$ for $r$-uniform hypergraphs. A \emph{homomorphism} from one relational structure of arity $r$, say $\A=(A,R^\A)$, to another of the same arity, say $\B=(B,R^\B)$, is a map $h:A\to B$ that preserves the relation: if $(a_1,\ldots,a_r)\in R^{\A}$ then $(h(a_1),\ldots,h(a_r))\in R^{\B}$. We denote the existence of a homomorphism from $\A$ to $\B$ by writing $\A\to\B$.
+
+Given two relational structures $\A$ and $\B$ with $\A\to\B$, the promise constraint satisfaction problem with template $(\A,\B)$, denoted by $\PCSP(\A,\B)$, is the following computational problem. Given a relational structure $\X$ with $\X \to \A$, find a homomorphism from $\X$ to $\B$. This is the search version of the problem. In the decision version, which reduces to the search version, one is given a relational structure $\X$ with the same arity as $\A$ and the task is to output \textsc{Yes} if $\X\to\A$ and \textsc{No} if $X\not\to\B$.\footnote{Since the decision version reduces to the search version, solving the decision version is no harder than solving the search version. All of our results will hold for both versions --- hardness results will hold even for the decision version, and tractability results will hold even for the search version.}
+
+In order to cast approximate hypergraph NAE/CF/LO-colourings as PCSPs, we will need to encode the NAE/CF/LO-colourability of a hypergraph by a homomorphism to a suitable relational structure.
+We will thus describe three families of relational structures capturing the three types of hypergraph colourings mentioned above (and therefore implicitly graph colouring).
+For any arity $r\geq 2$ and domain size $k$, we define:\footnote{For any integer $k$, we write $[k]$ for the set $\{1,2,\ldots,k\}$.}
+\begin{align*}
+    \NAE^r_k &= ([k], \{ (x_1, \ldots, x_r) \mid \exists i, j \in [r] \cdot x_i \neq x_j \}), \\
+    \CF^r_k &= ([k], \{ (x_1, \ldots, x_r) \mid \exists i \in [r] \cdot \forall j \in [r] \cdot i = j \lor x_i \neq x_j \}), \\
+    \LO^r_k &= ([k], \{ (x_1, \ldots, x_r) \mid \exists i \in [r] \cdot \forall j \in [r] \cdot i = j \lor x_i > x_j \}).
+\end{align*}
+Observe that an $r$-uniform hypergraph $\X$ has an NAE $k$-colouring if and only if $\X \to \NAE^r_k$. The analogous statement holds for CF and LO colourings. Since NAE, LO and CF colourings are all identical to graph colouring on uniformity 2, we see that $k$ vs.~$\ell$ AGC is the same as $\PCSP(\NAE^2_k, \NAE^2_\ell)$ --- or equivalently $\PCSP(\CF^2_k, \CF^2_\ell)$ or $\PCSP(\LO^2_k, \LO^2_\ell)$.
+
+\paragraph{Nonmonochromatic colourings}
+The most studied hypergraph colourings are nonmonochromatic colourings, also known as weak hypergraph colourings.
+This is the weakest non-trivial restriction one can impose when colouring the
+vertices of a hypergraph, i.e., any type of hypergraph colouring (that excludes constant colourings) is also a nonmonochromatic colouring. 
+As mentioned before, nonmonochromatic $k$-colourings of an $r$-uniform hypergraph correspond to homomorphisms from the hypergraph to $\NAE^r_k$.
+Since nonmonochromatic colouring is \NP-hard for any uniformity $r\geq 3$ and
+number of colours $k \geq 2$, Dinur, Regev, and Smith investigated the
+approximate version, establishing  the following result~\cite{DRS05}.
+\begin{restatable}{theorem}{main}\label{thm:main}
+$\PCSP(\NAE_k^r, \NAE_\ell^r)$ is \NP-hard
+for all constant $2 \leq k \leq \ell$ and $r \geq 3$.
+\end{restatable}
+
+In this paper we will show a simpler proof of this result. The proof in~\cite{DRS05} relies on constructing a somewhat ad-hoc reduction and analysing its completeness and soundness.
+We recast this proof
+in the  recent algebraic framework for PCSPs~\cite{BBKO21}. 
+We also replace the use of Schrijver graphs with the simpler Kneser graphs, plus
+a (correct and very easy) case of Hedetniemi’s conjecture (cf.~\Cref{prodchrombound}). 
+We believe that our simplification is of interest since it replaces a more quantitative analysis of the polymorphisms with one that only deals with constants everywhere. In particular, this means that our proof does not require the full strength of the PCP theorem --- only the ``baby PCP'' of Barto and Kozik~\cite{Barto22:soda}.
+
+\paragraph{Conflict-free colourings}
+
+A conflict-free hypergraph colouring is a colouring of the vertices in a
+hypergraph such that every hyperedge has at least one uniquely coloured
+vertex~\cite{Even03:sicomp,Smorodinsky2013}. 
+As mentioned before, conflict-free $k$-colourings of an $r$-uniform hypergraph correspond to homomorphisms from the hypergraph to $\CF^r_k$.
+We shall determine the complexity of $\PCSP(\CF^r_k,\CF^r_\ell)$ for all
+constants $2\leq k\leq\ell$ and $r\geq 3$ (the case of $r=3$ corresponding to
+nonmonochromatic colourings, i.e., $\CF^3_k=\NAE^3_k$ for every $k$).
+
+After the easy observation that $\PCSP(\CF_k^r, \CF_\ell^r)$ reduces to $\PCSP(\CF_k^{r + t}, \CF_\ell^{r + t})$ for $t \geq 2$ (cf.~\Cref{lem:red} in~\Cref{sec:prelims}), \Cref{thm:main} directly implies \NP-hardness for promise conflict-free colouring for uniformity $r\geq 5$.
+The crux of the result is to deal with the case of uniformity $r=4$.
+Note that finding a conflict-free colouring of a 4-uniform hypergraph using 2
+colours is identical to solving systems of equations of the form $x + y + z + t \equiv 1 \pmod{2}$ over $\mathbb{Z}_2$, and is hence in \P{} and consequently so is $\PCSP(\CF_2^4, \CF_\ell^4)$ for every $\ell\geq 2$. 
+We resolve the only remaining case, showing in~\Cref{sec:proof} that $\PCSP(\CF_k^4, \CF_\ell^4)$ is \NP-hard for all $3 \leq k \leq \ell$.
+Summarising, we have
+\begin{restatable}{theorem}{cf}\label{thm:cf}
+$\PCSP(\CF_k^r, \CF_\ell^r)$ is \NP-hard  for all constant $2 \leq k \leq \ell$ and $r \geq 3$, except for $k=2$ and $r=4$, which is in \P.
+\end{restatable}
+
+This also immediately implies the following (much weaker) corollary, which does not appear to have been known in the CF-colouring literature.
+
+\begin{corollary}
+    It is \NP-hard to approximate the conflict-free chromatic
+    number\footnote{That is, the minimum number of colours needed to CF-colour
+    a given hypergraph.} of a hypergraph to within any constant factor, even if it
+    is $r$-uniform for some constant $r \geq 3$.
+\end{corollary}
+
+
+\paragraph{Linearly-ordered colourings}
+
+A linearly-ordered~\cite{Barto21:stacs} (or
+unique-maximum~\cite{Cheilaris13:sidma}) hypergraph colouring is a colouring of
+the vertices in a hypergraph with linearly-ordered colours such that the maximum
+colour in every hyperedge is unique.
+As mentioned before, linearly-ordered $k$-colourings of an $r$-uniform hypergraph correspond to homomorphisms from the hypergraph to $\LO^r_k$.
+
+Barto at al.~\cite{Barto21:stacs} conjectured that $\PCSP(\LO_k^3,\LO_\ell^3)$
+is \NP-hard for all constant $2\leq k\leq \ell$, but even the case
+$\PCSP(\LO_2^3,\LO_3^3)$ is still open. A recent result of Filakovsk\'y et
+al.~\cite{fnotw24:stacs} established \NP-hardness of $\PCSP(\LO_3^3,\LO_4^3)$ by generalising the topological methods of Krokhin et al.~\cite{KOWZ23}.
+Nakajima and \v{Z}ivn\'y~\cite{NZ23:toct} also showed \NP-hardness of
+$\PCSP(\LO_k^r,\LO_\ell^r)$ for every $2\leq k\leq \ell$ and $r\geq \ell-k+4$. We strengthen this result, showing \NP-hardness of $\PCSP(\LO_k^r,\LO_\ell^r)$ when $3 \leq k \leq \ell$ and $r \geq 4$.
+
+\begin{restatable}{theorem}{lo}\label{thm:lo}
+    $\PCSP(\LO^r_k,\LO^r_\ell)$ is \NP-hard for all constant $3\leq k\leq \ell$ and $r\geq 4$.
+\end{restatable}
+
+Observe that this theorem covers nearly all the cases from the result
+of~\cite{NZ23:toct}: the only case not covered is $k = 2$ and $r \geq \ell + 2$.
+In particular, \Cref{thm:lo} has no requirement on $r$ in terms of $\ell$,
+unlike the result in~\cite{NZ23:toct}. Indeed, \Cref{thm:lo} covers the full range of
+parameters except for the cases $r = 3$ or $k = 2$ (and thus the conjecture
+of Barto et al. remains open).
+
+It is worth digressing somewhat to discuss the appearance of topological methods within these proofs. Our proof uses the chromatic number of the Kneser graph as an essential ingredient --- this is a topological fact, and thus our proof is in some sense topological. (This is similar to the appearance of topology within hardness proofs for rainbow colourings~\cite{ABP20}.) On the other hand, the topological approach of~\cite{fnotw24:stacs}, which proved that $\PCSP(\LO_3^3, \LO_4^3)$ is \NP-hard, is rather different. It assigns each relational structure an equivariant simplicial complex in a ``nice enough'' way so that the topological properties of these simplicial complexes imply the hardness of the original template. It would be interesting to see if these two approaches can be merged, or combined to strengthen both.
+
+\section{Preliminaries}
+\label{sec:prelims}
+
+Let $(\A,\B)$ be a PCSP template with $\A$ and $\B$ of arity $r$.
+A \emph{polymorphism} of arity $n=\ar(f)$ of $(\A,\B)$ is a function $f:A^n \to B$ such
+that if  $f$ is applied component-wise to any $n$-tuple of elements of $R^\A$ it
+gives an element of $R^\B$. In more detail, whenever $(a_{ij})$ is an $r\times
+n$ matrix such that every column is in $R^\A$, then $f$ applied to the rows
+gives an $r$-tuple which is in $R^\B$. We say that the rows of such a matrix are \emph{compatible}.
+We denote by $\Pol^{(n)}(\A,\B)$ the collection of $n$-ary polymorphisms of $(\A, \B)$, and we let $\Pol(\A, \B) = \bigcup_n \Pol^{(n)}(\A, \B)$.
+
+
+
+For an $n$-ary function $f:A^n \to B$ and a map $\pi : [n] \to [m]$, we say that an $m$-ary function $g:A^m\to B$ is the \emph{minor of $f$ given by $\pi$} if $g(x_1,\ldots,x_m) = f(x_{\pi(1)},\ldots,x_{\pi(n)})$.
+We write $f \xrightarrow{\pi} g$ if $g$ is the minor of $f$ given by $\pi$. Note that $\Pol(\A,\B)$ is closed under minors.
+
+We use $\leq_p$ to denote a polynomial-time many-one reduction.
+
+\begin{theorem}[\cite{BG21:sicomp}]\label{polsubset}
+If $\Pol(\A,\B) \subseteq \Pol(\A',\B')$ then $\PCSP(\A',\B')\leq_p\PCSP(\A,\B)$.
+\end{theorem}
+\begin{lemma}\label{lem:red}
+    For any $t\geq 2$, $\PCSP(\CF_k^r, \CF_\ell^r)
+    \leq_p \PCSP(\CF_k^{r + t}, \CF_\ell^{r + t})$.
+\end{lemma}
+\begin{proof}
+We will use~\Cref{polsubset} and show that $\Pol(\CF_k^{r + t}, \CF_\ell^{r + t}) \subseteq \Pol(\CF_k^r, \CF_\ell^r)$. Suppose $f \in \Pol^{(n)}(\CF_k^{r + t}, \CF_\ell^{r + t})$. Consider any $r \times n$ matrix $A$ with rows $\vec{a}_1,\ldots,\vec{a}_r \in [k]^n$ such that every column in the matrix has a unique entry. We can choose $\vec{b} \in [k]^n$ such that each column in the $(r + t) \times n$ matrix $A'$ with rows $\vec{a}_1,\ldots,\vec{a}_r$, and $t$ copies of $\vec{b}$ has a unique entry: choose element $i$ of $\vec{b}$ to be any value in $[k]$ \emph{other than} the unique entry in the $i$-th column of $A$.
+Since $f$ is a polymorphism of $(\CF_k^r,\CF_\ell^r)$, we get that $(f(\vec{a}_1),\ldots,f(\vec{a}_r),f(\vec{b}),\ldots,f(\vec{b}))$ has a unique entry. Since $t\geq 2$, $(f(\vec{a}_1),\ldots,f(\vec{a}_r))$ must also have a unique entry. Thus $f \in \Pol^{(n)}(\CF_k^{r}, \CF_\ell^{r})$ as required.
+\end{proof}
+
+An \emph{$\ell$-chain of minors} is a sequence of the form $f_0 \xrightarrow{\pi_{0,1}} f_1 \xrightarrow{\pi_{1,2}} \cdots \xrightarrow{\pi_{\ell-1,\ell}} f_\ell$. We shall then write $\pi_{i,j}: [\ar(f_i)]\to[\ar(f_j)]$ for the composition of $\pi_{i,i+1}, \dots, \pi_{j-1,j}$, for any $0\leq i < j\leq \ell$. Note that $f_i \xrightarrow{\pi_{i,j}} f_j$. 
+We shall use the following \NP-hardness criterion for PCSPs. 
+\begin{theorem}[\cite{BWZ21}]\label{thm:chain hardness}
+    Suppose there are constants $k, \ell$ and an assignment
+    $\sel$ which, for every $f \in \Pol(\A, \B)$, outputs a set $\sel(f) \subseteq [n]$ of size at most $k$, where $n$ is the arity of $f$.
+    Suppose furthermore that for every $\ell$-chain of minors there are
+    $i, j$ such that $\pi_{i, j}(\sel(f_i))
+    \cap \sel(f_j) \neq \varnothing$. Then, 
+    $\PCSP(\A,\B)$ is \NP-hard.
+\end{theorem}
+
+For a graph $G$, the \emph{chromatic number} of $G$, denoted by $\chi(G)$, is the smallest $k$ such
+that $G\to \KK_k$, where $\KK_k$ is the clique on $k$
+vertices.
+We will rely on Lov\'asz's result for the chromatic number of Kneser graphs~\cite{Lovasz78}.
+For $1\leq h \leq |A|$, write $A^{(h)}$ for the family of subsets of $A$ of size $h$.
+The \emph{Kneser graph} is defined as 
+$\KG(A,h) = (A^{(h)},E)$,
+where $\{S,T\} \in E$ if and only if $S\cap T = \emptyset$. For the special case $A = [n]$, we use the notation $\KG(n, h) = \KG([n], h)$.
+
+\begin{theorem}[\cite{Lovasz78}]\label{kneserchrombound}
+  $\chi(\KG(n,h))=n-2h+2$ for any $n,h\geq 1$.
+\end{theorem}
+\begin{lemma}\label{prodchrombound}
+	Let $\chi(G) > n$. Then $\chi(G \times \KK_{n+1}) > n$.
+\end{lemma}
+\begin{proof}
+	We show the contrapositive: suppose there is a homomorphism $G \times \KK_{n+1} \to \KK_n$.
+	Equivalently, there is a homomorphism $G \to \KK_n^{\KK_{n+1}}$, where $\KK_n^{\KK_{n+1}}$ is the graph with vertex set $\{f:[n+1]\to[n]\}$, and $f$ and $g$ adjacent if for every distinct $i,j \in [n+1]$, $f(i) \neq g(j)$. This is equivalent since every homomorphism 
+    $f : G \times \KK_{n + 1} \to \KK_n$
+     corresponds uniquely to the homomorphism $f' : G \to \KK_n^{\KK_{n + 1}}$ given by $f'(u) = (v \mapsto f(u, v))$.
+    There is also a homomorphism $\KK_n^{\KK_{n+1}} \to \KK_n$: map any $f \in V(\KK_n^{\KK_{n+1}})$ to an arbitrary repeating element in the range of $f$ (at least one must exist by the pigeonhole principle). Thus $G \to \KK_n$.
+\end{proof}
+
+If $\A\to\A'\to\B'\to\B$ then $(\A,\B)$ is a \emph{homomorphic relaxation} of $(\A',\B')$. In this case it follows from the definitions that  $\PCSP(\A,\B)\leq_p\PCSP(\A',\B')$~\cite{BBKO21}.
+
+
+
+
+
+
+
+
+
+ 
+\section{Proofs of hardness}
+\subsection{Avoiding sets imply hardness}
+\label{sec:avoiding}
+
+Our hardness proofs will revolve around the notion of \emph{avoiding sets} for
+polymorphisms~\cite{BBKO21}, defined below. We denote by $\1_X$ the
+\emph{indicator vector} of $X$: $(\1_X)_i = 1$ when $i \in X$ and $(\1_X)_i = 0$ otherwise. The overall length of the vector will be clear from context.
+
+\begin{definition}
+Take $A$ so that $\{0, 1 \} \subseteq A$. Let $f:A^n\to B$ and $T\subseteq B$.
+  A \emph{$T$-avoiding set} for $f$ is a set $S \subseteq [n]$ such that for any
+  $R \supseteq S$, we have
+  $f(\1_R) \notin T$.
+  For $t\in
+\mathbb{N}$, we call a set $S$ $t$-avoiding for $f$ if it is $T$-avoiding for
+$f$ for some subset $T\subseteq B$ of size $t$. 
+\end{definition}
+
+We will first collect some simple properties of avoiding sets.
+\begin{lemma}\label{lem:avoidingProperties}
+    Let $f : A^n \to B$ and $\ell = |B|$.
+    \begin{lemenumerate}
+        \item\label{item:noLAvoiding} There are no $\ell$-avoiding sets for $f$.
+        \item\label{item:domainAvoiding} $[n]$ is an $(\ell - 1)$-avoiding set for $f$.
+        \item\label{item:upwardsClosed} If $U$ is $T$-avoiding for $f$ then so is every $V\supseteq U$.
+        \item\label{item:minorPreserving} Take $\pi : [n] \to [m]$ and suppose $f \xrightarrow{\pi} g$ for some $g : A^m \to B$. Suppose $S \subseteq [n]$ is $T$-avoiding for $f$. Then $\pi(S)$ is $T$-avoiding for $g$.
+    \end{lemenumerate}
+\end{lemma}
+\begin{proof}
+  For $(i)$, observe that any $\ell$-avoiding set would imply that $f(\1_{[n]})
+    \not \in B$, which is impossible. For $(ii)$, note that $[n]$ is $(B \setminus \{
+      f(\1_{[n]}) \})$-avoiding, and hence $(\ell - 1)$-avoiding. $(iii)$ follows
+    from the definitions.
+    For $(iv)$, first observe that $g(\1_X) = f(\1_{\pi^{-1}(X)})$. For
+    contradiction, suppose $\pi(S)$ is not $T$-avoiding for $g$, i.e., there exists $R \supseteq \pi(S)$ with $g(\1_R) \in T$. Then $\pi^{-1}(R) \supseteq S$, and furthermore $f(\1_{\pi^{-1}(R)}) = g(\1_R) \in T$. Hence $S$ is not $T$-avoiding for $f$.
+\end{proof}
+
+To apply~\Cref{thm:chain hardness}, we want to build $\sel(f)$ out of (small)
+avoiding sets for $f$. This is a good idea because avoiding sets are preserved
+by minors, as shown in~\Cref{item:minorPreserving}. The issue is that we might have too many
+avoiding sets. For the polymorphisms in this paper, many (small) $t$-avoiding
+sets which are pairwise disjoint imply the existence of a (small)
+($t+1$)-avoiding set. Thus, since there can be no sets that avoid every output
+in the range, as shown in~\Cref{item:noLAvoiding}, there must be some maximal $t$ for which a (small) avoiding set exists. By maximality, there cannot be too many disjoint $t$-avoiding sets. Thus, we can build $\sel(f)$ out of these disjoint ``maximally avoiding'' sets.
+
+\begin{theorem}\label{our hardness condition}
+  Let $(\A,\B)$ be a PCSP template with $\{0, 1\} \subseteq A$ and $\ell = |B|$.
+Suppose that there exist constants $N,\{\alpha_t\}_{t=1}^\ell,\{\beta_t\}_{t=1}^\ell$ such that every $f \in \Pol(\A,\B)$ has the following properties:
+\begin{enumerate}
+    \item $f$ has a 1-avoiding set of size $\leq \beta_1$.
+    \item If $f$ is of arity $\geq N$ and has a disjoint family of $> \alpha_t$ many $t$-avoiding sets, all of size $\leq \beta_t$, then $f$ has a $(t+1)$-avoiding set of size $\leq \beta_{t+1}$.
+\end{enumerate}
+Then, $\PCSP(\A,\B)$ is \NP-hard.
+\end{theorem}
+\begin{proof}
+For each $f \in \Pol(\A,\B)$, define $t(f)$ to be the maximal $t$ such that $f$
+  has a $t$-avoiding set of size $\leq \beta_t$. By Assumption 1 and the lack 
+  of $\ell$-avoiding sets (cf.~\Cref{item:noLAvoiding}),  $t(f)$ exists and $1\leq t(f) <
+  \ell$. For each $f\in \Pol(\A,\B)$, let $\mathcal{F}_f$ be a maximal disjoint family of $t(f)$-avoiding sets of size $\leq \beta_t$. Define $\sel(f) = \bigcup \mathcal{F}_f$. Then by Assumption 2, $|\sel(f)| \leq \max\{N,\max_{1\leq t<\ell} \alpha_t\beta_t\} \eqqcolon k$.
+  
+Using~\Cref{thm:chain hardness}, it remains to show that for every $\ell$-chain
+  of minors there are $i, j$ such that $\pi_{i,
+  j}\left(\sel\left(f_i\right)\right) \cap \sel\left(f_j\right) \neq \emptyset$.
+  Let $f_0 \xrightarrow{\pi_{0,1}} f_1 \xrightarrow{\pi_{1,2}} \cdots
+  \xrightarrow{\pi_{\ell-1, \ell}} f_{\ell}$ be such a chain. Since $1\leq
+  t(f_i) < \ell$, there are distinct $i,j$ such that $t(f_i)=t(f_j) \eqqcolon
+  t$. By~\Cref{item:minorPreserving}, for every $t$-avoiding set $S$ of
+  $f_i$, $\pi_{i,j}(S)$ is $t$-avoiding for $f_j$. Hence by maximality of $\mathcal{F}_{f_j}$, $\pi_{i,j}(S)$ intersects $\sel(f_j)$. Since $\sel(f_i)$ is the union of such sets, certainly $\pi_{i,j}(\sel(f_i))$ intersects $\sel(f_j)$.
+\end{proof}
+The rest of this papers will show hardness of certain PCSP templates by showing that they have the two properties from~\Cref{our hardness condition}.
+
+\subsection{Hardness of promise nonmonochromatic colouring}
+
+In this section we prove the advertised hardness results for NAE colouring. The most important case is $\PCSP(\NAE_2^3, \NAE_\ell^3)$ for $\ell \geq 2$; all other cases derive from this one by either gadget reductions or homomorphic relaxations.
+
+\begin{lemma}\label{lem:lem1}
+	Let $\ell \geq 2$ and $n \in \mathbb{N}$.
+    Any $f \in \Pol^{(n)}(\NAE_2^3, \NAE_\ell^3)$ has a 1-avoiding set of size $ \leq \ell$.
+\end{lemma}
+\begin{proof}
+  By~\Cref{item:domainAvoiding}, $[n]$ is an $(\ell-1)$-avoiding set and hence a 1-avoiding set. Thus if $n\leq\ell$, we are done.
+	Otherwise assume $n > \ell$.
+	Let $h = \left\lceil \frac{n-\ell}{2}\right\rceil$.
+	Consider the Kneser graph $\KG(n,h)$, and colour each vertex $S$ by $f(\1_S)$.
+	By~\Cref{kneserchrombound}, $\chi(\KG(n,h))=n-2h+2 > \ell$, so
+	there are disjoint sets $S,T \in [n]^{(h)}$ with the same colour $f(\1_S)=f(\1_T) = b$.
+	Let $X \coloneq [n] \setminus (S \cup T)$.
+    
+    We claim that $X$ is a $\{b\}$-avoiding set and thus 1-avoiding.
+    Since $|X| = n - 2h \leq \ell$ this completes the proof.
+In order to prove the claim, consider any $Y$ such that $X \subseteq Y
+    \subseteq [n]$; we want to show that $f(\1_Y) \neq b$. Construct a matrix in
+    which each column corresponds to an element $i\in [n]$ and 
+    whose rows are $\1_S, \1_T, \1_Y$. 
+    Observe that since $S \cup T \cup Y = [n]$ (as $S, T, X$ are a
+    partition of $[n]$), no column contains only 0s. Similarly since $S \cap T
+    \cap Y = \emptyset$ (as $S$ and $T$ are disjoint), no column contains only
+    1s. Hence all the columns of the matrix whose rows are $\1_S, \1_T, \1_Y$
+    are tuples of $\NAE_2^3$. Since $f$ is a polymorphism of
+    $(\NAE_2^3,\NAE_\ell^3)$, 
+    $(f(\1_S), f(\1_T), f(\1_Y))$ must be a tuple of $\NAE_\ell^3$. But $f(\1_S) = f(\1_T) = b$, so $f(\1_Y) \neq b$ as required.
+	  Thus $X$ is 1-avoiding. 
+\end{proof}
+
+
+\begin{lemma}\label{lem:lem2}
+	Let $1\leq t < \ell$ and $n \geq (\ell+1) \ell^t + \ell+1$.
+  Suppose $f \in \Pol^{(n)}(\NAE_2^3, \NAE_\ell^3)$ has $>\binom{\ell}{t}\cdot \ell$ disjoint $t$-avoiding sets of size $\leq \ell^t$.
+	Then $f$ has a $(t+1)$-avoiding set of size $\leq \ell^{t+1}$.	
+\end{lemma}
+\begin{proof}
+	By assumption and the pigeonhole principle, $f$ has $\geq \ell+1$ disjoint sets $S_1,\dots,S_{\ell+1}\subseteq [n]$ of size $\leq \ell^t$ that avoid the same $T \subseteq [\ell]$ of size $|T|=t$.
+	Let $R \coloneq [n] \setminus (S_1 \cup \dots \cup S_{\ell+1})$.
+	Let $h = \left\lceil \frac{|R|-\ell}{2}\right\rceil$. We have $h \geq 0$ by the lower bound on $n$.
+    
+	Consider subsets of $[n]$ which are the union of exactly one of $S_1,\dots,S_{\ell+1}$, and a subset of $R$ of size $h$; let $\mathcal{S}$ be the collection of such subsets. We want to find two disjoint sets $S, T \in \mathcal{S}$ such that $f(\1_S) = f(\1_T)$.
+    Observe that there is a bijection between $\mathcal{S}$ and the vertex set of $\KK_{
+    \ell + 1} \times \KG(R, h)$, given by taking vertex $(i, A)$ of $\KK_{
+    \ell + 1} \times \KG(R, h)$ to $S_i \cup A \in \mathcal{S}$. Furthermore, this bijection extends to an isomorphism between the graph  $\KK_{
+    \ell + 1} \times \KG(R, h)$ and the graph whose vertex set is $\mathcal{S}$ and which considers $S, T \in \mathcal{S}$ to be adjacent if and only if they are disjoint.
+	By~\Cref{prodchrombound}, $\chi(\KK_{\ell+1} \times \KG(R,h)) > \ell$, so there must exist disjoint sets $S, T \in \mathcal{S}$ with $f(\1_S) = f(\1_T) \eqqcolon b$.
+    
+	Since $S_i \subseteq S$ for some $i$, we have $b \not\in T$.
+	Let $X \coloneqq [n] \setminus (S \cup T)$. Identically to the reasoning in
+  the proof of~\Cref{lem:lem1}, observe that for any
+	$Y \subseteq [n]$ with $X\subseteq Y$, $f(\1_{Y}) \neq b$.
+	Moreover, $X\subseteq Y$ implies  $S_j \subseteq Y$ for
+  $(\ell+1)-2 \geq 1$ different values of $j$ (i.e.~those for which $S_j \not \in \{S, T\}$), hence $f(\1_{Y}) \not \in T$.
+	Thus $X$ is $(T \cup \{b\})$-avoiding, so $(t + 1)$-avoiding.
+	Finally $|X| \leq ((\ell+1)-2) \cdot \ell^t + |R|-2h \leq (\ell-1) \cdot \ell^t + \ell \leq \ell^{t+1}$.
+\end{proof}
+
+\main*
+
+\begin{proof}
+$\PCSP(\NAE_2^3,\NAE_\ell^3)$ is \NP-hard for all $\ell \geq 2$ by~\Cref{our hardness condition}, \Cref{lem:lem1}, and~\Cref{lem:lem2}. For larger uniformity $r>3$, we have $\PCSP(\NAE_k^{3},\NAE_\ell^{3}) \leq_p \PCSP(\NAE_k^{r}, \NAE_\ell^{r})$ by a simple reduction: if $I = (V,E)$ is a 3-uniform hypergraph, then let $I'=(V,E')$ be the $r$-uniform hypergraph with $E' = \{(x,y,z,\ldots,z)\mid (x,y,z) \in E\}$. Then by homomorphic relaxation, as $\NAE_2^r\to\NAE_k^r\to\NAE_\ell^r$, we have $\PCSP(\NAE_2^r,\NAE_\ell^r)\leq_p \PCSP(\NAE_k^r,\NAE_\ell^r)$.
+\end{proof}
+
+\subsection{Hardness of promise conflict-free and linearly-ordered colouring}
+\label{sec:proof}
+
+In this section we prove the advertised hardness results for both LO and CF
+colourings. For the CF colourings, by~\Cref{lem:red} it suffices to establish
+hardness for $r=4$. However, our proof is the same for any $r\geq 4$ and thus we
+will present it that way. Since $\LO^r_k\to\CF^r_k$, we can then do both LO and
+CF colourings ``in one go'' by proving the hardness of $\PCSP(\LO_3^r, \CF_\ell^r)$ for all $\ell \geq 3$ and $r \geq 4$. 
+In the following proofs, we let $\0$ denote the vector whose elements are all 0, and we let $\2_X$ denote a ``scaled indicator vector'': $\2_X = 2 \cdot \1_X$.
+
+\begin{lemma}\label{lem:existence}
+    Let $\ell \geq 3$ and $r\geq 4$.
+    Then any $f \in \Pol^{(n)}(\LO_3^r, \CF_\ell^r)$ has a 1-avoiding set of size $\leq \ell$.
+\end{lemma}
+\begin{proof}
+  By~\Cref{item:domainAvoiding}, $[n]$ is an $(\ell-1)$-avoiding set and hence a 1-avoiding set. Thus if $n\leq\ell$, we are done.
+  Otherwise assume $n > \ell$, and set $h = \lceil \frac{n-\ell}{2}\rceil$.
+    Consider the Kneser graph $\KG(n,h)$, and colour each vertex $S$ by $f(\2_S)$. By~\Cref{kneserchrombound}, $\chi(\KG(n, h)) = n - 2h + 2 > \ell$, so there exist disjoint sets $S, T \in [n]^{(h)}$  such that $f(\2_S) = f(\2_T)$. Let $X \coloneqq [n]\setminus (S \cup T)$.
+    
+    Now observe that for any $Y \subseteq [n]$ with $X\subseteq Y$, $\1_Y$ is
+    compatible with $\2_S, \2_T$, and $r-3$ many copies of $\0$. To see why this
+    is the case, consider the matrix whose rows are $\1_Y, \2_S, \2_T$ and $r -
+    3$ copies of $\0$. The columns of the matrix correspond to elements $i \in
+    [n]$. We must show that each column contains a unique maximum element.
+    Observe that for $i \in S$, the unique maximum is a 2 in the $\2_S$ row; for
+    $i \in T$ the unique maximum is a 2 in the $\2_T$ row; and for all other $i$
+    the unique maximum is a 1 in the $\1_Y$ row. Hence, since $f$ is a
+    polymorphism of $(\LO_3^r,\CF_\ell^r)$, we have that $(f(\1_Y), f(\2_S),
+    f(\2_T), f(\0), \ldots, f(\0))$ is a tuple of $\CF_\ell^r$. Since $f(\2_S) = f(\2_T)$ we deduce that $f(\1_Y) \neq f(\0)$.
+Thus it follows that $X$ is $\{ f(\0) \}$-avoiding, and thus 1-avoiding. Noting that $X$ has size $n-2h\leq \ell$ completes the proof.
+\end{proof}
+
+\begin{lemma} \label{lem:boosting}
+  Let $  \ell \geq 3$ and $r\geq 4$. Let $1\leq t<\ell$, and suppose that $f\in \Pol^{(n)}(\LO_3^r, \CF_\ell^r)$ has a disjoint family of $> \binom{\ell}{t}\ell$ many $t$-avoiding sets, all of size $\leq t\ell$. Then $f$ has a $(t+1)$-avoiding set of size $\leq (t+1)\ell$.
+\end{lemma}
+\begin{proof}
+By assumption and the pigeonhole principle, there is a family $\mathcal{F}$ of at least $\ell+1$ disjoint $T$-avoiding sets of size $\leq t \ell$ for some $T \subseteq [n]$ of size $t$. Let $h,S,T,X$ be as in the proof of~\Cref{lem:existence} --- thus $S, T \in [n]^{(h)}, X \in [n]^{(n - 2h)}, f(\2_S) = f(\2_T)$ and $S, T, X$ form a partition of $[n]$. Recall that $|X| \leq \ell$.
+
+  Now, since the sets in $\mathcal{F}$ are disjoint, at most $\ell$ of the sets in
+  $\mathcal{F}$ intersect $X$. Thus, since $|\mathcal{F}| \geq \ell+1$, there is
+  some $Z\in \mathcal{F}$ disjoint from $X$. Let $C$ be any other set in
+  $\mathcal{F}$ and define $C' = C \cup X$. Note that $|C'| \leq (t+1)\ell$.
+  Note that $f( \1_Z) \notin T$ as $Z$ is $T$-avoiding. We will show that $C'$
+  is $(T\cup \{f(\1_Z)\})$-avoiding, proving the result.
+
+Since $C$ is $T$-avoiding and $C\subseteq C'$, $C'$ is also $T$-avoiding
+  (cf.~\Cref{item:upwardsClosed}). To see that $C'$ is
+  $\{f(\1_Z)\}$-avoiding, note that for every $D' \subseteq [n]$ with $C'
+  \subseteq D'$, $\1_{D'}$ is compatible with $\2_S, \2_T$, and $r-3$ many
+  copies of  $\1_Z$. To see why this is the case, consider the matrix whose rows
+  are $\1_{D'}, \2_S, \2_T$ and $r - 3$ copies of $\1_Z$. Each column
+  corresponds to an element of $i \in [n]$, and we want to show that each column
+  has a unique maximum element. For $i \in S$ (respectively $i \in T$), the
+  unique maximum is given by a 2 in the $\2_S$ row (respectively the $\2_T$ row)
+  --- these two cases are disjoint since $S, T$ are disjoint. Since $S, T, X$
+  form a partition of $[n]$, we now consider $i \in X$. Since $S, T, Z$ are
+  disjoint from $X$, all the $\2_S, \2_T, \1_Z$ rows have a 0 in these columns.
+  On the other hand, the (unique) $\1_{D'}$ row has a 1, since $i \in X
+  \subseteq C' \subseteq D'$. Hence we see that every column in the matrix is an
+  element of $\LO_3^r$. Applying $f$ row-wise, we see that $(f(\2_S), f(\2_T),
+  f(\1_{D'}), f(\1_Z), \ldots, f(\1_Z))$ must be a tuple of the relation of $\CF_3^r$.
+
+  Hence since $f(\2_S) = f(\2_T)$ and since $f$ is a polymorphism of
+  $(\LO_3^r,\CF_\ell^r)$, we have that $f(\1_{D'}) \neq f(\1_Z)$. Thus $C'$ is
+  the required $(T\cup \{f(\1_Z)\})$-avoiding, so $(t + 1)$-avoiding set.
+\end{proof}
+
+\begin{theorem}\label{locf}
+$\PCSP(\LO_3^r, \CF_\ell^r)$ is \NP-hard for all constant $\ell \geq 3$ and $r\geq 4$.
+\end{theorem}
+\begin{proof}
+  By~\Cref{our hardness condition}, \Cref{lem:existence} and~\Cref{lem:boosting}.
+\end{proof}
+\Cref{thm:cf} and~\Cref{thm:lo} follow immediately:
+\cf*
+\begin{proof}
+The case $r=3$ is given by~\Cref{thm:main} as $\NAE^3_k=\CF^3_k$ for every $k\geq 2$.
+The case $r\geq 5$ and $2\leq k\leq\ell$ follows from~\Cref{thm:main} and~\Cref{lem:red}.
+For $r=4$ and $k=2$, recall from~\Cref{sec:intro} that $\CF_2^4$ is identical to
+  solving systems of mod-2 equations of the form $x + y + z + t \equiv 1 \pmod
+  2$, so $\CSP(\CF_2^4)$ is in \P{}. By homomorphic relaxation, so is
+  $\PCSP(\CF_2^4, \CF_\ell^4)$.
+For $r=4$ and $3\leq k\leq\ell$, the result follows by~\Cref{locf} and by homomorphic relaxation as $\LO_3^r\to\LO_k^r\to \CF_k^r$.
+\end{proof}
+    
+\lo*
+
+\begin{proof}
+By~\Cref{locf} and by homomorphic relaxation as $\LO_3^r\to\LO_k^r$ and $\LO_\ell^r\to\CF_\ell^r$.
+\end{proof}
+\begin{remark}
+    In the above proofs of~\Cref{lem:existence} and~\Cref{lem:boosting}, the only required property of $\CF_\ell^r$ is that if a tuple in the relation has two entries which are equal, then the remaining $r-2$ entries in the tuple cannot all be equal. Thus, the same proof also shows a stronger result: 
+Define $\BNAE_\ell^{s,r-s}$ 
+    (Block-NAE) as the template on domain $[\ell]$, with a single relation which contains exactly the tuples for which if any $s$ coordinates have the same value, then the remaining $r-s$ coordinates cannot all have the same value. (This relation with $s=2$ is strictly larger than the relation corresponding to $\CF_\ell^r$ when $r \geq 6$). Then we have shown that $\PCSP(\LO_3^r, \BNAE_\ell^{2,r-2})$ is \NP-hard for all constant $\ell \geq 3, r\geq 4$. 
+In fact, using the same proof technique, one can also show \NP-hardness of $\PCSP(\LO_3^r, \BNAE_\ell^{s,r-s})$ for all constant $\ell \geq 3, r\geq 4, 2\leq s \leq r-2$ by considering the $s$-uniform Kneser hypergraph~$\KG^{(s)}(n,a)$, whose chromatic number is known to be  $\left\lceil\frac{n-s(a-1)}{s-1}\right\rceil$~\cite{AFL86}.
+\end{remark}
+
+{\small
+\bibliographystyle{alphaurl}
+\bibliography{bib}
+}
+
+\end{document}

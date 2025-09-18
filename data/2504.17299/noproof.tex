@@ -1,0 +1,730 @@
+\documentclass[a4paper,UKenglish,cleveref, autoref, thm-restate,authorcolumns, colorlinks]{lipics-v2021}
+\usepackage{graphicx} 
+\usepackage{amsthm}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{mathtools}
+\usepackage{xcolor}
+\usepackage{cleveref}
+\usepackage{url}
+\usepackage{todonotes}
+\usepackage{etoolbox}
+\usepackage[bibliography=common]{apxproof}
+
+\usepackage{tikz}
+\usetikzlibrary{automata, positioning, arrows,calc}
+
+
+\renewcommand{\thelemma}{\thesection.\arabic{lemma}}
+\newtheorem{question}[theorem]{Question}
+
+
+\newcommand\dom{\mathit{dom}}
+\newcommand\calC{\mathcal{C}}
+\newcommand\calD{\mathcal{D}}
+\newcommand\calF{\mathcal{F}}
+\newcommand\calS{\mathcal{S}}
+\newcommand\calT{\mathcal{T}}
+\newcommand\calU{\mathcal{U}}
+\newcommand\delay{\mathit{delay}}
+\newcommand\scomment[1]{{\color{blue}[#1]}}
+\newcommand{\trans}{\mathcal{T}}
+\newcommand{\transs}{\mathcal{S}}
+\newcommand\dia[2]{\ensuremath{\mathit{dia}_{#2}(#1)}}
+
+\newcommand{\dlev}{\ensuremath{d_l}}
+\newcommand{\TP}[0]{\textbf{TP}}
+\newcommand{\ATP}[0]{\textbf{ATP}}
+\newcommand{\STP}[0]{\textbf{STP}}
+\newcommand{\HTP}[0]{\textbf{HTP}}
+\newcommand{\dHam}[2]{d_{h}(#1,#2)}
+
+\appendixprelim{}
+
+
+\newrobustcmd{\manu}[2][]{{\color{black}\todo[color=blue!30,noshadow,#1]{{\bf Manu:} #2}}\ignorespaces}
+\newrobustcmd{\isma}[2][]{{\color{black}\todo[color=green!30,noshadow,#1]{{\bf Isma:} #2}}\ignorespaces}
+\newrobustcmd{\saina}[2][]{{\color{black}\todo[color=pink!30,noshadow,#1]{{\bf Saina:} #2}}\ignorespaces}
+\newrobustcmd{\khush}[2][]{{\color{black}\todo[color=red!45,noshadow,#1]{{\bf Khush:} #2}}\ignorespaces}
+
+
+\title{Approximate Problems for Finite Transducers}
+
+\author{Emmanuel Filiot}{Université libre de Bruxelles}{efiliot@ulb.e}{https://orcid.org/0000-0002-2520-5630}{He is a senior research associate at the National Fund for Scientific Research (F.R.S.-FNRS) in Belgium. His work is supported by the FNRS project T011724F.}
+\author{Isma\"el Jecker}{Université de Franche-Comté}{ismael.jecker@gmail.com}{https://orcid.org/0000-0002-6527-4470}{}
+\author{Khushraj Madnani}{Max Planck Institute for Software Systems}{kmadnani@mpi-sws.org}{https://orcid.org/0000-0003-0629-3847}{}
+\author{Saina Sunny}{Indian Institute of Technology Goa}{saina19231102@iitgoa.ac.in}{https://orcid.org/0009-0005-1366-0168}{}
+
+\authorrunning{E. Filiot, I. Jecker, K. Madnani and S. Sunny} 
+
+\ccsdesc{Theory of computation~Transducers}
+
+\ccsdesc[500]{Theory of computation~Quantitative automata}
+
+\hideLIPIcs  
+
+\nolinenumbers 
+
+\keywords{Finite state transducers, Edit distance, Determinisation, Functionality}
+
+\bibliographystyle{plain}
+
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+    Finite (word) state transducers extend finite state automata by defining a binary relation over finite words, called \emph{rational  relation}. If the rational relation is the graph of a function, this  function is said to be rational. The class of sequential functions is a strict subclass of rational functions, defined as the functions
+    recognised by input-deterministic finite state
+    transducers. The class membership problems between those classes
+    are known to be decidable. We consider approximate versions of
+    these problems and show they are decidable as well. This includes
+    the \emph{approximate functionality problem}, which asks whether
+    given a rational relation (by a transducer), is it \emph{close} to a
+    rational function, and the \emph{approximate determinisation problem}, which
+    asks whether a given rational function is close to a sequential
+    function. We prove decidability results for several classical
+    distances, including Hamming and Levenshtein edit distance. Finally, we
+    investigate the \emph{approximate uniformisation problem}, which
+    asks, given a rational relation $R$, whether there exists a sequential
+    function that is close to some function uniformising $R$. As its
+    exact version, we prove that this problem is undecidable.
+    
+\end{abstract}
+
+\section{Introduction}
+
+Finite (state) transducers are a fundamental automata model to compute functions from words to words. The literature on finite state transducers is rich, and dates back to the early days of computer science, where they were called generalised sequential machines~\cite{Raney1958SequentialF,Ginsburg1968-GINACO-2}. See also~\cite{DBLP:conf/stacs/MuschollP19,DBLP:journals/siglog/FiliotR16} and the references therein. Finite state transducers extend finite automata with outputs on their transitions, allowing them to produce none or several symbols. While finite automata recognise languages of (finite) words, finite transducers recognise binary relations from words to words, called \emph{rational relations}. When the rational relation is the graph of a function, it is called a \emph{rational function}. This subclass is decidable within the class of rational relations. In particular, given a finite transducer $T$, it is decidable in \textsc{PTime} whether $T$ recognises a function~\cite{GurariI83,twinningproperty}. In that case, $T$ is said to be \emph{functional}. Beyond the fact that it is a natural restriction, the class of functional transducers is of high importance, as many problems known to be undecidable for transducers (such as inclusion and equivalence), become decidable under the functional restriction.
+
+
+
+
+
+\subparagraph*{Determinisation} It turns out that non-determinism is needed for finite transducers to capture rational functions. A canonical example is the function $f_{\sf last} : \{a,b\}^*\rightarrow \{a,b\}^*$ that moves the last symbol upfront. For example, $f_{\sf last}(ab\underline{b}) = \underline{b}ab$ and $f_{\sf last}(ab\underline{a}) = \underline{a}ab$. Since the number of symbols that have to be read before reading the last symbol is arbitrarily large, a finite transducer recognising $f_{\sf last}$ needs non-determinism to guess the last symbol, as illustrated by the following transducer:
+\begin{center}
+\begin{tikzpicture}[draw=black,shorten >=1pt, auto, node distance=2cm, on grid, >=stealth,scale=0.8, every node/.style={scale=0.8}]
+    \tikzset{state/.style={circle, draw=black, thick, minimum size=0.5cm}}
+        \node[state, draw,initial,initial above, initial text=] (q0) {$q_0$};
+        \node[state] (q1) [right=of q0] {$q_1$};
+        \node[state] (q2) [left=of q0] {$q_2$};
+        \node[state, accepting,draw] (q3) [right=of q1] {$q_3$};
+        \node[state, accepting,draw] (q4) [left=of q2] {$q_4$};
+    
+        \path[->]
+            (q0) edge node {$\begin{array}{lll}a\mid aa\\ b\mid ab\end{array}$} (q1)
+            (q0) edge [above]node {$\begin{array}{l}a\mid ba\\ b\mid bb\end{array}$} (q2)
+            (q1) edge [loop above] node {$\begin{array}{l}a\mid a\\b\mid b\end{array}$} (q1)
+            (q2) edge [loop above] node {$\begin{array}{l}a\mid a\\b\mid b\end{array}$} (q2)
+            (q2) edge [above] node {$b\mid \epsilon$} (q4)
+            (q1) edge node {$a\mid\epsilon$} (q3);
+    \end{tikzpicture}
+\end{center}
+So non-determinism, unlike finite automata, brings some extra expressive power when it comes to finite transducers. On the other hand, non-determinism also yields some inefficiency issues when the input is received sequentially as a stream, because the whole input may have to be stored in memory until the first output symbol can be produced. This motivates the class of \emph{sequential functions}, as the rational functions recognised by \emph{input-deterministic} finite transducers, and the \emph{determinisation problem}: given an arbitrary finite transducer, does it recognise a sequential function? In other words, can it be (input-) determinised? This well-studied problem is known to be decidable in \textsc{PTime}~\cite{twinningproperty}. The determinisation problem is a central problem in automata theory. It has been for instance extensively considered for weighted automata~\cite{DBLP:journals/coling/Mohri97}, and a long-standing open problem is whether this problem is decidable for $(\mathbb{N},max,+)$-automata~\cite{DBLP:conf/stacs/KirstenL09}. 
+
+
+\subparagraph*{Approximate determinisation} The function $f_{\sf last}$ is not sequential, in other words, the latter transducer is not determinisable. It turns out that $f_{\sf last}$ is \emph{almost} sequential, in the sense that it is \emph{close to} some sequential function, for instance the identity function ${\sf id}$. "Close to" can be defined in different ways, by lifting standard distances between words to functions and relations. Two classical examples are
+the Hamming distance and the Levenshtein distance, which respectively measure the minimal number of letter substitutions (respectively letter substitutions, insertion and deletion) to rewrite a word into another. A distance $d$ between words is lifted to functions $f_1,f_2$ with the same input domain, by taking the supremum of $d(f_1(u),f_2(u))$ for all words $u$ in their domain. Coming back to our example, $f_{\sf last}$ and ${\sf id}$ are close for the edit distance, in the sense that $d(f_{\sf last},{\sf id})$ is finite for $d$ the edit distance, but they are not close for the Hamming distance. This raises a natural and fundamental problem, called \emph{approximate determinisation} problem (for a distance $d$): given a finite transducer recognising a function $f$, does there exists a sequential function $s$ such that $d(f,s)$ is finite? The approximate determinisation problem has been extensively studied for weighted automata~\cite{DBLP:conf/lics/AminofKL11,DBLP:journals/algorithmica/BuchsbaumGW01,DBLP:journals/tcs/AminofKL13} and quantitative automata~\cite{DBLP:conf/fsttcs/BokerH12,DBLP:journals/corr/BokerH14}, but, to the best of our knowledge, nothing was known for transducers. However, if both $f$ and $s$ are given (by finite transducers), checking whether they are close (for various and classical edit distances) is known to be decidable, even if $s$ is rational but not sequential~\cite{editdistance}. This can be seen as the verification variant of approximate determinisation, while approximate determinisation is rather a synthesis problem, for which only $f$ is given, and which asks to generate $s$ if it exists.  
+
+
+\subparagraph*{Contributions} In this paper, our main result is the decidability of approximate determinisation of finite transducers, for a family $\mathcal{E}$
+of edit distances, which include Hamming and Levenshtein distances. 
+For exact determinisation, determinisable finite transducers are characterised by the so called twinning property (\TP)~\cite{twinningproperty,twinningproperty0, ChoffrutG99}, a pattern that requires that the delay between any two outputs on the same input must not increase when taking synchronised cycles of the transducer. 
+As noticed in~\cite{editdistance}, bounded (Levenshtein) edit distance is closely related to the notion of word conjugacy. In this paper, we consider an approximate version of the twinning property (\ATP{}), with no constraints on the delay, but instead requires that the output words produced on the synchronised loops are conjugate. It turns out that \ATP{} is not sufficient to characterise approximately determinisable transducers, and an extra property is needed, the strongly connected twinning property (\STP{}), which requires that the \TP{} holds within SCCs of the finite transducer. We show that a transducer $\calT$ is approximately determinisable (for Levenshtein distance) iff both \ATP{} and \STP{} hold and, if they do, we show how to approximately determinise $\calT$. We also prove that $\ATP{}$ and $\STP{}$ are both decidable.
+
+For Hamming distance, which only allows letter substitutions, determinizable transducers are characterized by both \STP{} and another property called Hamming twinning property (\HTP{}), which roughly requires that outputs on synchronised cycles have same length and do not mismatch. We also show that \HTP{} is decidable, which entails decidability of approximate determinisation for Hamming distance. 
+
+
+
+We also consider another fundamental problem: the \emph{approximate functionality problem}. Informally, the approximate functionality problem asks whether a given rational relation $R$ is \emph{almost} a rational function, in the sense that $d(R,f)$ is finite for some rational function $f$, where $d(R,f)$ is now the supremum, for all $(u,v)\in R$, of $d(v,f(u))$. We prove that the approximate functionality problem is decidable for all the distances in $\mathcal{E}$. We prove this problem to be decidable for classical distances, including Hamming and Levenshtein. 
+
+Finally, we consider the \emph{approximate (sequential) uniformisation problem}. In its exact version, this problem asks whether for a given rational relation $R$, there exists a sequential function $f$ with the same domain, and whose graph is included in $R$. This problem is closely related to a synthesis problem, but is unfortunately undecidable~\cite{LoC,DBLP:conf/icalp/FiliotJLW16}. We consider its approximate variant, where instead of requiring that the graph of $f$ is included in $R$, we require that it is close to some function whose graph is included in $R$. However, despite this relaxation, we show that the problem is still undecidable. 
+
+
+\subparagraph*{Other related works} Variants of the determinisation problem have been considered in the literature~\cite{DBLP:conf/icalp/FiliotJLW16}. However, this work considers the \emph{exact} determinisation of a transducer $\calT$, by some sequential transducer which is \emph{close} to $\calT$, for some notions of structural similarity between transducers.  Robustness and continuity notions for finite transducers have been introduced in~\cite{DBLP:conf/fsttcs/HenzingerOS14}. While those notions are also based on word distances, the problems considered are different from ours.
+
+\section{Preliminaries}
+
+
+For every $k \in \mathbb{N}$, we let $[k]$ denote the set $\{1,\ldots, k\}$. 
+
+\subparagraph*{Words} Let $A$ or $B$ denote finite alphabets of letters. A word is a sequence of letters. The empty word is denoted by $\epsilon$. The length of a word is denoted by $|w|$, in particular $|\epsilon|=0$. The $i$th letter of a word $w$, for $i\in\{1,\dots,|w|\}$, is denoted by $w[i]$. The primitive root of $w$ is the shortest word $\rho_w$ such that $w\in\rho_w^*$. 
+The set of all finite words over the alphabet $A$ is denoted by $A^*$. A relation $R\subseteq A^*\times B^*$ is sometimes called a \emph{transduction}, and is said to be \emph{functional} if it is the graph of a function. We let $\dom(R) = \{ u\in A^*\mid \exists v\in B^*, (u,v)\in R\}$ be the \emph{domain} of $R$, and for all $u\in A^*$, we let $R(u) = \{v\in B^*\mid (u,v)\in R\}$. Note that $u\in\dom(R)$ iff $R(u)\neq\varnothing$.
+
+\subparagraph*{Finite State Automata and Transducers} A (non-deterministic) finite automaton over an alphabet $A$ is denoted as a tuple ${\cal A} = (Q, I, \Delta, F)$ where $Q$ is the finite set of states, $I\subseteq Q$ the set of initial states, $F\subseteq Q$ the set of final states, and $\Delta\subseteq Q\times A \times Q$ the transition relation. A \emph{run} on a word $\sigma_1\dots \sigma_n$ is a sequence of states $q_1\dots q_{n+1}$ such that  $(q_i,\sigma_i,q_{i+1})$ for all $i\in[n]$. It is accepting if and only if $q_1\in I$ and $q_{n+1}\in F$. We denote by $L(\cal A)$ the language accepted by $\cal A$, i.e. the set of words on which there is an accepting run. An automaton is said to be \emph{trim} if for any state $q$, there exists at least one accepting run visiting $q$. When ${\cal A}$ is deterministic, we denote the transition function as $\delta : Q\times A \rightarrow Q$.
+
+
+A \emph{rational transducer} $\cal T$ over an input alphabet $A$ and an output alphabet $B$ is a (non-deterministic) finite automaton over a finite subset of $A^*\times B^*$. A transition $(p,(u,v),q)$ of $\cal T$ is often denoted $p\xrightarrow{u\mid v}_{\cal T} q$. More generally, we write $p\xrightarrow{u_1\dots u_n\mid v_1\dots v_n}_{\calT} q$ whenever there exists a run $\rho$ of $\calT$ from $p$ to $q$ on $(u_1,v_1)\dots (u_n,v_n)$. The \emph{relation recognised} by $\cal T$, denoted as $R_{\cal T}\subseteq A^*\times B^*$, is defined as 
+$R_{\cal T} = \{ (u,v)\mid\exists q_0\in I,q_f\in F,q_0\xrightarrow{u\mid v}_{\calT} q_f\}$. The relations recognised by rational transducers are called \emph{rational relations}. 
+
+
+When rational transducers recognise functions, it is often convenient to restrict their transitions to input words of length one exactly, modulo the possibility of producing a word on accepting states. This defines the so-called class of real-time transducers, which is expressively equivalent to rational transducers when restricted to functions. 
+Formally, a \emph{real-time transducer} (or simply, a transducer in the sequel) $\calT$ over input alphabet $A$ and output alphabet $B$ is given by a tuple ${\cal T} = (Q, I,\Delta, F, \lambda)$ where 
+$(Q,I,\Delta, F)$ is a finite automaton over a finite subset of $A\times B^*$, and $\lambda : F\rightarrow B^*$ is a final output function. 
+
+
+Given a word $u = a_1 \cdots a_n \in A^*$ where $a_i\in A$ for all $i$, a run $\rho$ of $\calT$ over $u$ is a sequence $q_0 \cdots q_n$ such that $q_0 \in I$ and $(q_{i-1},a_i,v_i,q_i) \in \Delta$ for all $i \in [n]$. The \emph{input word} of the run $\rho$ is $u = a_1 \cdots a_n$ and the \emph{output word} of $\rho$ is $v_1 \cdots v_n \cdot \lambda(q_n)$ if $q_n$ is a final state; otherwise, $v_1 \cdots v_n$. As for rational transducers, the relation $R_{\cal T}$ recognised by $\cal T$ is defined as the set of pairs $(u,v)$ such that $u$ (resp. $v$) is the input (resp. output) word of some accepting run. We often confuse $\cal T$ with $R_{\cal T}$, and may write $\dom(\calT)$ for $\dom(R_\calT)$, or $\calT(u)$ for $R_\calT(u)$. 
+
+
+
+ The \emph{underlying automaton} of $\calT$ is the automaton obtained by projection on inputs, i.e. the automaton ${\cal A} = (Q, I, \Delta', F)$ such that $\Delta' = \{(q,a,q')\mid \exists (q,a,v,q')\in\Delta\}$. Note that $\dom(\calT) = L({\cal A})$. The transducer $\calT$ is said to be \emph{trim} if its underlying automaton is trim.
+
+ 
+  The cartesian product, denoted $\calT_1 \times \calT_2$,
+  of two transducers $\calT_i = (Q_i, I_i,\Delta_i, F_i, \lambda_i)$, $i\in[2]$, is the transducer $(Q_1 \times Q_2, I_1 \times I_2,\Delta, F_1 \times F_2, \lambda)$  where $((p_1,p_2),a,(v_1,v_2),(q_1,q_2)) \in \Delta$ if $(p_i,a,v_i,q_i) \in \Delta_i$ for $i \in [2]$, and, $\lambda(p_1,p_2) = (\lambda_1(p_1),\lambda_2(p_2))$ for $(p_1,p_2) \in F_1 \times F_2$.
+
+\subparagraph*{(Sub)classes of rational functions} Let $\calT$ be a real-time transducer. When $R_\calT$ is functional, $\calT$ is said to be functional as well, and the functions recognised by functional transducers are called \emph{rational functions}. If the underlying automaton of $\calT$ is unambiguous (i.e., has at most one accepting run on any input), $\calT$ is referred to as an \emph{unambiguous transducer}. It is well-known that a function is recognised by real-time transducer iff, it is recognised by a rational transducer~\cite{Berstel} iff, it is recognised by an unambiguous transducer~\cite{eilenberg1974automata}.
+
+
+\emph{Sequential transducers} are those whose underlying automaton is deterministic and they define functions known as \emph{sequential functions}. In that case, we denote the transition function as $\delta : Q\times A\rightarrow Q\times B^*$. The functions recognised by transducers that are
+finite disjoint unions of sequential transducers are called \emph{multi-sequential functions}~\cite{DBLP:conf/stacs/ChoffrutS86,DBLP:journals/ijfcs/JeckerF18}. The symmetric counterpart of multi-sequential is the class of \emph{series-sequential functions}.
+
+
+A transducer $\calT$ is \emph{series-sequential} if it is a finite disjoint union of sequential transducers $\calD_1, \ldots , \calD_k$
+where additionally, for every $1 \leq i < k$,  there is
+a single transition from a (not necessarily final) state $q_i$ of $\calD_i$
+to the initial state of the next transducer $\calD_{i+1}$. Moreover, the initial state of $\calT$ is the initial state of $\calD_1$ (the initial states of $\calD_i$ is not considered as initial in $\calT$, for all $2\leq i\leq k$).
+In particular, non-determinism is allowed, for all $1\leq i<k$, only in state $q_i$, from which it is possible to move to $\calD_{i+1}$ or to stay in $\calD_i$. We denote\footnote{This notation should not be confused with the split-sum operator of~\cite{DBLP:conf/csl/AlurFR14}, which is semantically different.} such a transducer as $\calD_1 \cdots \calD_k$.
+A function is \emph{series-sequential} if it is recognised
+by a series-sequential transducer.
+
+\subparagraph{Distances between words and word functions} We recall that a metric on a set $E$ is a mapping
+$d : E^2\rightarrow\mathbb{R}^+\cup \{\infty\}$ satisfying the separation, symmetry and triangle inequality axioms. 
+Classical metrics between finite words are 
+the \emph{edit distances}.
+An edit distance between two words is the minimum number of edit operations required to rewrite a word to another if possible, and $\infty$ otherwise. Depending on the set of allowed edit operations, we get different edit distances.
+\Cref{table:editdistance} gives widely used edit distances with their edit operations.
+
+\begin{table}[h!]
+\centering 
+\begin{tabular}{|p{4.8cm}|p{1.2cm}|p{6cm}|}
+\hline
+Edit Distances & Notation & Edit Operations \\
+\hline
+Hamming   & \ $d_h$   & letter-to-letter substitutions   \\
+Longest Common Subsequence   & \ $d_{lcs}$   & insertions and deletions   \\
+Levenshtein   & \ $\dlev$   & insertions, deletions and substitutions   \\
+Damerau-Levenshtein   & \ $d_{dl}$   & insertions, deletions, substitutions and swapping adjacent letters   \\
+\hline
+\end{tabular}
+\caption{Edit Distances \cite{editdistance}}
+\label{table:editdistance}
+\end{table}
+
+Distances between words can be lifted to that between functions from words to words.
+\begin{definition}[Metric over Functions \cite{editdistance}]\label{def:distfunc}
+ Let $d$ be a metric on words over some alphabet $B$. Given two partial functions $f_1,f_2: A^* \rightarrow B^*$, the distance between $f_1$ and $f_2$ is defined as 
+$$d(f_1,f_2) = \begin{cases} \sup \left \{\,  d(f_1(w), f_2(w)) \,\mid\,  w \in \dom(f_1) \right \} & \text{ if $\dom(f_1) = \dom(f_2)$} \\
+ \infty & \text{ otherwise } 
+ \end{cases}$$
+\end{definition}
+
+It is shown that $d$ is a metric over functions (Proposition 3.2 of \cite{editdistance}). 
+The distance between two functional transducers is defined as the distance between the functions they recognise. A notion closely related to the distance between functions is \emph{diameter} of a relation. The diameter of a relation $R$ w.r.t.~metric $d$, denoted by $\dia{R}{d}$ is defined to be the supremum of the distance of every pair in the relation, i.e.,
+$\dia{R}{d} = \sup \{d(u,v) \mid (u,v) \in R\}$.
+
+The distance between rational functions and diameter of rational relation w.r.t.~the metrics given in \Cref{table:editdistance} are computable \cite{editdistance}. The computability of distance and diameter relies on the notion of conjugacy.  Two words $u$ and $v$ are conjugate if there exist words $x,y$ such that $u=xy$ and $v =yx$. In other words, they are cyclic shifts of each other. For example, words $aabb$ and $bbaa$ are conjugate with $x=aa$ and $y=bb$. But $aabb$ and $abab$ are not conjugate. Conjugacy is an equivalence relation over words.
+
+\begin{proposition}\label{prop:conj}
+    Let $x,y,x',y',u,v$ be words and $c,C \in \mathbb{N}$. For any metric $d$ in \Cref{table:editdistance}, if $d(xu^ky,x'v^{ck}y') \leq C$ for all $k \geq 0$, then $|u| = |v^{c}|$ and the primitive roots of $u$ and $v$ are conjugate. 
+\end{proposition}
+
+\begin{proof}\textcolor{red}{TOPROVE 0}\end{proof}
+
+
+\begin{proposition}[\cite{editdistance}]\label{prop:levboundconj}
+    Given a rational relation $R$ defined by a transducer $\calT$, $\dia{R}{d} < \infty$ for $d \in \{\dlev,d_{lcs},d_{dl}\}$ if and only if every pair of input-output words generated by loops in $\calT$ are conjugate.
+   
+\end{proposition}
+
+\section{Twinning Properties}
+ The class of sequential functions has been characterised by transducers satisfying the so called \emph{twinning property}. In this section, we recall this property and introduce three variants --- approximate twinning property, strongly connected twinning property and Hamming twinning property. We also show that these properties on transducers are decidable as well as independent of the representation of the transducers.
+All these properties are expressed as particular conditions on twinning patterns. A \emph{twinning pattern} for a transducer $\calT = (Q, I, \Delta, F, \lambda)$ over $A,B$ is a tuple $(p_1,q_1,p_2,q_2,u,v,u_1,v_1,u_2,v_2)\in Q^4\times (A^*)^2 \times (B^*)^4$ such that the following runs (graphically depicted) exist:
+\begin{center}
+\begin{tikzpicture}[draw=black,shorten >=1pt, auto, node distance=2cm, on grid, >=stealth,scale=0.8, every node/.style={scale=0.8}]
+    \tikzset{state/.style={circle, draw=black, thick, minimum size=0.5cm}}
+        \node[state] (q0) {$p_1$};
+        \node[state] (q1) [right=of q0] {$q_1$};
+        \node[state] (p0) [right=of q1]{$p_2$};
+        \node[state] (p1) [right=of p0] {$q_2$};
+    
+        \path[->]
+            (q0) edge [above] node {$u \mid u_1$} (q1)
+            (q1) edge [loop above] node {$v \mid v_1$} (q1)
+            (p0) edge [above] node {$u \mid u_2$} (p1)
+            (p1) edge [loop above] node {$v \mid v_2$} (p1);
+    \end{tikzpicture}
+\end{center}
+
+The longest common prefix of any two words is denoted by $u\wedge v$. The \emph{delay} between $u$ and $v$, denoted by $\delay(u,v)$, is the pair $(u',v')$ such that $u = (u\wedge v)u'$ and $v=(u\wedge v)v'$.
+
+\begin{definition}[Twinning Property (\TP)]\label{def:tp}
+    Let $\calT$ be a trim transducer.
+    We say that $\calT$ satisfies \emph{twinning property} if for each twinning pattern
+    $(p_1,q_1,p_2,q_2,u,v,u_1,v_1,u_2,v_2)$ such that $p_1,p_2$ are initial,   $\delay(u_1,u_2) = \delay(u_1v_1,u_2v_2)$ holds. 
+\end{definition}
+
+It is well-known that a function recognised by a transducer $\calT$ is sequential iff $\calT$ satisfies the twinning property~\cite{DBLP:journals/tcs/Choffrut77,twinningproperty}. We now define its approximate variant.
+
+\begin{definition}[Approximate Twinning Property (\ATP)]\label{def:atp}
+    A trim transducer $\calT$ satisfies \emph{approximate twinning property}
+    if for each twinning pattern $(p_1,q_1,p_2,q_2,u,v,u_1,v_1,u_2,v_2)$
+    where $p_1,p_2$ are initial, the words $v_1$ and $v_2$ are conjugate. 
+\end{definition}
+
+\begin{definition}[Strongly Connected Twinning Property (\STP)]\label{def:stp}
+    A trim transducer $\calT$ satisfies \emph{strongly connected twinning property} if for each twinning pattern $(p_1,q_1,p_2,q_2,u,v,u_1,v_1,u_2,v_2)$ such that $p_1=p_2$ (not necessarily initial) and $p_1,q_1,q_2$ are in the same strongly connected component,  $\delay(u_1,u_2) = \delay(u_1v_1,u_2v_2)$ holds.
+\end{definition}
+
+
+\begin{definition}[Hamming Twinning Property (\HTP)]\label{def:htp}
+    A trim transducer $\calT$ satisfies \emph{Hamming twinning property} if for each twinning pattern $(p_1,q_1,p_2,q_2,u,v,u_1,v_1,u_2,v_2)$ such that $p_1,p_2$ are initial, it holds that $|v_1|=|v_2|$ and there is no mismatch between $v_1$ and $v_2$, i.e. for all position $i\in[\text{max}(|u_1|,|u_2|),\text{min}(|u_1v_1|,|u_2v_2|)]$, $(u_1v_1)[i] = (u_2v_2)[i]$.
+\end{definition}
+
+
+\begin{proposition}\label{proposition:TPrelations}
+    Each trim transducer satisfying \TP{} also satisfies \ATP{}, \STP{} and \HTP.
+\end{proposition}
+
+\begin{proof}\textcolor{red}{TOPROVE 1}\end{proof}
+
+The following lemma states that \ATP{}, \STP{} and \HTP{} is preserved between transducers up to finite edit distance, and so in particular between equivalent transducers. This shows that these properties do not depend on the representation of the transductions, not even on the representation of close transductions.
+
+\begin{lemma}\label{lem:preserveTPs}
+    Let $\trans$ and $\transs$ be two trim transducers
+    satisfying $\dom(\trans) = \dom(\transs)$, and
+    such that there exists an edit distance $d$ in \Cref{table:editdistance}
+    and a constant $C \in \mathbb{N}$
+    for which
+    \[
+    d(\trans(u),\transs(u))<C \text{ for all $u \in \dom(\trans)$}.
+    \]
+    Then for every ${\sf P}\in \{\ATP,\STP\}$,
+    $\transs$ satisfies ${\sf P}$ if and only if $\trans$ satisfies ${\sf P}$.
+    The statement also holds for $d = d_h$ and ${\sf P} = \HTP$.
+\end{lemma}
+
+\begin{proof}\textcolor{red}{TOPROVE 2}\end{proof}
+
+We now show that checking each of the variants of the twinning property is decidable.
+\begin{lemma}\label{lem:decideTPs}
+    It is decidable whether a transducer satisfies \ATP{}, \STP{} and \HTP{}.
+\end{lemma}
+
+\begin{proof}\textcolor{red}{TOPROVE 3}\end{proof}
+     
+
+\section{Approximate determinisation of rational functions}
+
+In this section, we define \emph{approximately determinisable functions} and give decidable properties on transducers to characterise them.
+
+\begin{definition}[Approximate determinisation]\label{def:approxdeter}
+A rational function $f : A^\ast \rightarrow B^\ast$ is \emph{approximately determinisable} w.r.t.~metric $d$ if there exists a sequential function $g : A^\ast \rightarrow B^\ast$ such that $d(f,g) < \infty$. In this case, we also say that $g$ approximately determinises $f$ w.r.t.~$d$. 
+\end{definition}
+
+\begin{example}
+The function $f_{\sf last}$ from the introduction is approximately determinisable w.r.t.~Levenshtein, while not w.r.t.~Hamming distance. The function $f_{\sf last}^\ast$ (depicted below) that maps $u_1\# \cdots u_n\#$, for $n \geq 1$, to $f_{\sf last}(u_1)\# \cdots f_{\sf last}(u_n)\#$ for some separator $\#$ is approximately determinisable w.r.t~neither Levenshtein nor Hamming distance.
+\begin{center}
+\begin{tikzpicture}[draw=black,shorten >=1pt, auto, node distance=2cm, on grid, >=stealth,scale=0.8, every node/.style={scale=0.8}]
+    \tikzset{state/.style={circle, draw=black, thick, minimum size=0.5cm}}
+        \node[state, draw,accepting,initial,initial above, initial text=] (q0) {$q_0$};
+        \node[state,draw] (q3) [right=of q0] {$q_a$};
+        \node[state,draw] (q4) [left=of q0] {$q_b$};
+        \node[state] (q1) [right=of q3] {$p_a$};
+        \node[state] (q2) [left=of q4] {$p_b$};
+    
+        \path[->]
+            (q0) edge [bend right,below] node {$\begin{array}{lll}a\mid aa\\ b\mid ab\end{array}$} (q1)
+            (q0) edge [bend left,below] node {$\begin{array}{l}a\mid ba\\ b\mid bb\end{array}$} (q2)
+            (q1) edge [loop right] node {$\begin{array}{l}a\mid a\\b\mid b\end{array}$} (q1)
+            (q2) edge [loop left] node {$\begin{array}{l}a\mid a\\b\mid b\end{array}$} (q2)
+            (q2) edge [above] node {$b\mid \epsilon$} (q4)
+            (q1) edge [above] node {$a\mid\epsilon$} (q3)
+            (q3) edge [above] node  {$\#|\#$} (q0)
+            (q4) edge [above] node  {$\#|\#$} (q0);
+    \end{tikzpicture}
+    \end{center}
+
+\end{example}
+The approximate determinisation problem asks whether a rational function given as a functional transducer
+is approximately determinisable.
+We prove the following.
+\begin{theorem}\label{theorem:main}
+    The approximate determinisation problem for rational functions w.r.t.~Levenshtein family ($d_l,d_{lcs},d_{dl}$) and Hamming $(d_h)$ distance are decidable.
+\end{theorem}
+To prove the theorem, we show that \ATP{} and \STP{} characterise
+rational functions that can be approximately determinised w.r.t~Levenshtein family (\Cref{theorem:approxdetlev}).
+Similarly, we establish that \HTP{} and \STP{} characterise rational functions that can be approximately determinised
+w.r.t~Hamming distance (\Cref{theorem:approxdetHamming}).
+Theorem~\ref{theorem:main} then follows directly,
+as these three properties are decidable (\Cref{lem:decideTPs}).
+We now outline the proof strategy.
+The full proof for Levenshtein family is presented in \cref{subsec:lev},
+while the proof for Hamming distance, which follows a similar approach, is deferred to \cref{subsec:ham}.
+
+\vspace{-0.3cm}
+\subparagraph*{Levenshtein family}
+We show with \Cref{proposition:approxtoATPSTP} that \ATP{} and \STP{}
+are necessary conditions for approximate determinisation with respect to Levenshtein family,
+a consequence of \Cref{lem:preserveTPs}.
+The main challenge lies in proving that these properties are sufficient.
+To prove it, we first show that \ATP{} alone
+suffices for certain subclasses of functional transducers:
+it enables the approximate determinisation of multi-sequential (\Cref{lemma:multiseqapprox})
+and unambiguous series-sequential (\Cref{lemma:seriesseqapprox}) functions.
+However, for rational functions in general, \ATP{} does not suffice. For example, the transducer above for $f^*_{\sf last}$ satisfies \ATP{} but is not approximately determinisable.
+To extend this result to all rational functions,
+we incorporate \STP{}.
+Given a functional transducer $\trans$ satisfying \STP{},
+we transform each strongly connected component of  $\trans$ into a sequential transducer,
+effectively decomposing $\trans$ into a finite union of concatenations of sequential transducers.
+We then leverage our results for series-sequential and multi-sequential functions
+to approximate this structure with a sequential function~(\Cref{theorem:approxdetlev}).
+
+\Cref{fig:enter-label} illustrates the main construction technique used in these proofs:
+Starting with a transducer 
+$\trans$ that we aim to approximate, we construct a sequential transducer 
+$\calD_1$ as follows. We apply the powerset construction to 
+$\trans$, introducing a distinguished state (marked by a $\bullet$ in the figure) in each subset.
+The output is determined by the distinguished state’s production.
+If the distinguished state reaches a point where it has no continuation,
+we simply transition to another distinguished state.
+We show that \ATP{}, combined with a carefully chosen priority scheme for selecting distinguished states,
+ensures bounded Levenshtein distance.
+
+\vspace{-0.3cm}
+ \subparagraph*{Hamming Distance} 
+The proof strategy is similar to the Levenshtein setting:
+We first show with \Cref{proposition:approxtoHTPSTP}
+that \HTP{} and \STP{} are necessary conditions
+for approximate determinisation with respect to Hamming distance,
+we show that \HTP{} alone suffices for the approximate determinisation
+of multi-sequential (\Cref{lemma:multiseqapproxHamming}) and
+series-sequential (\Cref{lemma:seriesseqapproxHamming}) functions,
+and then we conclude by using \STP{} to transform functional transducers
+into a finite unions of concatenations of sequential transducers (\Cref{theorem:approxdetHamming}).
+
+While the core ideas remain similar to those used for the Levenshtein family,
+the constructions required for the Hamming distance,
+illustrated in \Cref{fig:enter-label},
+are more intricate.  
+Approximating the transducer $\trans$ with respect to the Levenshtein distance
+(as shown by $\calD_1$ in the figure) allows us, at each step, to select a run,
+produce its output, and disregard other possible runs.
+However, for the Hamming distance, it is crucial to carefully track the length difference
+between the produced output and the potential outputs of alternative runs.  
+For instance, compare the outputs of $\trans$, $\calD_1$, and $\calD_2$ after reading $babcccc$~:
+\[
+\begin{array}{lll}
+\calT(\texttt{babcccc}) & = & \texttt{bbabcabcabcabc},\\
+\calD_1(\texttt{babcccc}) & = & \texttt{aabcabcabcabc},\\
+\calD_2(\texttt{babcccc}) & = & \texttt{ababcabcabcabc}.
+\end{array}
+\]
+We observe that after reading the input $bab$,
+$\calD_1$ realizes that its distinguished state is incorrect and jumps to another state.
+However, this shift causes a misalignment with $\trans$,
+and reading additional $c$'s results in arbitrarily
+many mismatches.\footnote{The Levenshtein distance remains bounded, as inserting a letter at the start resynchronizes both outputs.}  
+In contrast, $\calD_2$ keeps in memory the delay relative to other runs.
+Although it may still introduce mismatches along the way,
+it ensures that when the distinguished run terminates,
+it adjusts the output while transitioning to another run,
+preventing long-term misalignment with $\trans$.
+
+
+
+\begin{figure}
+    \centering
+    \begin{subfigure}{0.25\textwidth}
+        \begin{tikzpicture}[draw=black,shorten >=1pt, auto, node distance=2cm, on grid, >=stealth,scale=0.7, every node/.style={scale=0.7}]
+        \tikzset{state/.style={circle, draw=black, thick, minimum size=0.5cm}}
+        \arraycolsep=1.4pt
+            \node at (-0.75,0) {\Large$\calT$:}; 
+            \node[state] (s) at (0.625,0) {$s$};
+            \node[state] (p1) at (0,-1.5) {$p_1$};
+            \node[state] (p2) at (0,-3) {$p_2$};
+            \node[state] (q1) at (1.25,-1.5) {$q_1$};
+            \node[state] (q2) at (1.25,-3) {$q_2$};
+            \node[state,accepting] (f) at (0.625,-4.5) {$f$};
+        
+            \path[->]
+                ($(s) + (0,0.7)$) edge (s)
+                (s) edge [left] node[yshift=5pt] {$\begin{array}{lll}a &|& a\\b&|&\epsilon\end{array}$} (p1)
+                (p1) edge [left] node {$\begin{array}{lll}a &|& a\\b&|&\epsilon\end{array}$} (p2)
+                (p2) edge [left] node {$a \mid a$} (f)
+                (s) edge [right] node[yshift=5pt] {$\begin{array}{lll}a &|& \epsilon\\b&|&b\end{array}$} (q1)
+                (q1) edge [right] node {$\begin{array}{lll}a &|& \epsilon\\b&|&b\end{array}$} (q2)
+                (q2) edge [right] node {$b \mid b$} (f)
+                (f) edge [loop below] node[left,xshift=-5pt] {$c \mid abc$} (f);
+        \end{tikzpicture}
+    \end{subfigure}
+    \begin{subfigure}{0.25\textwidth}
+        \begin{tikzpicture}[draw=black,shorten >=1pt, auto, node distance=2cm, on grid, >=stealth,scale=0.8, every node/.style={scale=0.8}]
+        \tikzset{state/.style={circle, draw=black, thick, minimum size=0.5cm}}
+        \arraycolsep=1.4pt
+            \node at (-1.25,0) {\Large$\calD_1$:}; 
+            \node[draw,rectangle, rounded corners, minimum height = 18pt, thick] (p0)
+            at (0,0) {\ $s$ \ };
+            \node[draw,rectangle, rounded corners, minimum height = 18pt, thick] (p1)
+            at (0,-1.5) {\ $p_1$ \ $q_1$ \ };
+            \node[draw,rectangle, rounded corners, minimum height = 18pt, thick] (p2)
+            at (0,-3) {\ $p_2$ \ $q_2$ \ };
+            \node[draw,rectangle, rounded corners, minimum height = 18pt, thick] (p4)
+            at (0,-4.5) {\ $f$ \ };
+            \node[draw,rectangle, rounded corners, minimum height = 16pt, minimum width = 16, thick]
+            at (0,-4.5) {};
+            \node at ($(0,0) + (-0.17,0)$) {$\bullet$};
+            \node at ($(0,-1.5) + (-0.56,0)$) {$\bullet$};
+            \node at ($(0,-3) + (-0.56,0)$) {$\bullet$};
+            \node at ($(0,-4.5) + (-0.17,0)$) {$\bullet$};
+        
+            \path[->]
+                ($(p0) + (0,0.7)$) edge (p0)
+                (p0) edge [left] node {$a \mid a\strut$} (p1)
+                (p1) edge [left] node {$a \mid a\strut$} (p2)
+                (p2) edge [left] node {$a \mid a\strut$} (p4)
+                (p0) edge [right] node {$b\mid\epsilon\strut$} (p1)
+                (p1) edge [right] node {$b\mid\epsilon\strut$} (p2)
+                (p2) edge [right] node {$b\mid\epsilon\strut$} (p4)
+                (p4) edge [loop below] node[left,xshift=-5pt] {$c \mid abc$} (p4);
+        \end{tikzpicture}
+    \end{subfigure}
+    \begin{subfigure}{0.45\textwidth}
+        \begin{tikzpicture}[draw=black,shorten >=1pt, auto, node distance=2cm, on grid, >=stealth,scale=0.8, every node/.style={scale=0.8}]
+        \tikzset{state/.style={circle, draw=black, thick, minimum size=0.5cm}}
+        \arraycolsep=1.4pt
+            \node at (-1.25,0) {\Large$\calD_2$:}; 
+            \node[draw,rectangle, rounded corners, minimum height = 18pt, thick] (p0)
+            at (0,0) {\ $(s,\epsilon)$ \ };
+            \node[draw,rectangle, rounded corners, minimum height = 18pt, thick] (p11)
+            at (-1.35,-1.5) {\ $(p_1, a)$ \ $(q_1,\epsilon)$ \ };
+            \node[draw,rectangle, rounded corners, minimum height = 18pt, thick] (p12)
+            at (1.35,-1.5) {\ $(p_1, \epsilon)$ \ $(q_1,b)$ \ };
+            \node[draw,rectangle, rounded corners, minimum height = 18pt, thick] (p21)
+            at (-2.7,-3) {\ $(p_2, aa)$ \ $(q_2,\epsilon)$ \ };
+            \node[draw,rectangle, rounded corners, minimum height = 18pt, thick] (p22)
+            at (0,-3) {\ $(p_2, \epsilon)$ \ $(q_2,\epsilon)$ \ };
+            \node[draw,rectangle, rounded corners, minimum height = 18pt, thick] (p23)
+            at (2.7,-3) {\ $(p_2, \epsilon)$ \ $(q_2,bb)$ \ };
+            \node[draw,rectangle, rounded corners, minimum height = 18pt, thick] (f)
+            at (0,-4.5) {\ $(f,\epsilon)$ \ };
+            \node[draw,rectangle, rounded corners, minimum height = 16pt, minimum width = 32, thick]
+            at (0,-4.5) {};
+            \node at ($(0,0) + (-0.47,0)$) {$\bullet$};
+            \node at ($(-1.35,-1.5) + (-1.14,0)$) {$\bullet$};
+            \node at ($(1.35,-1.5) + (-1.11,0)$) {$\bullet$};
+            \node at ($(-2.7,-3) + (-1.21,0)$) {$\bullet$};
+            \node at ($(0,-3) + (-1.10,0)$) {$\bullet$};
+            \node at ($(2.7,-3) + (-1.19,0)$) {$\bullet$};
+            \node at ($(0,-4.5) + (-0.47,0)$) {$\bullet$};
+        
+            \path[->]
+                ($(p0) + (0,0.7)$) edge (p0)
+                (p0) edge [left] node[yshift=2pt] {$a \mid \epsilon\strut$} (p11)
+                (p0) edge [right] node[yshift=2pt] {$b \mid \epsilon\strut$} (p12)
+                (p11) edge [left] node[yshift=2pt] {$a \mid \epsilon\strut$} (p21)
+                (p11) edge [left] node[yshift=2pt,xshift=-2pt] {$b \mid a\strut$} (p22)
+                (p12) edge [right] node[yshift=2pt,xshift=2pt] {$a \mid a\strut$} (p22)
+                (p12) edge [right] node[yshift=2pt] {$b \mid \epsilon\strut$} (p23)
+                (p21) edge [left, bend right] node[yshift = -5pt] {$a\mid aaa\strut$} (f)
+                (p21) edge [right, bend right] node[yshift = 9pt, xshift = -9pt] {$b\mid b\strut$} (f)
+                (p22) edge [left] node {$a\mid a\strut$} (f)
+                (p22) edge [right] node {$b\mid b\strut$} (f)
+                (p23) edge [left, bend left] node[yshift = 9pt, xshift = 9pt] {$a\mid a\strut$} (f)
+                (p23) edge [right, bend left] node[yshift = -5pt] {$b\mid bbb\strut$} (f)
+                (f) edge [loop below] node[left,xshift=-5pt] {$c \mid abc$} (f);
+        \end{tikzpicture}
+    \end{subfigure}
+    \caption{An unambiguous non-deterministic transducer $\calT$,
+    along with two sequential approximations $\calD_1$ and $\calD_2$
+    with respect to the Levenshtein distance, respectively Hamming distance.}
+    \label{fig:enter-label}
+\end{figure}
+
+
+
+
+\subsection{Approximate determinisation for Levenshtein Family}\label{subsec:lev}
+We give a decidable characterisation of approximately determinisable rational functions w.r.t.~Levenshtein family of distances --- Levenshtein ($\dlev$), Longest common subsequence ($d_{lcs}$) and Damerau-Levenshtein ($d_{dl}$). They are all equivalent up to boundedness (Lemma 2.1 and Remark 7 of \cite{editdistance}), i.e., for any two rational functions $f,g$, $d_{lcs}(f,g) < \infty \iff \dlev(f,g) < \infty \iff d_{dl}(f,g) < \infty.$ We show that a rational function is approximately determinisable w.r.t.~Levenshtein family if and only if the transducer that defines the function satisfies both \ATP{} and \STP{}. One direction is a consequence of \Cref{lem:preserveTPs} as follows.
+
+\begin{proposition}\label{proposition:approxtoATPSTP}
+   If a rational function given by a trim transducer $\calT$ is approximately determinisable w.r.t.~a metric $d \in \{d_l,d_{lcs},d_{dl}\}$ then $\calT$ satisfies both \ATP{} and \STP{}.
+\end{proposition}
+\begin{proof}\textcolor{red}{TOPROVE 4}\end{proof}
+
+Towards proving the other direction, we prove the following lemma, which provides a bound on the distance between the output words produced by distinct runs of a transducer on the same prefix of an input word using {\Cref{prop:levboundconj}. 
+
+
+\begin{lemma}\label{lem:ATPtobound}
+       Let $\calT$ be a trim transducer satisfying the \ATP{}. Then, there exists a constant $N_\calT \in \mathbb{N}$ such that for any two output words $v, v' \in B^*$ produced via two distinct runs of $\calT$ from an initial state on the same prefix of an input word, $d(v,v') \leq N_\calT$ for $d \in \{d_l,d_{lcs},d_{dl}\}$.
+    \end{lemma}
+
+    \begin{proof}\textcolor{red}{TOPROVE 5}\end{proof}
+
+For subclasses of rational functions, namely multi-sequential and series-sequential functions, we show that \ATP{} is a sufficient condition for approximate determinisation. 
+\begin{lemma} \label{lemma:multiseqapprox}
+    A multi-sequential function given by a trim transducer $\calT$ is approximately determinisable w.r.t.~a metric $d \in \{d_l,d_{lcs},d_{dl}\}$ iff $\calT$ satisfies the \ATP{}.
+\end{lemma}
+
+\begin{proof}\textcolor{red}{TOPROVE 6}\end{proof}
+
+The characterisation of Lemma~\ref{lemma:multiseqapprox} also holds for series-sequential functions.
+\begin{lemma} \label{lemma:seriesseqapprox}
+    Let $\calT = \calD_1 \cdots \calD_k$  be an unambiguous transducer where each $\calD_i$ is a sequential trim transducer for $i \in [k], k>1$. The series-sequential function defined by $\calT$ is approximately determinisable w.r.t.~a metric $d \in \{d_l,d_{lcs},d_{dl}\}$ if and only if $\calT$ satisfies \ATP{}.
+\end{lemma}
+
+\begin{proof}\textcolor{red}{TOPROVE 7}\end{proof}
+We extend the characterisation to rational functions, where \STP{} is also required to decompose the function into a finite union of series-sequential functions, which can then be transformed into a multi-sequential function using the properties of \ATP{}. 
+
+\begin{lemma}\label{theorem:approxdetlev}
+
+    A rational function given by a trim transducer $\calT$ is approximately determinisable w.r.t.~a metric $d \in \{d_l,d_{lcs},d_{dl}\}$ iff $\calT$ satisfies both \ATP{} and \STP{}.
+\end{lemma}
+
+\begin{proof}\textcolor{red}{TOPROVE 8}\end{proof}
+
+\subsection{Approximate determinisation for Hamming distance}\label{subsec:ham}
+In this subsection, we prove that a rational function is approximately determinisable w.r.t.~Hamming distance if and only if the transducer that defines the function satisfies both \HTP{} and \STP{}. The proof strategy is similar to the setting of Levenshtein family.
+    \begin{lemma}\label{claim:HP}
+    Let $T$ be a trim transducer satisfying the \HTP{}. Then, there exists a constant $N_T \in \mathbb{N}$ such that for any two output words $w, w' \in B^*$ produced by $T$ while processing the same input word via two distinct runs from an initial state, the following properties hold:
+    \begin{enumerate}
+        \item\label{item:sameLength} The length difference satisfies $\big||w| - |w'|\big| < N_T$.
+        \item\label{item:mismatch} The number of positions where $w$ and $w'$ differ is at most $N_T$.
+    \end{enumerate}
+    \end{lemma}
+
+
+    \begin{proof}\textcolor{red}{TOPROVE 9}\end{proof}
+
+
+\begin{proposition}\label{proposition:approxtoHTPSTP}
+   If a rational relation given by a transducer $\calT$
+   is approximately determinisable w.r.t.~Hamming distance
+   then $\calT$ satisfies both \HTP{} as well as \STP{}.
+\end{proposition}
+\begin{proof}\textcolor{red}{TOPROVE 10}\end{proof}
+
+
+\begin{lemma} \label{lemma:multiseqapproxHamming}
+    A multi-sequential function given by a transducer $\calT$
+    is approximately determinisable w.r.t. the~Hamming distance
+    if and only if $\calT$ satisfies the \HTP{}.
+\end{lemma}
+
+\begin{proof}\textcolor{red}{TOPROVE 11}\end{proof}
+\begin{lemma} \label{lemma:seriesseqapproxHamming}
+    Let $\calU = \calD_1 \calD_2 \cdots \calD_k$ be an unambiguous transducer,
+    where $\calD_i$ is a sequential trim transducer for $i \in [k], k>1$.
+    The series-sequential function given by the transducer $\calU$
+    is approximately determinisable w.r.t.~Hamming distance
+    if and only if $\calU$ satisfies the Hamming twinning property.
+\end{lemma}
+
+
+
+\begin{proof}\textcolor{red}{TOPROVE 12}\end{proof}
+
+\begin{lemma}\label{theorem:approxdetHamming}
+    A rational function given by a transducer $\calT$
+    is approximately determinisable w.r.t.~the Hamming distance
+    if and only if $\calT$ satisfies
+    both the Hamming and the strongly connected twinning property.
+\end{lemma}
+\begin{proof}\textcolor{red}{TOPROVE 13}\end{proof}
+
+\section{Approximate decision problems for rational relations}
+
+In this section, we consider two possible generalisations of the approximate determinisation problem to rational relations. We describe those generalisations informally. The first one asks to decide whether a rational relation is close to some rational function. We call it the approximate functionality problem. The second one, that we still call determinisation problem, amounts to decide, given a rational relation $R$, whether it is \emph{almost} a sequential function. The third generalisation we consider is an approximate uniformisation problem, which asks, given $R$, whether there exists a sequential function $s$ which is close to a function $f$, whose graph is included in $R$. We however show that this problem is undecidable. 
+
+We now proceed with the formal definitions and statements of our results. First, we need to extend the notion of distance from functions of words to binary relations of words. 
+Towards this, we use Hausdorff distance between languages, defined as \[
+d_H(L,L') = \max \left\{ \sup_{w \in L} \inf_{w' \in L'} d(w,w'), \sup_{w' \in L'} \inf_{w \in L} d(w,w') \right\}.
+\]
+Given a metric $d$ on words, and two relations $R_1,R_2\subseteq A^*\times B^*$, the distance between $R_1$ and $R_2$ is defined as follows.
+$$d(R_1,R_2) = \begin{cases} \sup \left \{\,  d_H(R_1(w), R_2(w)) \,\mid\,  w \in \dom(R_1) \right \} & \text{ if $\dom(R_1) = \dom(R_2)$} \\
+ \infty & \text{ otherwise } 
+ \end{cases}$$
+Therefore, $d(R_1,R_2)<\infty$ iff there exists $k\in\mathbb{N}$ such that for all word $u$ in the domain and any output $v_1$ of $R_1$ on $u$, there exists some output $v_2$ of $R_2$ on $u$, such that $d(v_1,v_2)<k$, and symmetrically. In fact, $d$ is a metric on relations as shown below. 
+    
+\begin{proposition}\label{prop:metricrelations}
+    $d$ is a metric on relations.
+\end{proposition}
+\begin{proof}\textcolor{red}{TOPROVE 14}\end{proof}
+
+\subparagraph*{Approximate functionality problem}
+
+\begin{definition}[Approximate Functionalisation]\label{def:approxfunc}
+    A rational relation $R$ is approximately functionalisable w.r.t.~a metric $d$ if there exists a rational function $f$  such that $d(R,f)<\infty$. 
+\end{definition}
+The approximate functionality problem asks, given $R$ represented by a transducer, whether it is approximately functionalisable w.r.t. $d$. Towards this, we define the following value for a relation $R$ and metric $d$, which measures how different are output words over the same input. More precisely, it is the maximal distance between any two output words over the same input word, by $R$:
+\\$
+\textcolor{white}{x}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{\sf diff}_d(R) = \sup_{u\in dom(R)} \sup_{v_1,v_2\in R(u)} d(v_1,v_2)
+$
+
+\begin{lemma}\label{lem:diffcomp}
+  For a rational relation $R$ given as a rational transducer, ${\sf diff}_d(R)$ is computable for all metrics given in \Cref{table:editdistance}.
+\end{lemma}
+\begin{proof}\textcolor{red}{TOPROVE 15}\end{proof}
+
+We now characterise rational relations which are approximately functionalisable.
+
+\begin{lemma}\label{lemma:approxfun}
+   A rational relation $R$ is approximately functionalisable w.r.t.~a metric $d$ if and only if ${\sf diff}_d(R) < \infty$.
+\end{lemma}
+
+\begin{proof}\textcolor{red}{TOPROVE 16}\end{proof}
+
+Since ${\sf diff}_d(R)$ is computable (see \Cref{lem:diffcomp}), we get the following result.
+\begin{theorem}
+    The approximate functionality problem for rational relations given as rational transducers w.r.t.~a metric given in \Cref{table:editdistance} is decidable.
+\end{theorem}
+
+
+\subparagraph*{Approximate determinisation problem}
+A rational relation $R$ is said to be approximately determinisable for a metric $d$ if it is almost a sequential function with respect to $d$. Formally, it means that there exists a sequential function $f$ such that $d(R,f)<\infty$. We show that the associated decision problem, that we call approximate determinisation problem, is decidable for Levenshtein family of distances. In fact, the characterisation for approximate determinisation of rational functions also holds for rational relations. 
+\begin{lemma}
+    A rational relation defined by a trim transducer $\calT$ is approximate determinisable w.r.t.~Levenshtein family ($d_l,d_{lcs},d_{dl}$) if and only if $\calT$ satisfies \ATP{} and \STP{}.
+\end{lemma}
+
+\begin{proof}\textcolor{red}{TOPROVE 17}\end{proof}
+Since \ATP{} and \STP{} are decidable for transducers (\Cref{lem:decideTPs}), we obtain the following.
+\begin{theorem}
+    The approximate determinisation problem for rational relations given as rational transducers w.r.t.~a metric $d \in \{d_l,d_{lcs},d_{dl}\}$ is decidable.
+\end{theorem}
+\subparagraph{Approximate uniformisation problem}
+
+Given a relation $R\subseteq A^*\times B^*$, a \emph{uniformiser} of $R$ is a function $U : A^*\rightarrow B^*$ such that $\dom(R) = \dom(U)$ and 
+for all $u\in\dom(R)$, it holds that $(u,U(u))\in R$. It is known that any rational relation admits a rational uniformiser~\cite{KOBAYASHI1969}, which is not true if we seek for a sequential uniformiser. Moreover, the problem of deciding whether a given rational relation admits a sequential uniformiser is undecidable~\cite{LoC}. We consider an approximate variant of this problem.
+
+\begin{definition}[Approximate Uniformisation]\label{def:approxuni}
+   A rational relation $R$ is approximately uniformisable w.r.t.~a metric $d$ if there exists a 
+    uniformiser $U$ of $R$ and a sequential function $f$ such that $d(U,f)<\infty$. In that case, we say that $R$ is $d$-approximate uniformisable by a sequential function. 
+\end{definition}
+In other words, $R$ is $d$-approximate uniformisable by a sequential function $f$ iff there exists an integer $k \in \mathbb{N}$ such that for all $u\in dom(R)$, there exists $(u,v)\in R$ with $d(v,f(u))\leq k$. 
+
+\begin{theorem}\label{thm:app-un}
+Checking whether a rational relation is $d$-approximate uniformisable for $d \in \{d_l,d_{lcs},d_{dl}\}$ is undecidable.
+\end{theorem}
+
+\begin{proof}\textcolor{red}{TOPROVE 18}\end{proof}
+
+\section{Future works}
+In this paper, we proved that approximate determinisation is decidable for functional transducers, by checking various twinning properties. We have shown that \HTP{} and \STP{} are decidable in \textsc{PTime}, which entails that approximate determinization of functional transducers for the Hamming distance is decidable in \textsc{PTime}. For the other distances, such as Levenshtein distance, the time complexity is doubly exponential, as deciding conjugacy of a rational relation, and hence \ATP, is doubly exponential~\cite{decidingconjugacy}.
+We conjecture that this is suboptimal,
+and leave as future work finding a better upper-bound. 
+
+We show that approximate uniformisation is undecidable for Levenshtein family. We leave the case of Hamming distance as future work. The current undecidability proof for Levenshtein family, based on PCP, heavily requires that the lengths of the output words produced on transitions can differ, which may not guarantee that the total output lengths are the same, which is necessary to have a finite Hamming distance. Our proof also does not extend to the
+letter-to-letter setting, where both the given transducer
+and the required uniformiser process \emph{and produce} a single letter
+on every transition.
+This problem is closely related to the standard Church synthesis for regular specifications,
+with the modification that the strategy to be synthesized is allowed to make
+a bounded number of errors.
+To our knowledge, this variant has not been studied in the literature.
+
+Finally, we studied approximate decision problems up to finite distance. Another interesting question is to consider their  ``up to distance $k$'' variant, where $k$ is given as input.
+    
+\bibliography{reference} 
+
+\end{document}

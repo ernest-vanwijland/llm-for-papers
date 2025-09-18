@@ -1,0 +1,692 @@
+\documentclass[a4paper,UKenglish,cleveref,thm-restate]{lipics-v2021}
+\usepackage{arydshln}
+\usepackage{bm}
+\usepackage{float}
+\usepackage{environ}
+\usepackage{todonotes}
+
+\nolinenumbers
+
+\newtoggle{ea}
+\togglefalse{ea}
+
+\newcommand{\Q}{\mathbb Q}
+\newcommand{\R}{\mathbb R}
+\newcommand{\Z}{\mathbb Z}
+\newcommand{\veczero}{\mathbf0}
+\newcommand{\matzero}{\bm O}
+\newcommand{\vecone}{\mathbf1}
+\newcommand{\vecinfty}{\bm\infty}
+\renewcommand{\O}{\mathcal O}
+\newcommand{\G}{\mathcal G}
+\DeclareMathOperator{\conv}{conv}
+\newcommand{\TODO}[1]{
+    \textcolor{red}{TODO: #1}
+    \GenericWarning{}{LaTeX Warning: TODO: #1}
+}
+
+\renewcommand{\pod}[1]{\allowbreak\if@display\mkern18mu\else\mkern8mu\fi(#1)}
+
+\newlength{\vdotsheight}
+\settoheight{\vdotsheight}{$\vdots$}
+
+\makeatletter
+\newenvironment{cdisplaymath}{\@fleqnfalse\begin{displaymath}}{\end{displaymath}}
+\makeatother
+
+\crefname{lemma}{Lemma}{Lemmata}
+\crefname{lemma}{Lemma}{Lemmata}
+\crefname{ilp}{ILP}{ILPs}
+\Crefname{ilp}{ILP}{ILPs}
+\creflabelformat{ilp}{(#2#1#3)}
+
+\bibliographystyle{plainurl}
+
+\title{Parameterized Algorithms for Matching Integer Programs with Additional Rows and Columns}
+
+\titlerunning{Parameterized Algorithms for Matching IPs with Additional Rows and Columns}
+
+\author{Alexandra Lassota}{Eindhoven University of Technology, Netherlands}{a.a.lassota@tue.nl}{https://orcid.org/0000-0001-6215-066X}{}
+
+\author{Koen Ligthart}{Eindhoven University of Technology, Netherlands}{k.m.ligthart@tue.nl}{https://orcid.org/0009-0004-6823-5225}{}
+
+\authorrunning{A. Lassota and K. Ligthart}
+
+\Copyright{Alexandra Lassota and Koen Ligthart} 
+
+\ccsdesc[500]{Mathematics of computing~Combinatorial optimization}
+\ccsdesc[500]{Theory of computation~Complexity classes}
+
+\keywords{integer programming, fixed-parameter tractability, polyhedral optimization, matchings}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We study integer linear programs (ILP) of the form $\min\{c^\top x\ \vert\ Ax=b,l\le x\le u,x\in\Z^n\}$ and analyze their parameterized complexity with respect to their distance to the generalized matching problem--following the well-established approach of capturing the hardness of a problem by the distance to triviality. The generalized matching problem is an ILP where each column of the constraint matrix has $1$-norm of at most $2$. It captures several well-known polynomial time solvable problems such as matching and flow problems. We parameterize by the size of variable and constraint backdoors, which measure the least number of columns or rows that must be deleted to obtain a generalized matching ILP. This extends generalized matching problems by allowing a parameterized number of additional arbitrary variables or constraints, yielding a novel parameter.
+
+We present the following results: (i) a fixed-parameter tractable (FPT) algorithm for ILPs parameterized by the size $p$ of a minimum variable backdoor to generalized matching; (ii) a randomized slice-wise polynomial (XP) time algorithm for ILPs parameterized by the size $h$ of a minimum constraint backdoor to generalized matching as long as $c$ and $A$ are encoded in unary; (iii) we complement (ii) by proving that solving an ILP is W[1]-hard when parameterized by $h$ even when $c,A,l,u$ have coefficients of constant size. To obtain (i), we prove a variant of lattice-convexity of the degree sequences of weighted $b$-matchings, which we study in the light of SBO jump M-convex functions. This allows us to model the matching part as a polyhedral constraint on the integer backdoor variables. The resulting ILP is solved in FPT time using an integer programming algorithm. For (ii), the randomized XP time algorithm is obtained by pseudo-polynomially reducing the problem to the exact matching problem. To prevent an exponential blowup in terms of the encoding length of $b$, we bound the Graver complexity of the constraint matrix and employ a Graver augmentation local search framework. The hardness result (iii) is obtained through a parameterized reduction from ILP with $h$ constraints and coefficients encoded in unary. \end{abstract}
+
+\section{Introduction}\label{sec:Intro}
+
+We study integer linear programs (ILPs) and analyze their parameterized complexity with respect to their distance to the generalized matching problem. In general, an ILP is of the form
+\begin{equation}
+    \min\bigl\{c^\top x\bigm\vert Ax=b,l\le x\le u,x\in\Z^n\bigr\},
+    \label[ilp]{ilp:general}\tag{G}
+\end{equation}
+where $l\in(\Z\cup\{-\infty\})^n,u\in(\Z\cup\{\infty\})^n$, $c\in\Z^n$ and $A\in\Z^{m\times n}$. The underlying integer linear programming problem is to either decide that the system is infeasible, there exists an optimal feasible solution, or it is unbounded and provide a solution with an unbounded direction of improvement.
+
+Integer linear programming is a powerful language that has been applied to many key problems such as graph problems \cite{DBLP:conf/isaac/FellowsLMRS08,DBLP:journals/dam/FialaGKKK18}, scheduling and bin packing \cite{DBLP:journals/jacm/GoemansR20,DBLP:journals/mp/JansenKMR22}, multichoice optimization \cite{ermolieva2023connections} and computational social choice \cite{bartholdi1989voting,DBLP:journals/teco/KnopKM20}, among others. Unfortunately, solving ILPs is, in general, NP-hard. 
+
+However, most ILP formulations of problems are naturally well-structured, see e.g.~\cite{DBLP:conf/isaac/FellowsLMRS08,DBLP:journals/jacm/GoemansR20,DBLP:journals/algorithmica/GrammNR03,DBLP:journals/mp/JansenKMR22,DBLP:journals/teco/KnopKM20} and the references therein. Motivated by this insight and their daunting general hardness, classes of ILPs with highly-structured constraint matrices and parameterizations have been intensively and successfully studied to obtain polynomial and FPT time algorithms~\cite{DBLP:conf/isaac/FellowsLMRS08,DBLP:journals/jacm/GoemansR20,DBLP:journals/algorithmica/GrammNR03,DBLP:journals/mp/JansenKMR22,DBLP:journals/teco/KnopKM20}. Arguably most famous is Lenstra's 1983 algorithm who presented the first FPT time algorithm for constraint matrices with few columns~\cite{DBLP:journals/mor/Lenstra83}. The body of literature for the over three-decades-long research and the many structures, parameters, and applications are too vast to cover here, we thus refer to~\cite{GavenciakKK22} for an overview.
+
+Central to this paper is the polynomial time solvable class of the generalized matching problem, which is the ILP restricted to coefficient matrices satisfying $\|A\|_1\le2$, i.e., all columns have $1$-norm at most $2$.
+
+\begin{theorem}[Theorem 36.1 in~\cite{schrijver2003combinatorial}]
+    When $\|A\|_1\le2$, \cref{ilp:general} can be solved in strongly polynomial time.
+    \label{thm:generalized-matching-in-p}
+\end{theorem}
+
+The generalized matching problem captures a variety of well-known problems in P such as minimum cost flow, minimum cost ($b$-)matching and certain graph factor problems~\cite{schrijver2003combinatorial}. This connection becomes apparent by interpreting the variables as values assigned to edges of a graph whose vertices correspond to the constraints of the ILP\footnote{Note that, due to the conventions in ILP, the vertices of the graph are the numbers $[m]:=\{1,\dots,m\}$ and the edges are identified with the numbers $[n]$.}. In this way, a constraint matrix $A$ with $\|A\|_1\le2$ can be interpreted as an incidence matrix of a generalized bidirected graph where all endpoints of edges are given signs and where degenerate self-loops and half-edges may be present~\cite{DBLP:conf/aussois/EdmondsJ01}. An example of a graphic interpretation of an instance of the generalized matching problem is shown in \cref{fig:example-generalized-matching-instance}.
+\begin{figure}
+    \begin{subfigure}{0.45\textwidth}
+        \begin{cdisplaymath}
+            \begin{pmatrix}
+                1&0&1&0&0&0\\
+                1&1&0&-1&0&0\\
+                0&-1&0&0&2&0\\
+                0&0&-1&-1&0&1
+            \end{pmatrix}
+            x=
+            \begin{pmatrix}
+                3\\
+                1\\
+                5\\
+                0
+            \end{pmatrix}
+        \end{cdisplaymath}
+        \caption{Example constraints $Mx=b$ with $\|M\|_1=2$ of a generalized matching instance.}
+        \label{fig:example-generalized-matching-instance-system}
+    \end{subfigure}
+    \hspace{0.05\textwidth}
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=0.8\textwidth]{figures/generalized-matching-problem.pdf}
+        \caption{Graphic interpretation of a solution to the system of \cref{fig:example-generalized-matching-instance-system}.}
+    \end{subfigure}
+    \caption{An example instance of the generalized matching problem and a corresponding solution, disregarding potential variable bounds.}
+    \label{fig:example-generalized-matching-instance}
+\end{figure}
+For instance, a problem such as the minimum cost perfect matching problem on a graph $G=(V,E)$ can be cast as a generalized matching ILP. In this scenario, $A\in\{0,1\}^{V\times E}$ is the incidence matrix of $G$ and $l=\veczero,u=\vecone,b=\vecone$. That is, $A_{ij}=1$ if and only if vertex $i$ is incident to edge $j$. Here, $\veczero$ and $\vecone$ denote the all-zero and all-ones vector respectively.
+
+This paper studies the degree to which we can extend the generalized matching problem while maintaining tractability. For this purpose, we study constraint matrices $A$ which are similar to the constraint matrix of a generalized matching problem. Such matrix $A$ consists of a small corner block $C\in\Z^{h\times p}$, wide block $W\in\Z^{h\times n}$, tall block $T\in\Z^{m\times p}$ and matching-like block $M\in\Z^{m\times n}$ with $\|M\|_1\le2$ and is of the form
+\[
+    A=\begin{pmatrix}
+        C&W\\
+        T&M
+    \end{pmatrix}.
+\]
+We consider the cases where either of $h=0$ or $p=0$, yielding the ILPs
+\begin{equation}
+    \min\bigl\{a^\top y+c^\top x\bigm\vert Ty+Mx=b,e\le y\le g,l\le x\le u,(y,x)\in\Z^{p+n}\bigr\},
+    \label[ilp]{ilp:tall}\tag{T}
+\end{equation}
+which describes a generalized matching ILP admitting additional variables, and
+\begin{equation}
+    \min\bigl\{c^\top x\bigm\vert Wx=d,Mx=b,l\le x\le u,x\in\Z^n\bigr\},
+    \label[ilp]{ilp:wide}\tag{W}
+\end{equation}
+which describes a generalized matching ILP admitting additional constraints. The ILPs \labelcref{ilp:tall,ilp:wide} represent generalizations of well-known flow and matching problems. See~\cite{DBLP:journals/networks/BalasP83} for an application of bipartite matching with additional variables to a scheduling problem.
+
+In the context of the fixed-parameter tractability of ILPs, graphs and corresponding structural parameters associated with the coefficient matrix of an ILP are usually studied. However, in our case, the coefficient matrix of the perfect matching problem may have arbitrary associated primal or dual graphs, unlike the case for two-stage stochastic and $n$-fold ILP, which have associated coefficient matrix graphs with limited tree-depth, see~\cite{eisenbrand2022algorithmictheoryintegerprogramming} for an overview. In addition, the incidence matrix of an undirected graph may have have arbitrarily large subdeterminants, which makes it unsuited for methods such as the one discussed in~\cite{DBLP:conf/focs/FioriniJWY21}.
+
+The goal of this paper is to study the complexity of the above integer linear programs \labelcref{ilp:tall,ilp:wide}, i.e., ILPs where the constraint matrices are \emph{nearly} generalized matching constraint matrices. For this purpose, we parameterize by the number of variables $p$ and constraints $h$ that must be deleted from \cref{ilp:general} to obtain a generalized matching problem. Such parameter choice follows the classical approach of studying parameters measuring the \emph{distance to triviality}, also called \emph{(deletion) backdoors to triviality}--a concept that was first proposed by Niedermeier~\cite{DBLP:books/ox/Niedermeier06}. Roughly speaking, this approach introduces a parameter that measures the distance of the given instance from an instance that is solvable in polynomial time. This approach was already used for many different problems such as clique, set cover, power dominating set, longest common subsequence, packing problems, and the satisfiability problem~\cite{DBLP:books/ox/Niedermeier06,DBLP:conf/mfcs/BannachBMMLRS20,DBLP:journals/jacm/GoemansR20,DBLP:conf/birthday/GaspersS12}. 
+
+For some problems, such as satisfiability, having obtained a variable backdoor immediately leads to an FPT algorithm parameterized by the size of the backdoor. For ILP, however, this is not as straightforward as variable domains may be arbitrarily large, which invalidates a brute-force approach to obtain FPT results in terms of variable backdoor size. In fact, solving ILPs in FPT time parameterized by the number of variables is already highly nontrivial~\cite{DBLP:journals/mor/Lenstra83,DBLP:conf/focs/ReisR23}.
+
+Despite such difficulties, a significant number of results have been obtained in the context of backdoors in ILPs. A large line of research has established efficient algorithms for solving ILPs given a variable or constraint backdoor to a remaining ILP which consists of many isolated ILPs with small coefficients~\cite{DBLP:conf/soda/CslovjecsekKLPP24,DBLP:journals/ai/DvorakEGKO21,eisenbrand2022algorithmictheoryintegerprogramming}. Two-stage stochastic and $n$-fold ILP, which are two important special cases of such block-structured ILPs, may be viewed as ILPs of the form shown in respectively \labelcref{ilp:tall,ilp:wide} where $M$ is a block-diagonal matrix with small nonzero blocks and small coefficients. To relate these results with backdoors and backdoor identification, Dvořák et al.~\cite{DBLP:journals/ai/DvorakEGKO21} define fracture numbers, which describe the number of variable and/or constraint removals needed to decouple the ILP into small blocks. They give an overview of the parameterized complexity of ILPs parameterized by various backdoor sizes and coefficient sizes of the constraint matrix. Their work and the recent result of Cslovjecsek et al.~\cite{DBLP:conf/soda/CslovjecsekKLPP24} shows that the complexity of ILPs parameterized by backdoor size is subtle, as ILPs may already become NP-hard when there are only 3 complicating global variables connecting constant dimension, otherwise independent ILPs with unary coefficient size~\cite{DBLP:journals/ai/DvorakEGKO21}. On the other hand, when additionally parameterizing by the coefficient size of the small blocks, the problem becomes FPT~\cite{DBLP:conf/soda/CslovjecsekKLPP24}. With this paper, we aim to reveal the parameterized complexity with respect to backdoor sizes to another class of well-known efficiently solvable ILPs, that of the generalized matching problem.
+
+We show that ILPs parameterized by $p$, the number of variables that, upon deletion, give a general matching problem, is FPT by designing a corresponding algorithm. Further, we give a randomized, XP time algorithm with respect to $h$, and prove the corresponding W[1]-hardness result for this case.
+
+We note that studying the complexity of ILP with respect to $p$ is also motivated by the hardness of the general factor problem with a gap size of $2$~\cite{lovasz1972factorization}. Lovász's reduction from edge coloring on cubic graphs shows that, even when $T$ consists solely of columns with only one nonzero coefficient with value $3$, ILP remains NP-hard. This, together with the tractability of generalized matching and our FPT result, shows that if one were to judge the complexity of an ILP by independently and individually labeling each column as ``hard'' or ``easy'', the easy columns are precisely those with $1$-norm at most $2$.
+
+Finally, given an arbitrary constraint matrix $A$ of \cref{ilp:general}, a permutation of the columns or rows to obtain the form \cref{ilp:tall} or \labelcref{ilp:wide} with minimum $p$ or $h$ respectively can be obtained efficiently\footnote{Through the use of elementary row operations, some systems may be modified to a row-equivalent system admitting smaller backdoors. See~\cite{DBLP:journals/mp/BrianskiKKPS24} for such study on block-structured ILP. We leave this problem open in the context of the parameterizations discussed in this paper.}. That is, one can identify a minimum cardinality variable or constraint deletion backdoor to the generalized matching ILP. To obtain the form \cref{ilp:tall}, one may greedily move all columns with $1$-norm greater than $2$ to the left. The problem of minimizing $h$ in \cref{ilp:wide} is equivalent to the $3$-uniform hitting set problem, which is NP-hard but FPT in $h$, cf.~\cite{DBLP:conf/birthday/GaspersS12}. For this reason, we will assume that the given ILPs are of the form \cref{ilp:tall} or \labelcref{ilp:wide} throughout the rest of the paper.
+
+\subsection{Contributions}
+
+In this paper, we show that solving integer linear programs is fixed-parameter tractable parameterized by the number of columns of $A$ with $1$-norm greater than $2$.
+
+\begin{restatable}{theorem}{thmtallfpt}
+    \cref{ilp:tall} is FPT parameterized by $p$.
+    \label{thm:tall-fpt}
+\end{restatable}
+
+This reveals an entirely new class of ILPs that is FPT and adds to the story of parameterized ILPs and distance to triviality paradigm. To obtain this algorithm, we use a remainder guessing strategy introduced by Cslovjecsek et al.~\cite{DBLP:conf/soda/CslovjecsekKLPP24}. Central in this approach is modeling non-backdoor variables as polyhedral constraints on the backdoor variables. In~\cite{DBLP:conf/soda/CslovjecsekKLPP24}, these polyhedral constraints may be exponentially complex, whereas we exploit the structure of matching problems and employ an efficient description of a global polyhedral constraint. To accomplish this, we study the convexity of degree sequences for which a corresponding graph factor exists. These systems have been studied previously, see~\cite{DBLP:journals/jgt/AnsteeN99}, and are a well-known example of discrete systems known as jump systems~\cite{DBLP:journals/siamdm/BouchetC95,DBLP:journals/siamdm/Murota06,DBLP:journals/ieicet/MurotaT06,DBLP:conf/ipco/Kobayashi23}. For our application, we prove a new result involving the lattice-convexity of a particular class of jump M-convex functions on the shifted lattice $2\Z^m+r$, see \cref{sec:overview} for a technical overview of this algorithm. 
+
+As for the constraint backdoors, we show that matching-like ILPs are solvable in polynomial time with a randomized algorithm for a fixed number of additional complicating constraints if the constraints and the objective are encoded in unary. As \cref{ilp:wide} can encode the NP-hard subset sum problem for $h=1$, we will need to assume that the coefficients of the constraint matrix are small. That is, we assume that they are bounded by $\Delta$ in absolute value. The given randomized XP time algorithm unifies the known tractability in terms of membership in RP of multiple classes of constrained problems where the edges of a graph correspond to variables.
+
+\begin{restatable}{theorem}{thmwidexp}
+    \cref{ilp:wide} can be solved with a randomized XP time algorithm in terms of $h$. More specifically, it can be solved in time $\tilde\O(\|c\|_\infty\log^2\|c\|_\infty\cdot\Delta^h\log^5\Delta)\cdot\O(n)^{10+h}\cdot\O(\Delta hm)^{8h+h^2}+\O(nm)$.
+    \label{thm:wide-xp}
+\end{restatable}
+
+In this paper, the running time is measured in the number of arithmetic operations on numbers with encoding length polynomial in the encoding length of the instance. The $\tilde\O$ hides polylogarithmic factors of the encoding length of the instance.
+
+Camerini, Galbiati and Maffioli~\cite{DBLP:journals/jal/CameriniGM92} already observed in 1992 that one can solve constrained flow, circulation and matching problems in randomized, pseudo-polynomial time. \cref{thm:wide-xp} differs in that it reveals the tractability of a generalized class of problems by removing the exponential dependency on the encoding length of $b$ that would appear in a purely pseudo-polynomial algorithm.
+
+The randomized XP time algorithm is obtained through the use of a Graver augmentation framework, which has been effective in obtaining FPT algorithms for two-stage stochastic and $n$-fold ILP with small coefficients~\cite{eisenbrand2022algorithmictheoryintegerprogramming}. For those ILPs, the Graver complexity is bounded by a function of the parameters, resulting in FPT algorithms, whereas the XP time dependence on $h$ of \cref{thm:wide-xp} is the result of \cref{ilp:wide} having a large Graver complexity and proximity. We provide upper and lower bounds for these respective quantities, see \iftoggle{ea}{\cref{sec:overview-few-arbitrary-variables,sec:lower-bounds}. The latter section also reveals that \cref{ilp:tall} has a similarly large Graver complexity even for binary matrices $T$}{\cref{sec:overview-few-arbitrary-constraints,sec:overview-lower-bounds} for the technical overview. Finally, in \cref{sec:overview-lower-bounds}, we note that \cref{ilp:tall} has a similarly large Graver complexity even for binary matrices $T$}, which motivates the use of the different technique.
+
+We provide a W[1]-hardness result in terms of the number of additional constraints $h$ to match the randomized XP time algorithm in a complexity theoretic sense. The hardness persists even for binary constrained perfect matching on a restricted class of graphs. \cref{thm:wide-w1-hard} additionally shows that parameterizing with $\Delta$ in addition to the number of complicating constraints $h$ is unlikely to result in an FPT algorithm.
+
+\begin{restatable}{theorem}{thmwidewonehard}
+    Solving \cref{ilp:wide} encoded in unary is W[1]-hard parameterized by $h$. This hardness persists when restricting to $M$ being the incidence matrix of a graph which is the disjoint union of even length cycles and $W\in\{0,1\}^{h\times n},c=\veczero,l=\veczero,u=\vecone,b=\vecone$.
+    \label{thm:wide-w1-hard}
+\end{restatable}
+
+We like to conclude the introduction with noting that recent methodology used by Eisenbrand and Rothvoss~\cite{eisenbrand2025parameterizedlinearformulationinteger} can be used to derive a similar results to \cref{thm:tall-fpt} in a different way\iftoggle{ea}{}{, which is presented in \cref{sec:milp-approach-for-tall-fpt}}. This work was carried out independently to ours. 
+\section{Technical Overview}\label{sec:overview}
+This section gives a technical overview of our results. It aims at presenting the main ideas and new concepts. Therefore, details are omitted. 
+
+We first preprocess an ILP instance in \cref{sec:overview-reduction-to-perfect-b-matching}, after which both algorithms are covered in \cref{sec:overview-few-arbitrary-variables,sec:overview-few-arbitrary-constraints}. The W[1]-hardness of \cref{thm:wide-w1-hard} is additionally discussed in the latter section. \iftoggle{ea}{\cref{sec:lower-bounds}}{\cref{sec:overview-lower-bounds}} provides lower bounds on the Graver complexity and proximity.
+
+\subsection[Reduction to perfect b-matching]{Reduction to perfect $b$-matching}
+\label{sec:overview-reduction-to-perfect-b-matching}
+Before presenting the key components of the algorithms that solve the generalized matching problem with additional variables or constraints, we first discuss a reduction that modifies \cref{ilp:tall,ilp:wide} in a favorable way. By doing so, it suffices to give algorithms for such restricted instances, see \cref{sec:overview-few-arbitrary-variables,sec:overview-few-arbitrary-constraints}. 
+
+In particular, we show that \cref{ilp:tall,ilp:wide} can, in polynomial time, be transformed to equivalent ILPs where the generalized matching submatrix is transformed to the constraint matrix of the perfect $b$-matching problem. Such matrix $M$ is a binary matrix with unique columns that each have precisely two nonzero entries, and is the incidence matrix of a simple graph $G(M)$, the \emph{constraint graph}, with vertices $[m]$. Since $M$ is the incidence matrix of $G(M)$, we may identify a variable $i\in[n]$ with the edge of $G(M)$ connecting the vertices $j_1,j_2$ such that $M_{i,j_1}=M_{i,j_2}=1$. Now, a $b$-matching $x$ of $G(M)$ is a solution to the generalized matching ILP with constraint matrix $M$, nonnegative integral variables $x\in\Z_{\ge0}^n$, and right-hand-side $b$. That is, $x$ assigns a value to every edge such that for every vertex $i$ the sum of $x_j$ over the incident edges $j$ is exactly $b_i$.
+
+The used reduction is an extension of the reduction in~\cite{schrijver2003combinatorial} from generalized matching to $b$-matching. However, we show in \cref{lemma:master-reduction} that we can also keep track of the additional general variables and constraints.  
+
+\begin{restatable}{lemma}{lemmamasterreduction}
+    An ILP of the form
+    \[
+        \min\Biggl\{a^\top y+c^\top x\biggm\vert\begin{pmatrix}
+            C&W\\
+            T&M
+        \end{pmatrix}(y,x)=\begin{pmatrix}
+            d\\
+            b
+        \end{pmatrix},e\le y\le g,l\le x\le u,(y,x)\in\Z^{p+n}\Biggr\},
+    \]
+    and finite variable bounds can be reduced in input+output-linear time to an instance of the same form that additionally satisfies
+    \begin{itemize}
+        \item $M'\in\{0,1\}^{m'\times n'}$ is the incidence matrix of a simple graph,
+        \item $c'\ge\veczero,W'\in\Z_{\ge0}^{h'\times n'}$,
+        \item $e',l'=\veczero,\|g'\|_1=\O(\|g-e\|_1),u'=\vecinfty$,
+        \item $n',m'=\O(n+m)$,
+        \item $h'=h,p'=p$,
+        \item $\|d'\|_1=\O(\|d\|_1+\|A\|_1(\|e\|_1+\|l\|_1))$,
+        \item $\|b'\|_1=\O(\|u-l\|_1)$ if $p=0$ and $\|b'\|_1=\O(\|b\|_1+\|g-e\|_1+\|u-l\|_1+\|A\|_1(\|e\|_1+\|l\|_1))$ otherwise,
+        \item $a',c',C',T',W'$ contain the same collections of entries as $a,c,C,T,W$ up to sign changes, the insertion of zeros and the insertion of at most one binary row to $T$.\\
+    \end{itemize}
+    \label{lemma:master-reduction}
+\end{restatable}
+
+Here, parameters with primes are used to denote the parameters of the new instance and $u=\vecinfty$ denotes the absence of upper bounds on $x$. The proof transforms the constraint matrix and variable bounds to the intended form by creating additional constraints and variables. It consists of steps that individually treat columns with negative entries, columns with $1$-norm strictly less than $2$ and finite variable upper bounds. Most of these obstacles are circumvented by conceptually subdividing edges or adding redundant constraints. Due to space restrictions, we postpone the proof to \cref{sec:master-reduction}. 
+
+By virtue of \cref{lemma:master-reduction}, we can now restrict ourselves to finding algorithms for \cref{ilp:tall,ilp:wide} which represent perfect $b$-matching problems with additional variables or constraints.
+
+\subsection{Few arbitrary variables}
+\label{sec:overview-few-arbitrary-variables}
+
+We now focus on solving \cref{ilp:tall}. We first motivate the main idea underlying the algorithm and present the algorithm itself, before we give an outline of remaining parts. The key idea is to treat the backdoor variables $y$ and the matching variables $x$ separately. Let us first consider the problem of determining the feasibility of \cref{ilp:tall}. In essence, we replace the constraint $Ty+Mx=b$ and matching variables $x$ with a polyhedral constraint of the form $b-Ty\in P$ for some polyhedron $P$ that models that there must exist a $x\in\Z_{\ge0}^n$ such that $Mx=b-Ty$, in other words, there must exist a perfect $(b-Ty)$-matching in $G(M)$. To construct such polyhedral constraint on $y$, the first idea may be to use the convex hull of all points $z\in\Z^m$ such that there exists a perfect $z$-matching--unfortunately, a naive execution of this strategy fails as when $G(M)=K_3$, the complete graph on $3$ vertices, we have that $z=(0,0,0)$ and $z=(2,2,2)$ and the convex combination $z=(1,1,1)$ is in the hull, but the latter does not admit a perfect $z$-matching. Hence, we attempt to model a discrete set that is not lattice-convex on $\Z^3$ with a convex constraint, which is impossible.
+
+To contrast this, the work by Cslovjecsek et al.~\cite{DBLP:conf/soda/CslovjecsekKLPP24} shows that, even for general matrices $M$, one can work around this issue by restricting $y$ to a fixed remainder $r\in\Z^m$ modulo some large integer $B$. That is, one can construct a polyhedron $P_r$ such that for all $y\in B\Z^m+r$, we have that $\{Mx=b-Ty,x\ge0\}$ is feasible if and only if $b-Ty\in P_r$. Note that through an affine transformation, this may equivalently be posed as a polyhedral constraint directly on $y$. Their choice of $B$ may grow with the dimensions of $M$, which calls for a more problem specific approach to solve \cref{ilp:tall} in FPT time. When $M$ is the incidence matrix of a simple graph, we show that we may restrict the modulus $B$ to be the constant $2$, which paves the way for an FPT algorithm. In addition, we show that one may optimize over a linear objective function by encoding the objective contribution of the matching part of the ILP in an additional dimension of $P_r$. The required convexity property to make this work translates to a lattice-convexity property, see \cref{lemma:convexity-of-b-matching}, of the function $f_{c,M}$ from \cref{def:f}.
+
+\begin{definition}
+    Let $f_{c,M}:\Z^m\to\Z\cup\{\infty\}$ be defined by
+    \[
+        f_{c,M}(z)=\min\bigl\{c^\top x\bigm\vert Mx=z,x\in\Z_{\ge0}^n\bigr\}.
+    \]
+    That is, $f_{c,M}(z)$ is the cost of a minimum $c$-cost perfect $z$-matching of $G(M)$ or $\infty$ if $G(M)$ has no perfect $z$-matching.
+    \label{def:f}
+\end{definition}
+
+\begin{lemma}
+    Let $z^{(1)},z^{(2)},\dots,z^{(\ell)}\equiv r\pmod2$ be given and $\lambda^{(1)},\lambda^{(2)},\dots,\lambda^{(\ell)}$ be real convex multipliers so that $z:=\sum_{k\in[\ell]}\lambda^{(k)}z^{(k)}\equiv r\pmod2$. Then $f_{c,M}(z)\le\sum_{k\in[\ell]}\lambda^{(k)}f_{c,M}(z^{(k)})$.
+    \label{lemma:convexity-of-b-matching}
+\end{lemma}
+
+We use modular congruence on vectors to denote component-wise modular congruence. Next, we show in which way \cref{lemma:convexity-of-b-matching} allows us to reformulate \cref{ilp:tall}. First, we perform a binary search on the objective to obtain the problem of finding a feasible point of \cref{ilp:tall} subject to an additional linear constraint $a^\top y+c^\top x\le\omega^*$. We guess the remainder vector $t$ of $y$ in an optimal solution modulo $2$. It then suffices to search for an integer point $y$ restricted to $y\equiv t\pmod2$ in the box $e\le y\le g$ subject to the constraint that there is a perfect $(b-Ty)$-matching with cost at most $\omega^*-a^\top y$. This is equivalent to finding a point in the set
+\[
+    \{y\in\Z^p:y\equiv t\pmod2,e\le y\le g,f(b-Ty)\le\omega^*-a^\top y\}.
+\]
+In particular, as the parity of $b-Ty\equiv r\pmod2$ is constant for $y\equiv t\pmod2$, \cref{lemma:convexity-of-b-matching} shows that there exists a convex set $P_r$ such that the constraint $f(b-Ty)\le\omega^*-a^\top y$ may be replaced with $(\omega^*-a^\top y,b-Ty)\in P_r$. When we obtain a good representation of $P_r$, we use the algorithm by Reis and Rothvoss~\cite{DBLP:conf/focs/ReisR23} to solve the integer program in FPT time. After guessing all $2^p$ parity vectors $t$, an optimal solution to \cref{ilp:tall} is found.
+
+We now discuss the missing ingredients needed to make the previously discussed algorithm work. First, we explain how \cref{lemma:convexity-of-b-matching} is derived. To do so, we consider jump systems, where degree sequences of graphs and functions such as $f_{c,M}$ have been studied exhaustively~\cite{DBLP:journals/siamdm/BouchetC95,DBLP:journals/siamdm/Murota06,DBLP:journals/ieicet/MurotaT06,DBLP:conf/ipco/Kobayashi23}. Murota~\cite{DBLP:journals/ieicet/MurotaT06} observed that $f_{c,M}$ describes a jump M-convex function, which is a valuated generalization of jump systems. In fact, recent work on the general factor problem~\cite{DBLP:conf/ipco/Kobayashi23} reveals that a similar jump M-convex function defined for weighted graph factorizations has additional exploitable properties. Informally, small steps, as in \cref{def:2-step-decomposition}, connecting points in the effective domain of such function may be rearranged in any order. For this reason, Kobayashi defines strongly base orderable (SBO) jump systems and a valuated extension. Our function $f_{c,M}$ defined over weighted uncapacitated perfect $b$-matchings can be seen to also satisfy the properties of \cref{def:sbo-jump-m-convex}. As \cref{lemma:convexity-of-b-matching} holds for general SBO jump M-convex functions, we discuss our proof in terms of this abstract property.
+
+\begin{restatable}{definition}{deftwostepdecomposition}
+    A $2$-step decomposition of a vector $d\in\Z^m$ is a multiset of steps $p^{(1)},\dots,p^{(\ell)}\in\Z^m$, satisfying $\|p^{(k)}\|_1=2$ and $p^{(k)}\sqsubseteq d$ for all $k\in[\ell]$, such that $d=\sum_{k\in[\ell]}p^{(k)}$.
+    \label{def:2-step-decomposition}
+\end{restatable}
+
+Here, $x\sqsubseteq y$ is the conformal partial order defined by $x\sqsubseteq y$ if and only if $|x_i|\le|y_i|$ and $x_iy_i\ge0$ for all $i$.
+
+\begin{restatable}{definition}{defsbojumpmconvex}
+    A function $f\colon\Z^m\to\Q\cup\{\infty\}$ is SBO jump M-convex if for every two points $z^{(1)},z^{(2)}$ in the domain $\{z\in\Z^m:f(z)<\infty\}$ there exist a 2-step decomposition $p^{(1)},\dots,p^{(\ell)}$ of $z^{(2)}-z^{(1)}$ and real numbers $g^{(1)},\dots,g^{(\ell)}$ such that
+    \begin{itemize}
+        \item $f(z^{(2)})=f(z^{(1)})+\sum_{i\in[\ell]}g^{(k)}$,
+        \item for all $I\subseteq[\ell]$ it holds that $f(z^{(1)}+\sum_{k\in I}p^{(k)})\le f(z^{(1)})+\sum_{k\in I}g^{(k)}$.\\
+    \end{itemize}
+    \label{def:sbo-jump-m-convex}
+\end{restatable}
+
+The alternating path argument employed by Kobayashi~\cite{DBLP:conf/ipco/Kobayashi23} to show that $\vecone$-capacitated perfect $b$-matchings satisfy \cref{def:sbo-jump-m-convex} can be adapted to show the SBO jump M-convexity of $f_{c,M}$. For this, we use a known gadget construction that relates $b$-matchings to perfect matchings~\cite{schrijver2003combinatorial}. See \cref{sec:tall} for the full proof.
+
+\cref{lemma:convexity-of-b-matching} is derived by first showing that a $2$-step decomposition of a difference $z^{(2)}-z^{(1)}$ can be used to construct a small even step $\sum_{k\in I}p^{(k)}\in\{-2,0,2\}^m$ by combining some of the steps. Such an even, small step can be used to modify a pair of points $z^{(2)},z^{(1)}$ closer to each other while remaining on the lattice $2\Z^m+r$ and without increasing the sum of the function values on these points. Such pairwise modifications may then be exhaustively performed to move the points appearing in a convex combination towards the target $z$ as in \cref{lemma:convexity-of-b-matching} and obtain the required result. \iftoggle{ea}{The proof of \cref{lemma:convexity-of-b-matching} is provided in \cref{sec:lattice-convexity}.}{}
+
+The final ingredient needed to implement the FPT algorithm for \cref{ilp:tall} is a good characterization of a suitable polyhedron $P_r$ that models the matching part of the ILP. We obtain this by letting $P_r$ be the convex hull of the vectors $(\omega,z)\in\R\times\Z^m$ for which $f_{c,M}(z)\le\omega$ and $z$ is in some bounding box. That is, $P_r$ is the epigraph of a natural convex extension of $f_{c,M}$ restricted to a bounding box. Since proximity arguments allow us to assume that $e$ and $g$ are finite, it is possible to bound $z$, see~\cite{DBLP:journals/mp/CookGST86}. We obtain a polynomial time separation oracle for $P_r$ through the ellipsoid method~\cite{DBLP:books/sp/GLS1988} and by noting that $P_r$ can efficiently be optimized over\footnote{We note that it may be possible to derive a combinatorial separation algorithm, but this is not needed to establish the fixed-parameter tractability of \cref{ilp:tall}. For a closely related separation problem, see~\cite{DBLP:journals/mor/Zhang03}.}. This follows from the fact that weights associated with a vertex $i$ may be transferred to the edge weights of the incident edges, which shows that optimizing over $(\omega,z)\in P_r$ corresponds to solving a minimum cost parity constrained $b$-matching problem. The parity constraints can straightforwardly be translated into constraints compatible with the polynomially solvable generalized matching problem~\cite{schrijver2003combinatorial,DBLP:journals/mp/EdmondsJ73}.
+
+\subsection{Few arbitrary constraints}
+\label{sec:overview-few-arbitrary-constraints}
+
+The randomized XP time algorithm for solving \cref{ilp:wide} is obtained through a series of reductions. As a key intermediate step, we will employ a pseudo-polynomial reduction in~\cite{schrijver2003combinatorial} that transforms the minimum cost perfect $b$-matching to the minimum cost perfect matching problem on a graph with a total of $\|b\|_1$ vertices. In order to prevent an exponential blow-up in terms of the encoding size of $b$, we split the solution process up into parts in which $b$ may be bounded through the use of the Graver augmentation framework~\cite{eisenbrand2022algorithmictheoryintegerprogramming}. This is an exact local search framework which iteratively improves a primal solution to an ILP by taking smaller steps solving a similar, but slightly easier ILP. In these easier ILPs, the variable domains may be bounded by a function of the Graver complexity of the constraint matrix of the ILP. By \cref{lemma:master-reduction}, bounds on the variable domains translate into bounds on the right-hand side $b$. Before providing the required bounds, we first introduce the Graver augmentation framework and relevant definitions.
+
+\begin{restatable}{definition}{defgraverbasis}
+    The Graver basis $\G(A)\subseteq\Z^n\setminus\{\veczero\}$ of an integer matrix $A\in\Z^{m\times n}$ is the set of conformally minimal nonzero integral kernel elements of $A$. That is, $g\in\G(A)$ if and only if $g\ne\veczero,Ag=\veczero$ and there is no $g'\notin\{\veczero,g\}$ such that $Ag'=\veczero$ and $g'\sqsubseteq g$.\\
+    \label{def:graver-basis}
+\end{restatable}
+
+The Graver complexity of $A$ refers to norm bounds on $\G(A)$, and we are interested in $g_\infty(A)=\max\{\|g\|_\infty\ \vert\ g\in\G(A)\}$ and $g_1(A)=\max\{\|g\|_1\ \vert\ g\in\G(A)\}$, referring to the $\infty$-norm and $1$-norm respectively. An oracle that can compute a single small improving step, used in the local search framework, is called a Graver-best oracle.
+
+\begin{definition}
+    A Graver-best oracle is an oracle that, given variable bounds $l$ and $u$ finds a Graver-best step. That is, it finds an integral solution $x$ to $\{Ax=\veczero,l\le x\le u\}$ so that
+    \[
+        c^\top x\le\min\left\{c^\top g\bigm\vert l\le g\le u,g\in\G(A)\right\}.
+    \]
+    \label{def:graver-best-oracle}
+\end{definition}
+
+Such an oracle can be implemented by solving an ILP over variable domains of size at most $\O(g_\infty(A))$, which we show to be polynomially bounded for fixed $h$ for \cref{ilp:wide}. In this case, we may employ \cref{lemma:master-reduction} to find that implementing a Graver-best oracle corresponds to finding a minimum cost constrained $b$-matching where $\|b\|_1\le n\|b\|_\infty=\O(ng_\infty(A))$ is polynomially bounded. \cref{thm:graver-augmentation} concludes with how this Graver-best oracle can be used to optimize an ILP.
+
+\begin{restatable}[Lemma 12 in~\cite{eisenbrand2022algorithmictheoryintegerprogramming}, Lemma 5 in~\cite{DBLP:conf/icalp/EisenbrandHK18}]{theorem}{thmgraveraugmentation}
+    Given a feasible solution $x$ to \cref{ilp:general} with finite $l$ and $u$, an optimal solution to the ILP can be found with $\O(n\log(\|l-u\|_\infty)\log(c^\top x-c^\top x^*))$ queries of a Graver-best oracle. Here $c^\top x^*$ is the value of an optimal solution.
+    \label{thm:graver-augmentation}
+\end{restatable}
+
+By constructing an auxiliary ILP with a trivial feasible solution to the form \cref{ilp:wide}, we can use \cref{thm:graver-augmentation} to find a feasible solution as well as optimize such solution. For this reason, we will assume that we are given a feasible solution to \cref{ilp:wide}.
+
+The polynomial bound on $g_\infty(A)$ for fixed $h$ follows from literature: Berndt, Mnich and Stamm~\cite{DBLP:conf/sofsem/BerndtMS24} show that the Graver basis elements of a matrix $M$ with $\|M\|_1\le2$ are small.
+
+\begin{theorem}[Theorem 13 in~\cite{DBLP:conf/sofsem/BerndtMS24}]
+    Let $M\in\Z^{m\times n}$ be an integer matrix with $\|M\|_1\le2$. Then $g_\infty(M)\le2$ and $g_1(M)\le2m+1$.
+    \label{thm:graver-ub-generalized-matching}
+\end{theorem}
+
+Note that we may assume that $m=\O(n)$ after preprocessing. Lemma 3 in~\cite{DBLP:conf/icalp/EisenbrandHK18}, which proves a Graver complexity bound for $n$-fold ILPs, reveals that \cref{thm:graver-ub-generalized-matching} suffices to yield a polynomial bound on the Graver complexity of the composite matrix appearing in \cref{ilp:wide}.
+
+\begin{restatable}{corollary}{corgraverubwide}
+    \[
+        g_\infty\left(\begin{pmatrix}
+            W\\M
+        \end{pmatrix}\right)\le2(2\Delta h(2m+1)+1)^h=\O(\Delta hm)^h.
+    \]
+    \label{cor:graver-ub-wide}
+\end{restatable}
+
+The number of Graver-best steps that need to be computed in \cref{thm:graver-augmentation} can be polynomially bounded by computing a solution to the LP relaxation of \cref{ilp:wide} and using Theorem 3.14 in~\cite{DBLP:journals/mp/HemmeckeKW14}, which shows that the proximity of an ILP is bounded by $n$ times the obtained Graver bound from \cref{cor:graver-ub-wide}.
+
+\begin{restatable}{corollary}{corproximityubwide}
+    Let $y^*$ be an optimal solution to the LP relaxation of \cref{ilp:wide}. If the ILP is feasible, then there exists an optimal ILP solution $x^*$ with $\|y^*-x^*\|_\infty=n\cdot\O(\Delta hm)^h$.
+    \label{cor:proximity-ub-wide}
+\end{restatable}
+
+Thus, we may restrict the search of an optimal solution to \cref{ilp:wide} to a polynomially bounded domain, which results in the needed bound on $c^\top x-c^\top x^*$ to apply \cref{thm:graver-augmentation}. Now, after applying the pseudo-polynomial reduction to a perfect matching problem~\cite{schrijver2003combinatorial}, which is compatible with additional constraints as noted in~\cite{DBLP:journals/jal/CameriniGM92}, we find that solving \cref{ilp:wide} can be polynomially reduced to finding a minimum cost constrained perfect matching in a graph with polynomially many vertices. As all variables in this resulting problem are binary, we can condense all $h$ constraints into a single constraint by encoding the constraints in base-$B$ for sufficiently large $B$. This generalizes the reduction steps used in~\cite{DBLP:journals/mp/BergerBGS11,DBLP:journals/jacm/PapadimitriouY82} and only increases the coefficient size of the constraint matrix polynomially for fixed $h$. The resulting constrained perfect matching problem can then be solved with a randomized pseudo-polynomial algorithm such as the one by Mulmuley, Vazirani and Vazirani~\cite{DBLP:journals/combinatorica/MulmuleyVV87}. Combining all steps and binary searching on the values of the variables in an optimal solution yields the randomized XP time algorithm from \cref{thm:wide-xp}.
+
+To the best of our knowledge, the complexity of constrained matching where the objective is encoded in binary is still open. It is worth noting that the reduction chain shows that \cref{ilp:wide} is polynomially equivalent to the exact matching problem, which aims to find a perfect matching in a graph with exactly a given target weight. Finding a deterministic pseudo-polynomial algorithm for this problem has been a central and intensively studied open problem for over four decades.
+
+Finally, to complement the XP time complexity of the algorithm from \cref{thm:wide-xp}, we reveal the W[1]-hardness of solving \cref{ilp:wide} parameterized by $h$ in \cref{thm:wide-w1-hard}. This result is obtained through a parameterized reduction from the ILP problem, which is strongly W[1]-hard when parameterized by the number of constraints~\cite{DBLP:journals/ai/DvorakEGKO21}.
+
+\begin{restatable}[Theorem 22 in~\cite{DBLP:journals/ai/DvorakEGKO21}]{theorem}{thmwonemulticolorclique}
+    Determining the feasibility of the system
+    \[
+        \{Wx=d:x\in\Z_{\ge0}^n\},
+    \]
+    where $W\in\Z_{\ge0}^{h\times n}$ is encoded in unary and $d\in\{0,1\}^h$, is W[1]-hard parameterized by $h$. This hardness persists when restricting $x$ to $\veczero\le x\le u$ where $u$ is encoded in unary.
+    \label{thm:w1-multicolorclique}
+\end{restatable}
+
+The essence of the reduction is to split every variable $x_i$ into $u_i$ many binary variables. The resulting binary variables can then be duplicated and linked through graph cycles to reduce the unary sized coefficients in $W$ and obtain a binary constraint matrix.
+
+\iftoggle{ea}{
+
+}{
+
+\subsection{Lower bounds}
+\label{sec:overview-lower-bounds}
+
+We finish the overview by presenting Graver complexity and proximity lower bounds for \cref{ilp:tall,ilp:wide}. These are shown through explicit constraint matrix constructions, which can be found in \cref{sec:tall,sec:wide}.
+
+First, we observe that the Graver augmentation framework is unlikely to assist in deriving simpler FPT algorithms to solve \cref{ilp:tall}, as \cref{prop:graver-lb-tall} shows.
+
+\begin{restatable}{proposition}{propgraverlbtall}
+    For any fixed positive integer $p$, there exists an infinite family of binary constraint matrices $\begin{pmatrix}T\,\,\,M\end{pmatrix}\in\{0,1\}^{m\times(p+n)}$ of \cref{ilp:tall} with Graver basis elements that have an $\infty$-norm of order $\Omega(n)^p$.
+    \label{prop:graver-lb-tall}
+\end{restatable}
+
+\cref{prop:graver-lb-wide} gives a construction showing that \cref{cor:graver-ub-wide} is asymptotically tight when $h$ is constant.
+
+\begin{restatable}{proposition}{propgraverlbwide}
+    For any fixed positive integer $h$, there exists an infinite family of constraint matrices $\binom WM\in\{0,1,\Delta\}^{(h+m)\times n}$ of \cref{ilp:wide} with Graver basis elements that have an $\infty$-norm of order $\Omega(\Delta m)^h$.
+    \label{prop:graver-lb-wide}
+\end{restatable}
+
+Additionally, a similar construction as in the proof of \cref{prop:graver-lb-wide} shows that \cref{cor:proximity-ub-wide} is tight for constant $h$ and $n=\Theta(m)$. We note that a conjecture posed by Berndt, Mnich and Stamm involving upper bounds of the proximity of ILPs and their relation to the Graver-complexity~\cite{DBLP:conf/sofsem/BerndtMS24} hints at that the upper bound from \cref{cor:graver-ub-wide} may be able to be improved to $m\cdot\O(\Delta hm)^h$, at least for the case where $u=\vecinfty$.
+
+\begin{restatable}{proposition}{propproximitylbwide}
+    For any fixed positive integer $h$, there exists an infinite family of constraint matrices $\binom WM\in\{0,1,\Delta\}^{(h+m)\times n}$ of \cref{ilp:wide} and vertex LP relaxation solutions to the corresponding \cref{ilp:wide} such that the nearest integral solution is at $\infty$-norm distance $\Omega(m)\cdot\Omega(\Delta m)^h$.
+    \label{prop:proximity-lb-wide}
+\end{restatable}
+
+We note that constant multiplicative factors of $1/p$ and $1/h$ in the lower bounds of \cref{prop:graver-lb-tall,prop:graver-lb-wide,prop:proximity-lb-wide} are hidden in the $\Omega$.
+
+} 
+\section[Reduction to perfect b-matching]{Reduction to perfect $b$-matching}
+\label{sec:master-reduction}
+
+We proceed to present the details of \cref{sec:overview} and prove the required intermediate results. First, we consider \cref{lemma:master-reduction} which simplifies the design of the algorithms for \cref{ilp:tall,ilp:wide} by showing that it suffices to give algorithms exploiting backdoors to $b$-matching problems. To do so, we generalize the reduction steps in~\cite{schrijver2003combinatorial} that transform the generalized matching problem to the perfect $b$-matching problem. Most steps of \cref{lemma:master-reduction} can be interpreted as gadget constructions in bidirected graphs, see~\cite{schrijver2003combinatorial}, but we present them in terms of ILPs to retain a direct connection with the additional variables and linear constraints.
+
+\lemmamasterreduction*
+
+\begin{proof}\textcolor{red}{TOPROVE 0}\end{proof}
+
+Having shown that the instances of \cref{ilp:general} may be restricted to be a perfect $b$-matching problem with additional complicating variables or constraints, we may rely on this in the algorithm constructions in \cref{sec:tall,sec:wide}. 
+\section{Few arbitrary variables}
+\label{sec:tall}
+
+This section is devoted to proving \cref{thm:tall-fpt} as outlined in \cref{sec:overview-few-arbitrary-variables}, which shows that ILP is FPT when parameterized by the number of columns with $1$-norm larger than $2$.
+
+\thmtallfpt*
+
+\iftoggle{ea}{
+
+} {
+
+Before discussing the algorithm itself, we observe that it is unlikely that a Graver-best augmentation procedure along the lines of \cref{thm:graver-augmentation} will be effective at solving \cref{ilp:tall}, even in the case that the coefficients in the block $T$ are bounded by a constant.
+
+\propgraverlbtall*
+
+\begin{proof}\textcolor{red}{TOPROVE 1}\end{proof}
+
+}
+
+Recall that our strategy to solve \cref{ilp:tall} is to guess the remainder of the $p$ complicating variables modulo $2$ and then solve an ILP on only these $p$ variables by modeling the remaining matching part of the problem using a polyhedral constraint. For this, we require the convexity result from \cref{lemma:convexity-of-b-matching}. Recall \cref{def:f,def:sbo-jump-m-convex}. First, we modify the alternating path argument of Kobayashi~\cite{DBLP:conf/ipco/Kobayashi23} to show that the function $f_{c,M}$ which models the cost of a minimum cost $b$-matching is SBO jump M-convex. \iftoggle{ea}{In \cref{sec:lattice-convexity}, we have readily established the lattice-convexity that follows.}{Then, we show that an arbitrary jump M-convex function $f$ satisfies the required lattice convexity on $2\Z^m+r$.} The essence of Kobayashi's argument is to consider two optimal matchings and decompose their difference into alternating paths. The endpoints of these paths then yield a suitable $2$-step decomposition $p^{(k)}$ and the changes they induce in the cost of the matchings yield the required objective steps $g^{(k)}$. As Kobayashi's argument works with $\vecone$-capacitated $b$-matchings, we need a slightly different approach to obtain suitable alternating paths. For this purpose, we present a construction used to pseudo-polynomially reduce the perfect $b$-matching problem to a perfect matching problem in \cref{prop:gb}~\cite{schrijver2003combinatorial}. The construction expands the vertices and edges of the original graph into multiple copies so that assigning a value of $x_e$ to $e$ in a $b$-matching in $G$ corresponds to choosing $x_e$ copies of $e$ in the constructed graph. This is visualized in \cref{fig:G_b}.
+
+\begin{proposition}[Section 31.1 in~\cite{schrijver2003combinatorial}]
+    Let $b,\overline b\in\mathbb Z_{\ge0}^V$ satisfy $b\le\overline b$ and $G=(V,E)$ be a simple graph. Let $G_{\overline b}$ be the graph defined by creating $\overline b_v$ copies of each vertex $v\in V$ and creating an edge between every pair of copies of $v_1$ and $v_2$ when $v_1$ and $v_2$ are adjacent in $G$. Then $G$ has a perfect $b$-matching if and only if $G_{\overline b}$ has a matching saturating exactly $b_v$ copies of $v$ for each $v\in V$. In particular, a given $x$ is a perfect $b$-matching of $G$ if and only if $G_{\overline b}$ has a matching $M$ such that $M$ contains exactly $x_{\{v_1,v_2\}}$ edges between the copies of $v_1$ and $v_2$ and saturates exactly $b_v$ copies of $v$.
+    \label{prop:gb}
+\end{proposition}
+
+\begin{figure}
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=0.8\textwidth]{figures/G_b-G.pdf}
+        \caption{$G$ with $b$ specified on the vertices and a perfect $b$-matching specified by the edge labels}
+    \end{subfigure}
+    \hspace{0.05\textwidth}
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=0.8\textwidth]{figures/G_b-G_b.pdf}
+        \caption{$G_b$ with a perfect matching $M$ corresponding to the perfect $b$-matching in $G$}
+    \end{subfigure}
+    \caption{A pseudo-polynomial reduction construction between matching and $b$-matching~\cite{schrijver2003combinatorial}.}
+    \label{fig:G_b}
+\end{figure}
+
+By using this construction for an appropriate $\overline b$, we can use the alternating paths appearing in Kobayashi's~\cite{DBLP:conf/ipco/Kobayashi23} argument in $G_{\overline b}$ to provide a suitable $2$-step decomposition for points in the domain of $f_{c,M}$.
+
+\begin{proposition}
+    The function $f_{c,M}(z)=\min\bigl\{c^\top x\bigm\vert Mx=z,x\in\Z_{\ge0}^n\bigr\}$ is SBO jump M-convex.
+    \label{prop:b-matching-is-sbo-jump-m-convex}
+\end{proposition}
+
+\begin{proof}\textcolor{red}{TOPROVE 2}\end{proof}
+
+\iftoggle{ea}{
+
+Recall that we established the convexity of SBO jump M-convex functions on the scaled and shifted lattice $2\Z^m+r$ in \cref{sec:lattice-convexity}. By applying this to the special case $f_{c,M}$ using \cref{prop:b-matching-is-sbo-jump-m-convex}, we find that, for a fixed $r$, the set of $z$-s with corresponding perfect $z$-matchings and its optimal objective can be modeled as the points in a convex set in $1+m$ dimensions. 
+
+}{
+
+We now proceed to show the lattice-convexity of SBO jump M-convex functions. The proof is split into two steps. \cref{lemma:sbo-jump-m-convex-closing} shows how two points in a convex combination can be pairwise modified without increasing the overall sum of function values. This operation is then exhaustively employed in the proof of the final lattice-convexity result.
+
+\begin{lemma}
+    Let $f$ be an SBO jump M-convex function. Let $z^{(1)},z^{(2)}\equiv r\pmod2$ and let $i^*\in[m]$ be so that $z_{i^*}^{(1)}-z_{i^*}^{(2)}\ge2$. Then, there exist $z^{(1)\prime}$ and $z^{(2)\prime}$ such that
+    \begin{itemize}
+        \item $z^{(1)\prime},z^{(2)\prime}\equiv r\pmod2$,
+        \item $z^{(1)\prime}+z^{(2)\prime}=z^{(1)}+z^{(2)}$,
+        \item $f(z^{(1)\prime})+f(z^{(2)\prime})\le f(z^{(1)})+f(z^{(2)})$,
+        \item $z_{i^*}^{(1)\prime}=z_{i^*}^{(1)}-2,z_{i^*}^{(2)\prime}=z_{i^*}^{(2)}+2$,
+        \item $z_i^{(1)}=z_i^{(2)}\implies z_i^{(1)}=z_i^{(1)\prime}=z_i^{(2)\prime}=z_i^{(2)}$ for all $i\in[m]$.
+    \end{itemize}
+    \label{lemma:sbo-jump-m-convex-closing}
+\end{lemma}
+
+\begin{proof}\textcolor{red}{TOPROVE 3}\end{proof}
+
+We can now exhaustively employ \cref{lemma:sbo-jump-m-convex-closing} pairwise on vectors of a given convex combination to derive the lattice-convexity of $f$. \cref{lemma:convexity-of-sbo-jump-m-convex-functions} generalizes \cref{lemma:convexity-of-b-matching}.
+
+\begin{lemma}
+    Let $f$ be an SBO jump M-convex function. Let $z^{(1)},z^{(2)},\dots,z^{(\ell)}\equiv r\pmod2$ be given and $\lambda^{(1)},\lambda^{(2)},\dots,\lambda^{(\ell)}$ be real convex multipliers so that $z:=\sum_{k\in[\ell]}\lambda^{(k)}z^{(k)}\equiv r\pmod2$. Then $f(z)\le\sum_{k\in[\ell]}\lambda^{(k)}f(z^{(k)})$.
+    \label{lemma:convexity-of-sbo-jump-m-convex-functions}
+\end{lemma}
+
+\begin{proof}\textcolor{red}{TOPROVE 4}\end{proof}
+
+We note that the lattice-convexity of the domain $\{z\in\Z^m\colon f_{c,M}(z)<\infty\}$ on $2\Z^m+r$ immediately follows from a generalization of Tutte's characterization of graphs with perfect matchings, see Corollary 31.1a in~\cite{schrijver2003combinatorial}. Alternatively, it is a special case of Theorem 1.2 in~\cite{DBLP:journals/jgt/AnsteeN99}. 
+Having established the convexity of $f_{c,M}$ on the scaled and shifted lattice $2\Z^m+r$, we find that, for a fixed $r$, the set of $z$-s with corresponding perfect $z$-matchings and its optimal objective can be modeled as the points in a convex set in $1+m$ dimensions. 
+
+}
+
+We define a polyhedron in \cref{def:pr}, which models this set within some prescribed bound $U$ and can be interpreted as the epigraph of a convex extension of $f_{c,M}$.
+
+\begin{definition}
+    Let $r\in\{0,1\}^m$ be a remainder vector modulo $2$ and $U\in\Z$ an upper bound with polynomial encoding length. We define the polyhedron $P_{r,U}$ to be the convex hull of the points $S_{r,U}$ defined by
+    \[
+        S_{r,U}:=\bigl\{(\omega,z)\in\R\times\Z^m\colon z\equiv r\pmod2,\left\|z\right\|_\infty\le U,f_{c,M}(z)\le\omega\bigr\}.
+    \]
+    That is, $P_{r,U}$ is the Minkowski sum of the polytope which is the convex hull of the points
+    \[
+        \tilde S_{r,U}=\bigl\{(f_{r,U}(z),z)\bigm\vert z\equiv r\pmod2,\left\|z\right\|_\infty\le U,f_{c,M}(z)<\infty,z\in\Z^m\bigr\}
+    \]
+    and the recession cone $\{(\lambda,\veczero)\ \vert\ \lambda\ge0\}$.
+    \label{def:pr}
+\end{definition}
+
+That is, $S_{r,U}$ contains points $(\omega,z)$ for which there is a perfect $z$-matching with cost at most $\omega$, restricted to remainder vector $r$ modulo $2$ and a bounding box. Note that we do not have an explicit compact outer description of $P_{r,U}$ and are not aware of whether a polyhedron that models $f_{c,M}$ on $2\Z^m+r$ with polynomially many facets that are efficiently computable exists. However, such a description is not needed, as known integer programming algorithms, e.g.~\cite{DBLP:conf/focs/ReisR23,DBLP:journals/mor/Lenstra83}, can solve integer programs when the feasible region is a bounded polyhedron equipped with a strong separation oracle. Similar as to what was observed in~\cite{DBLP:journals/mor/Zhang03} for a slightly different polytope, the known methods for optimizing generalized matchings, imply that such a strong separation oracle running in polynomial time exists as a consequence of the ellipsoid method.
+
+\begin{lemma}
+    The strong separation problem for $P_{r,U}$ can be solved in polynomial time. That is, given a fractional $\tilde q\in\Q^{1+m}$ one can efficiently decide whether $\tilde q\in P_{r,U}$ and if not, yield a separating hyperplane $\alpha\in\Q^{1+m}$ such that $\alpha^\top\tilde q>\alpha^\top q$ for all $q\in P_{r,U}$.
+    \label{lemma:separation-oracle}
+\end{lemma}
+
+\begin{proof}\textcolor{red}{TOPROVE 5}\end{proof}
+
+We have now gathered the necessary ingredients to prove \cref{thm:tall-fpt}.
+
+\begin{proof}\textcolor{red}{TOPROVE 6}\end{proof}
+
+We note that the additional multiplicative $2^p$ contribution to the running time of the algorithm as a result of guessing the parity of $y$ is asymptotically small compared to the running time of the current state-of-the-art IP algorithm by Reis and Rothvoss~\cite{DBLP:conf/focs/ReisR23}, which for our application may have a running time of $(\log p)^{\O(p)}$ times a polynomial of the input encoding length. 
+\section{Few arbitrary constraints}
+\label{sec:wide}
+
+We now turn our focus on complicating constraints in \cref{ilp:wide} instead of complicating variables. As mentioned, if the coefficients of the constraint matrix are encoded in binary, \cref{ilp:wide} can encode the NP-hard subset sum problem. Therefore, we develop an algorithm scaling polynomially in $\Delta,\|c\|_\infty$ for a fixed $h$.
+
+\thmwidexp*
+
+To complement \cref{thm:wide-xp}, we show that solving \cref{ilp:wide} is W[1]-hard when parameterized by $h$ even when $\Delta=1$ in \cref{thm:wide-w1-hard}.
+
+The essence of solving \cref{ilp:tall} in XP time when $W$ and $c$ are encoded in unary is reducing the problem to a perfect $b$-matching problem with additional constraints and a polynomially bounded right-hand side $b$ by using a bound on the Graver complexity of the constraint matrix and the Graver augmentation framework of \cref{thm:graver-augmentation}. This perfect $b$-matching problem can then safely be pseudo-polynomially expanded to a perfect matching problem using the construction of \cref{prop:gb}. Finally, the $h$ constraints can be condensed into one and the resulting problem can be solved using a known randomized algorithm for the exact matching problem.
+
+As the key step in this algorithm is bounding $b$, we first discuss the Graver complexity of the constraint matrix and bound the proximity, i.e., the distance between optimal solutions to the LP relaxation of \cref{ilp:wide} and nearby optimal integer solutions.  Using \cref{thm:graver-ub-generalized-matching} and the proof of a lemma from the study of $n$-fold ILPs~\cite{DBLP:conf/icalp/EisenbrandHK18}, we obtain the bound given in \cref{sec:overview-few-arbitrary-constraints}.
+
+\corgraverubwide*
+
+\begin{proof}\textcolor{red}{TOPROVE 7}\end{proof}
+
+Note that an instance of \cref{ilp:wide} may be preprocessed so that $m\le2n$. Since every column has at most two nonzero entries, such preprocessing step which removes potential zero rows from $M$ can be executed in $\O(nm)$ time. Except for the running time in \cref{thm:wide-xp}, we will present the results of this section assuming $m=\O(n)$.
+
+\iftoggle{ea}{
+
+}{
+
+As shown in \cref{prop:graver-lb-wide}, the bound from \cref{cor:graver-ub-wide} is asymptotically tight for constant $h$.
+
+\propgraverlbwide*
+
+\begin{proof}\textcolor{red}{TOPROVE 8}\end{proof}
+
+}
+
+As \cref{thm:graver-augmentation} requires the ILP to be bounded, we employ the proximity bound of $n\cdot\O(\Delta hm)^h$ from \cref{cor:proximity-ub-wide}. \iftoggle{ea}{Both the Graver complexity and proximity bounds can be used in conjunction with \cref{thm:graver-augmentation} to reduce the problem of solving \cref{ilp:wide} to computing a number of Graver-best steps.}{Before showing how these two results allow us to reduce \cref{ilp:wide} to finding solutions to a constrained $b$-matching problem with small $b$, we show that the proximity upper bound is tight when $n=\Theta(m)$ and $h$ is constant.
+
+\propproximitylbwide*
+
+\begin{proof}\textcolor{red}{TOPROVE 9}\end{proof}
+
+Both \cref{cor:graver-ub-wide,cor:proximity-ub-wide} can be used in conjunction with \cref{thm:graver-augmentation} to reduce the problem of solving \cref{ilp:wide} to computing a number of Graver-best steps.
+
+}
+
+\begin{lemma}
+    The \cref{ilp:wide} can be solved by performing $\O(h^2n\log(\|c\|_\infty\Delta hn)\log(\Delta hn))$ many Graver-best oracle queries for instances of \cref{ilp:wide} with $n'=\O(n),\|c'\|_\infty=\O(\|c\|_\infty)$ and $W'$ having the same entries as $W$ up to the insertion of an identity matrix; computing the LP relaxation of an asymptotically equally sized instance of \cref{ilp:wide}; and performing a preprocessing step which takes $\O((h^2+m)n)$ time.
+    \label{lemma:graver-best-step-count}
+\end{lemma}
+
+\begin{proof}\textcolor{red}{TOPROVE 10}\end{proof}
+
+We now proceed to reduce the problem of finding a Graver-best step to a constrained perfect matching problem. To do so, we first reduce to a constrained $b$-matching problem and then employ the pseudo-polynomial reduction to perfect matching from \cref{prop:gb}.
+
+\begin{lemma}
+    Finding a Graver-best step for \cref{ilp:wide} can be reduced to solving another instance of \cref{ilp:wide} where $l'=\veczero,u'=\vecone,d'=d,b'=\vecone,\Delta'=\Delta$ and $n'=n^2\cdot\O(\Delta hm)^{2h},m'=n\cdot\O(\Delta hm)^h$, and $M$ is the incidence matrix of a simple graph. This reduction can be performed in output-linear time.
+    \label{lemma:wide-ip-reduction-to-perfect-matching}
+\end{lemma}
+
+\begin{proof}\textcolor{red}{TOPROVE 11}\end{proof}
+
+Finally, all $h$ constraints can be condensed into a single constraint. This can accomplished by representing the constraints in base $B$ for a sufficiently large $B$, as done for special cases in \cite{DBLP:journals/mp/BergerBGS11,DBLP:journals/jacm/PapadimitriouY82} (for $h=2$ and $W\in\{0,1\}^{h\times n}$ respectively).
+
+\begin{lemma}
+    An instance of \cref{ilp:wide} with
+    \begin{itemize}
+        \item $W\in\Z_{\ge0}^{h\times n}$,
+        \item $M$ being the incidence matrix of a simple graph,
+        \item $l=\veczero,u=\vecone,b=\vecone$,
+    \end{itemize}
+    can be reduced to itself with $h'=1,W'\in\Z_{\ge0}^{1\times n}$ in input+output linear time by only increasing $\Delta'=\Delta^h\cdot\O(m)^{h-1}$ and preserving $c,M,l,u,b$.
+    \label{lemma:constraint-condensation}
+\end{lemma}
+
+\begin{proof}\textcolor{red}{TOPROVE 12}\end{proof}
+
+We can now employ the randomized exact matching algorithm by Mulmuley, Vazirani and Vazirani~\cite{DBLP:journals/combinatorica/MulmuleyVV87} to solve instances resulting from \cref{lemma:constraint-condensation}. For the sake of completeness, we present an algorithm in \cref{lemma:weighted-exact-matching}, which closely follows their ideas.
+
+\begin{lemma}
+    A constrained minimum cost perfect matching problem, i.e., an instance of \cref{ilp:wide} with
+    \begin{itemize}
+        \item $c\ge\veczero,W\in\Z_{\ge0}^{1\times n},h=1$,
+        \item $M$ being the incidence matrix of a simple graph,
+        \item $l=\veczero,u=\vecone,b=\vecone$,
+    \end{itemize}
+    can be solved with a randomized algorithm in 
+    \begin{align*}
+        \|c\|_\infty\Delta nm^7\log(\Delta m)\log(\|c\|_\infty\Delta n)\cdot(\log\log(\|c\|_\infty\Delta n))^{\O(1)}
+    \end{align*}
+    time. In this case, an optimal solution is not computed.
+    \label{lemma:weighted-exact-matching}
+\end{lemma}
+
+\begin{proof}\textcolor{red}{TOPROVE 13}\end{proof}
+
+We can now combine the findings from this section to derive the claimed randomized XP time algorithm.
+
+\begin{proof}\textcolor{red}{TOPROVE 14}\end{proof}
+
+Observe that, by using the Graver augmentation framework, \cref{thm:graver-ub-generalized-matching}, \cref{lemma:master-reduction} and a polynomial time algorithm for minimum cost perfect matching, one can rederive the fact that the generalized matching problem is in P, \cref{thm:generalized-matching-in-p}. Most of the steps taken in this reduction process from \cref{lemma:master-reduction} reduce to the steps as listed by Schrijver~\cite{schrijver2003combinatorial}. The difference lies in that the application of a sensitivity result and minimum cost circulation algorithm are replaced by the Graver augmentation framework.
+
+Instead of directly solving the constrained perfect matching problem via \cref{lemma:weighted-exact-matching}, we may further reduce the problem to the $0/1$-weighted exact matching problem, which is to find a perfect matching with a target weight, assuming all edges have weight $0$ or $1$. This can be done by splitting the unary-encoded coefficients in $W$ into multiple binary coefficients as shown in \cref{lemma:wide-coefficient-reduction}. This generalizes the reduction used in~\cite{DBLP:journals/jacm/PapadimitriouY82}. As the lemma additionally reveals that the W[1]-hardness of solving \cref{ilp:wide} persists even when we restrict to coefficients bounded by a constant $\Delta$ in \cref{thm:wide-w1-hard}, we provide an explicit proof.
+
+\begin{lemma}
+    An instance of \cref{ilp:wide} with finite $l,u$ and $W\in\Z_{\ge0}^{h\times n}$ can be reduced to itself in output-linear time where
+    \begin{itemize}
+        \item $W'\in\{0,1\}^{h'\times n'}$,
+        \item $\|l'\|_1=\O(\Delta\|l_1\|),\|u'\|_1=\O(\Delta(\|u\|_1+\|u-l\|_1))$,
+        \item $n',m'=\O(\Delta n)$,
+        \item $h'=h$,
+        \item $d'=d$,
+        \item $\|b'\|_1=\O(\|b\|_1+\Delta\|u\|_1)$,
+        \item $c'$ contains the same entries as $c$ up to the insertion of zeros.
+    \end{itemize}
+    In addition, the following properties of an instance are preserved:
+    \begin{itemize}
+        \item $M$ is the incidence matrix of a simple graph,
+        \item $l=\veczero,u=\vecone,b=\vecone$.
+    \end{itemize}
+    \label{lemma:wide-coefficient-reduction}
+\end{lemma}
+
+\begin{proof}\textcolor{red}{TOPROVE 15}\end{proof}
+
+This technique can also be used to reduce the objective coefficients to a binary vector when it is given in unary. In this way, we find that solving \cref{ilp:wide} is equivalent to the $0/1$-weighted exact matching problem.
+
+\begin{proposition}
+    If the objective coefficients and constraints are encoded in unary and $h$ is fixed, then solving \cref{ilp:wide} is polynomially equivalent to the $0/1$-weighted exact matching problem.
+    \label{thm:wide-ip-exact-matching-equivalence}
+\end{proposition}
+
+\begin{proof}\textcolor{red}{TOPROVE 16}\end{proof}
+
+In this way, a polynomial time deterministic algorithm for $0/1$-weighted exact matching yields a deterministic algorithm to solve \cref{ilp:wide}. The question of whether such algorithm exists is a long standing open question.
+
+Additionally, if one is able to solve minimum cost perfect matching with one $0/1$ side constraint, \cref{lemma:graver-best-step-count,lemma:wide-ip-reduction-to-perfect-matching,lemma:constraint-condensation,lemma:wide-coefficient-reduction} show that \cref{ilp:wide} is similarly solvable. However, to the best of our knowledge, the complexity of this problem is unknown. In particular, it suffices to focus on maximum weight perfect matching under a $0/1$ budget constraint $\sum_{j\in[n]}w_jx_j\le B$ for $w\in\{0,1\}^n$, as one can reduce to this problem by decreasing the costs associated with edges with $w_j=1$ by a sufficiently large number $(m/2)\|c\|_\infty+1$ so that the budget constraint is forced to be met with equality.
+
+Having finished the discussion of problems related to \cref{ilp:wide}, we now complement \cref{thm:wide-xp} with the hardness result listed in \cref{thm:wide-w1-hard}. For this, we employ the known hardness of ILP with coefficients encoded in unary~\cite{DBLP:journals/ai/DvorakEGKO21}. This problem was shown to be strongly W[1]-hard parameterized by the number of constraints by Dvorák et al.~\cite{DBLP:journals/ai/DvorakEGKO21} through a reduction from the multicolored clique problem. In their reduction they use binary indicator variables together with variables taking the values of (the sum of two) numbers that have a one-to-one correspondence with vertices of the graph. For this, they use a Sidon sequence of which the elements may be bounded by $\O(n^2)$. This justifies the restriction on the variables $x$ in \cref{thm:w1-multicolorclique} of $\veczero\le x\le u$ where $u$ is in unary.
+
+\thmwonemulticolorclique*
+
+The unary upper bounds on the variables, combined with \cref{lemma:wide-coefficient-reduction} allow to derive the W[1]-hardness of solving \cref{ilp:wide} parameterized by $h$ for the restricted case of a binary constrained perfect matching problem on a bipartite graph for which many width parameters are constant. To arrive at the claimed graph class, we avoid the pseudo-polynomial reduction from \cref{lemma:wide-ip-reduction-to-perfect-matching} and first model each variable of the ILP with pseudo-polynomially many binary variables, before subdividing the corresponding edges to reduce the coefficients of $W$.
+
+\thmwidewonehard*
+
+\begin{proof}\textcolor{red}{TOPROVE 17}\end{proof}
+
+This shows that, unlike $n$-fold ILP, the constrained matching problem is unlikely to become FPT when the coefficient size is bounded. 
+\section{Concluding notes and open problems}
+We study the complexity of ILP parameterized by the size of variable or constraint backdoors to the generalized matching problem, called $p$ and $h$ respectively. In particular, we show that solving ILPs is in FPT when parameterized by $p$. We study the convexity of degree sequences in the light of SBO jump M-convex functions to express the non-backdoor variables efficiently as polyhedral constraints. Additionally, we present a randomized XP time algorithm to solve ILPs for fixed $h$ when the objective and constraint matrix are encoded in unary. This algorithm employs a Graver basis augmentation procedure to reduce the problem to the exact matching problem. Finally, we match this latter result by showing that ILP is W[1]-hard parameterized by $h$.
+
+Having studied the case where $p>0,h=0$ and where $p=0,h>0$, a natural open question is whether ILP can still be solved in polynomial time when it is a generalized matching problem with a fixed number of both additional variables and constraints. This can be seen as an analogue of $4$-block $n$-fold ILP in the context of block structured ILPs, which are known to be solvable in slice-wise polynomial time~\cite{DBLP:conf/ipco/HemmeckeKW10}. Since the restricted case of $p=0,h>0$ in the context of generalized matching is W[1]-hard in terms of $h$, the question is whether $p>0,h>0$ also admits a randomized XP time algorithm when $c,A$ are encoded in unary. We note that providing a polynomial Graver-complexity upper bound for \cref{ilp:tall} will suffice to obtain this result. In such case, the Graver-complexity of the entire constraint matrix will also be polynomially bounded and a Graver-best step can be computed by brute forcing the values of the $p$ arbitrary variables, after which a problem of \cref{ilp:wide} can be solved efficiently.
+
+In addition, aside from the long standing open question of whether the exact matching problem is in P, a natural open question that arises from \cref{thm:wide-xp} is whether the exponential dependence on the encoding length of $c$ is necessary. To answer this question positively, it suffices to restrict to $0/1$-budgeted perfect matching with its objective in encoded binary\iftoggle{ea}{, see \cref{sec:wide}}{}.
+
+Finally, we suspect that some intermediate steps used in obtaining \cref{thm:tall-fpt} can be refined. That is, we suspect that \cref{lemma:convexity-of-sbo-jump-m-convex-functions} holds for general jump M-convex functions. In addition, it may be possible to make a combinatorial separation algorithm for $P_{r,U}$ in a more direct fashion as done in~\cite{DBLP:journals/mor/Zhang03}. 
+\bibliography{bib}
+
+\appendix
+
+\section{A direct MILP approach to exploit variable backdoors}
+\label{sec:milp-approach-for-tall-fpt}
+
+Recent independent and concurrent research by Eisenbrand and Rothvoss~\cite{eisenbrand2025parameterizedlinearformulationinteger} shows that the integer hull of arbitrary polyhedra $Ax\le b$ can be expressed as a system that depends linearly on $b$ as long as $b$ has a fixed remainder modulo a large integer depending only on the dimensions of $A$ and the coefficient size. They use this to optimize two-stage stochastic integer programming with large coefficients in the constraint matrix corresponding to the variable backdoor in FPT time. To accomplish this, they replace the non-backdoor variables with real variables and replace the constraints on those variables with their parametric versions of the integer hull. Their strategy reveals an additional way in which \cref{thm:tall-fpt} can be derived, which we shortly discuss.
+
+Consider the perfect $b$-matching problem with additional variables resulting from \cref{lemma:master-reduction}. Let $P(z)$ be the polyhedron $\{x\in\R^n:Mx=z,x\ge0\}$ and $P_I(z)$ its integer hull $\conv(P(z)\cap\Z^n)$. It is known that $P_I(z)$ is given by
+\[
+    P_I(z)=\{x\in\R^n:Mx=z,x\ge0,Q_bx\le q\},
+\]
+where $Q_bx\le q$ consists of the constraints $\sum_{j\in\delta(U)}x_j\ge1$ for all $U\subseteq[m]$ such that $\sum_{i\in U}z_i$ is odd. See Corollary 31.2a in~\cite{schrijver2003combinatorial}. Here $\delta(U)$ are the edges connecting $U$ and its complement. These constraints are identical for all $z\equiv r\pmod2$ for a fixed remainder $r$, which justifies labeling our system as $Q_rx\le q$.
+
+After guessing the remainder $r'\equiv y\pmod2$, we may solve the $b$-matching variant of \cref{ilp:tall} by solving the problem
+\[
+    \min\{c^\top(y,x)\ \vert\ y\in2\Z^p+r',\veczero\le y\le g,x\in P_I(b-Ty)\},
+\]
+as after finding an optimal $y$, we can obtain vertex solutions $x$ that are integral. This is equivalent to
+\[
+    \min\{c^\top(2v+r',x)\ \vert\ v\in\Z,\veczero\le 2v+r'\le g,x\in P_I(b-T(2v+r'))\}.
+\]
+As $z=b-T(2v+r')\equiv r\pmod2$ for all $v$ for suitably chosen $r$, we may restrict to solving
+\[
+    \min\{c^\top(2v+r',x)\ \vert\ v\in\Z,\veczero\le 2v+r'\le g,Mx=b-T(2v+r'),x\ge0,Q_rx\le q\}.
+\]
+
+This mixed integer linear program can be solved in FPT time parameterized by $p$ as a result of Lenstra's algorithm~\cite{DBLP:journals/mor/Lenstra83} as long as we can optimize any linear function over its linear relaxation in polynomial time. The latter is possible by using the ellipsoid method~\cite{DBLP:books/sp/GLS1988} and Padberg's and Rao odd minimum cut algorithm~\cite{DBLP:journals/mor/PadbergR82}, which allows to efficiently separate the inequalities in $Q_rx\le q$. 
+\end{document}

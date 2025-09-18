@@ -1,0 +1,597 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath, mdframed}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{newtxtext, newtxmath}
+\usepackage{enumitem}
+\usepackage{titling}
+\usepackage{hyperref}
+\usepackage{epsfig}
+\let\openbox\relax
+\usepackage{amsthm}
+\usepackage{graphicx}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{CJKutf8}
+\usepackage{url}
+\usepackage{comment}
+\usepackage{bbm}
+\usepackage{blindtext}
+\usepackage{xcolor}
+\usepackage{tikz, tikz-3dplot}
+\usepackage{tikz-qtree}
+\usetikzlibrary{positioning,calc}
+\usepackage{etoolbox}
+\usepackage{enumitem}
+\usepackage{multirow}
+\usepackage{tabularx}
+\usepackage{makecell}
+\usetikzlibrary{decorations.markings}
+\usetikzlibrary{decorations.text}
+
+
+
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{prop}[theorem]{Proposition}
+\newtheorem{remark}{Remark}
+\newtheorem{fact}{Fact}
+\newtheorem{conjecture}{Conjecture}
+\newtheorem{problem}{Problem}
+\newtheorem{claim}{Claim}
+
+
+
+\newcommand{\inftynorm}[1]{\left\lVert#1\right\rVert_\infty}
+\newcommand{\zeronorm}[1]{\left\lVert#1\right\rVert_0}
+\newcommand{\rounddown}[1]{\left\lfloor#1\right\rfloor}
+\newcommand{\roundup}[1]{\left\lceil#1\right\rceil}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Ci}{\mathcal{C}}
+\newcommand{\blue}[1]{\textcolor{blue}{#1}}
+\newcommand{\red}[1]{{\color{red} #1}}
+\newcommand{\bidirect}[1]{\overset\leftrightarrow{#1}} 
+\makeatletter
+
+\DeclareRobustCommand{\cev}[1]{{\mathpalette\do@cev{#1}}}
+\newcommand{\do@cev}[2]{\vbox{\offinterlineskip
+    \sbox\z@{$\m@th#1 x$}\ialign{##\cr
+      \hidewidth\reflectbox{$\m@th#1\vec{}\mkern4mu$}\hidewidth\cr
+      \noalign{\kern-\ht\z@}
+      $\m@th#1#2$\cr
+    }}}
+\makeatother
+
+\newcommand{\knote}[1]{{\color{red}[{Karthik: \bf #1}]\marginpar{\color{red}*}}}
+
+\newcommand{\snote}[1]{{\color{cyan}[{Siyue: \bf #1}]\marginpar{\color{blue}*}}}
+
+\newcommand{\rnote}[1]{{\color{blue}[{Ravi: \bf #1}]\marginpar{\color{blue}*}}}
+
+\DeclareMathOperator{\intcone}{int\_cone}
+\DeclareMathOperator{\cone}{cone}
+\DeclareMathOperator{\supp}{supp}
+\DeclareMathOperator{\opt}{OPT}
+\DeclareMathOperator{\alg}{ALG}
+
+\title{Minimum Cost Nowhere-zero Flows and Cut-balanced Orientations}
+\author{Karthekeyan Chandrasekaran\thanks{Grainger College of Engineering, University of Illinois, Urbana-Champaign. Email: {\tt karthe@illinois.edu}. Supported in part by NSF grant CCF-2402667.}\and Siyue Liu\thanks{Tepper School of Business, Carnegie Mellon University. Email: {\tt siyueliu@andrew.cmu.edu}. This material is based upon work supported in part by the Air Force Office of
+Scientific Research under award number FA9550-23-1-0031.}
+\and R. Ravi\thanks{Tepper School of Business, Carnegie Mellon University. Email: {\tt ravi@andrew.cmu.edu}. This material is based upon work supported in part by the Air Force Office of
+Scientific Research under award number FA9550-23-1-0031.}
+}
+
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Flows and colorings are disparate concepts in graph algorithms---the former is tractable while the latter is intractable. Tutte \cite{tutte1954contribution, tutte1966algebraic} introduced the concept of nowhere-zero flows to unify these two concepts. Jaeger \cite{jaeger1976balanced} showed that nowhere-zero flows are equivalent to cut-balanced orientations. 
+Motivated by connections between nowhere-zero flows, cut-balanced orientations, Nash-Williams' well-balanced orientations, and postman problems, we study optimization versions of nowhere-zero flows and cut-balanced orientations. 
+Given a bidirected graph with asymmetric costs on two orientations of each edge, we study the min cost nowhere-zero $k$-flow problem and min cost $k$-cut-balanced orientation problem. We show that both problems are NP-hard to approximate within any finite factor. Given the strong inapproximability result, we design bicriteria approximations for both problems: we obtain a $(6,6)$-approximation to the min cost nowhere-zero $k$-flow and a $(k,6)$-approximation to the min cost $k$-cut-balanced orientation.
+For the case of symmetric costs (where the costs of both orientations are the same for every edge), we show that the nowhere-zero $k$-flow problem remains NP-hard and admits a $3$-approximation. 
+\end{abstract}
+
+\newpage
+\section{Introduction}\label{sec:intro}
+Flows and colorings are disparate concepts in graph theory, especially from a computational perspective---flow problems are typically tractable while coloring problems are typically intractable. However, these two concepts are related in planar graphs via planar duality. 
+Inspired by this connection, Tutte \cite{tutte1954contribution,tutte1966algebraic} introduced nowhere-zero flows to unify flows and colorings in arbitrary graphs. This unified viewpoint has driven several fundamental results in connectivity and orientations (e.g., see \cite{west2001introduction} and \cite{CLR24}). Existence of nowhere zero flows is characterized by the existence of cut-balanced orientations \cite{jaeger1976balanced}. Motivated by these connections, we investigate optimization problems associated with nowhere-zero flows and cut-balanced orientations.
+
+We begin by defining nowhere-zero flows, cut-balanced orientations, and the optimization problems of interest. 
+In an undirected graph $G=(V,E)$, for a subset of vertices $U\subseteq V$, we denote the set of edges with exactly one end-vertex in $U$ by $\delta_G(U)$. In a directed graph $D=(V,A)$, for $U\subseteq V$, we denote the arcs leaving and entering $U$ by $\delta^+_{D}(U)$ and $\delta^-_{D}(U)$ respectively. For a subset of edges $F\subseteq E$, we denote $\delta_F(U):=\delta_G(U)\cap F$. Similarly, for a subset of arcs $B\subseteq A$, we define $\delta_{B}^{\pm}(U):=\delta_{D}^{\pm}(U)\cap B$.
+Let $G=(V, E)$ be an undirected graph and $k\ge 2$ be an integer.
+A \emph{nowhere-zero $k$-flow} in $G$ is a tuple $(\vec{E},f)$, where $\vec{E}$ is an orientation of $E$ and $f:\vec{E} \rightarrow \{1,2,...,k-1\}$ is a function that satisfies flow conservation, i.e., $f(\delta_{\vec{E}}^+(v))=f(\delta_{\vec{E}}^-(v))$ for every $v\in V$. A \emph{nowhere-zero flow} is a nowhere-zero $k$-flow for some finite integer $k\geq 2$. An orientation $\vec{E}$ of $E$ \emph{induces} a nowhere-zero $k$-flow if there is a function $f: \vec{E} \rightarrow \{1,2,...,k-1\}$ such that $(\vec{E}, f)$ is a nowhere-zero $k$-flow. 
+An orientation $\vec{E}$ of $E$ is \emph{$k$-cut-balanced} if $|\delta_{\vec{E}}^+(U)|\geq \frac{1}{k}|\delta_{E}(U)| \ \forall U\subseteq V$. 
+A \emph{cut-balanced orientation} is a $k$-cut-balanced orientation for some finite integer $k\ge 2$. 
+The \emph{bidirected graph} of $G=(V,E)$, denoted $\vec{G}=(V,E^+\cup E^-)$, is obtained by making two copies $e^+\in E^+$ and $e^-\in E^-$ of every edge $e\in E$ and orienting them in opposite directions. Let  $c:E^+\cup E^-\rightarrow \Z_{\ge 0}$ be costs on the arcs of the bidirected graph $\vec{G}$. The cost of an orientation $\vec{E}$ is denoted by $c(\vec{E}):=\sum_{e\in \vec{E}}c(e)$ and the cost of a nowhere-zero flow $(\vec{E}, f)$ is denoted by $c(f):=\sum_{e\in \vec{E}}c(e)f(e)$. 
+We consider the following problems for a fixed integer $k\ge 2$:
+
+\begin{mdframed}
+\textbf{Weighted nowhere-zero $k$-flow ($\operatorname{WNZF}(k)$)}:  \\
+\begin{tabular}{ l l }
+\textbf{Given:}& Undirected $2$-edge-connected graph $G=(V, E)$ and costs $c: E^+\cup E^-$ \\
+\textbf{Goal:}& Find a nowhere-zero $k$-flow $(\vec{E},f)$ with minimum cost $c(f)$.
+\end{tabular}
+\end{mdframed}
+
+\begin{mdframed}
+\textbf{Weighted $k$-cut-balanced orientations ($\operatorname{WCBO}(k)$)}:\\
+\begin{tabular}{ l l }
+\textbf{Given:}& Undirected $2$-edge-connected graph $G=(V, E)$ and costs $c: E^+\cup E^-$ \\
+\textbf{Goal:}& Find a $k$-cut-balanced orientation $\vec{E}$ with minimum cost $c(\vec{E})$.
+\end{tabular}
+\end{mdframed}
+
+The \emph{feasibility versions} of  $\operatorname{WNZF}(k)$ and $\operatorname{WCBO}(k)$ are the problems of determining whether a given undirected $2$-edge-connected graph has a nowhere-zero $k$-flow and a $k$-cut-balanced orientation, respectively. An orientation induces a nowhere-zero $k$-flow if and only if it is $k$-cut-balanced \cite{jaeger1976balanced, goddyn2001open,goddyn1998k,thomassen2012weak}. Hence, the feasibility versions of  $\operatorname{WNZF}(k)$ and $\operatorname{WCBO}(k)$ are equivalent, and we will discuss their complexity shortly. 
+We say that the cost function $c: E^+\cup E^-$ is \emph{symmetric} if $c(e^+)=c(e^-)$ for every $e\in E$ and \emph{asymmetric} otherwise. If the costs $c$ are symmetric, $\operatorname{WCBO}(k)$ is equivalent to the feasibility problem while $\operatorname{WNZF}(k)$ is non-trivial. We denote $\operatorname{WNZF}(k)$ for symmetric costs as $\operatorname{SWNZF}(k)$. We define $\operatorname{WNZF}(\infty)$ as the problem of finding a min-cost nowhere-zero flow with no restriction on $k$, i.e., 
+\[
+\operatorname{WNZF}(\infty):=\min\{c(f): \exists\ \vec{E} \text{ such that $(\vec{E}, f)$ is a nowhere-zero $k$-flow for some integer $k\ge 2$}\}. 
+\]
+We define $\operatorname{WCBO}(\infty)$  and $\operatorname{SWNZF}(\infty)$ analogously. 
+In all optimization problems above, we assume that the input graph is $2$-edge-connected since this is a necessary condition for the existence of a nowhere-zero flow/cut-balanced orientation. 
+
+
+\subsection{Background, Motivations, and Connections}
+\vspace{1mm}
+\noindent \textbf{Nowhere-zero Flows.}
+Nowhere-zero flow is a rich area of study in graph theory, with close connections to graph coloring and chromatic polynomials. 
+We begin by observing that $2$-edge-connectivity is necessary and sufficient for the existence of a nowhere-zero flow.\footnote{The necessity of $2$-edge-connectivity for nowhere-zero flows follows from flow-conservation and nowhere-zero property. We sketch its sufficiency: we recall that every $2$-edge-connected graph $G=(V, E)$ admits a strongly connected orientation $\vec{E}$, i.e., an orientation $\vec{E}$ such that $|\delta^+_{\vec{E}}(U)|\ge 1$ for every $\emptyset\neq U\subsetneq V$; such an orientation is a $k$-cut-balanced orientation for some sufficiently large integer $k$; now, recall that an orientation is a $k$-cut-balanced orientation if and only if it induces a nowhere-zero $k$-flow~\cite{jaeger1976balanced}.} 
+Moreover, for integers $k_2\ge k_1\ge 2$, a nowhere-zero $k_1$-flow is also a nowhere-zero $k_2$-flow. 
+Given this, most works on nowhere-zero flows focused on the least integer $k$ for which every $2$-edge-connected graph admits a nowhere-zero $k$-flow. 
+Tutte \cite{tutte1954contribution,tutte1966algebraic} conjectured that every $2$-edge-connected graph has a nowhere-zero $5$-flow---we will call this Tutte's $5$-flow conjecture. 
+The Petersen graph does not have a nowhere-zero $4$-flow, showing that $5$ is best possible.
+Jaeger \cite{jaeger1976nowhere,jaeger1979flows} proved that every $2$-edge-connected graph has a nowhere-zero $8$-flow. Seymour \cite{seymour1981nowhere} improved Jaeger's result by showing that every $2$-edge-connected graph has a nowhere-zero $6$-flow. Seymour's proof is non-constructive and a subsequent algorithmic proof was given by Younger \cite{younger1983integer}. DeVos and Nurse \cite{devos2023short} gave a shorter proof of Seymour's result which can also be made constructive. 
+
+We now discuss the feasibility variants of $\operatorname{WNZF}(k)$ and $\operatorname{WCBO}(k)$. A consequence of Seymour's result is that for every integer $k\ge 6$, all instances of both $\operatorname{WNZF}(k)$ and $\operatorname{WCBO}(k)$ are feasible. We now discuss the status for integers $k\in \{2,3, 4, 5\}$. 
+An undirected graph admits a nowhere-zero $2$-flow if and only if it is Eulerian; we recall that Eulerian property is verifiable in polynomial time and hence, the feasibility versions of $\operatorname{WNZF}(2)$ and $\operatorname{WCBO}(2)$ are solvable in polynomial time. A planar graph admits a nowhere-zero $k$-flow if and only if its dual is $k$-vertex-colorable \cite{jaeger1988nowhere}; deciding $3$-vertex-colorability of a planar graph is NP-complete \cite{garey1974some} and consequently, feasibility variants of $\operatorname{WNZF}(3)$ and $\operatorname{WCBO}(3)$ are NP-complete (even in planar graphs) \cite{kochol1998hypothetical}. 
+Tutte \cite{tutte1954contribution} showed that a simple cubic graph has a nowhere-zero $4$-flow if and only if it is $3$-edge-colorable. Deciding $3$-edge-colorability of a given simple cubic graph is NP-complete \cite{holyer1981np} and hence, feasibility variants of $\operatorname{WNZF}(4)$ and $\operatorname{WCBO}(4)$ are also NP-complete (see also \cite{jaeger1979flows} and Section 7.3 of \cite{west2001introduction}). Interestingly, Kochol \cite{kochol1998hypothetical} proved that if Tutte's $5$-flow conjecture is false, then deciding whether a cubic graph has a nowhere-zero $5$-flow is NP-complete. In fact, for $k=3,4,5$, NP-completeness of the feasibility variants implies no finite approximations for corresponding optimization problems $\operatorname{WNZF}(k)$ and $\operatorname{WCBO}(k)$. This is because a finite approximation algorithm for the instance with all costs set to 0 would also certify feasibility.
+We summarize these facts in the 
+first two columns of Table \ref{table:main}. 
+
+
+
+From the discussion above, we have that 
+the feasibility variants of $\operatorname{WNZF}(2)$ and $\operatorname{WCBO}(2)$ are polynomial-time solvable and for $k\ge 6$, all instances of $\operatorname{WNZF}(k)$ and $\operatorname{WCBO}(k)$ are feasible. Given this status, it is natural to ask whether the optimization variants $\operatorname{WNZF}(k)$ and $\operatorname{WCBO}(k)$ are solvable in polynomial time for $k=2$ and $k\ge 6$. We observe that $\operatorname{WNZF}(2)$ and $\operatorname{WCBO}(2)$ are equivalent since a nowhere-zero $2$-flow $(\vec{E},f)$ has $f(e)=1\ \forall e\in\vec{E}$, and thus the cost of the flow is equal to the cost of the orientation. 
+In particular, $\operatorname{WNZF}(2)$ and $\operatorname{WCBO}(2)$ are equivalent to the min cost Eulerian orientation problem, which can be solved in polynomial time \cite{win1989windy}. 
+We emphasize that these connections already highlight the discrete nature of $\operatorname{WNZF}(k)$ in contrast to the classic min cost flow problem which is inherently a continuous optimization problem. 
+
+\vspace{1mm}
+\noindent \textbf{Well-balanced Orientations.}
+The notion of $k$-cut-balanced orientation is closely related to that of well-balanced orientation, a fundamental notion in connectivity-preserving orientation problems. Let $G=(V, E)$ be an undirected graph. An orientation $\vec{E}$ is \emph{well-balanced} if $\lambda_{\vec{E}}(u,v)\ge \lfloor \lambda_E(u,v)/2\rfloor$ for every $u,v\in V$, where 
+$\lambda_E(u,v):=\min_{u\in U\subseteq V-v}|\delta_E(U)|$ and 
+$\lambda_{\vec{E}}(u,v):=\min_{u\in U\subseteq V-v}|\delta_{\vec{E}}^+(U)|$. 
+Nash-Williams \cite{nash1960orientations} showed that every $2$-edge-connected graph admits a well-balanced orientation---this result is known as the strong orientation theorem in the literature. The strong orientation theorem guarantees a single orientation that halves the pairwise connectivity of all pairs. In contrast, Nash-Williams' weak orientation theorem is about global connectivity: it states that every $2k$-edge-connected graph admits a $k$-arc-connected orientation. The weak orientation theorem can be derived from the strong orientation theorem. Nash-Williams' proof of the strong orientation theorem is rather involved. Subsequent works \cite{mader1978reduction,frank1993applications} have given alternative proofs, but they are still complex. In fact, discovering a simpler proof of Nash-Williams' strong orientation theorem has been a long-standing question in graph theory and combinatorial optimization (see Section 9.8 in \cite{frank2011connections}). 
+
+As a motivating question for this quest for simplification, Frank \cite{frank1993applications} posed an optimization variant of Nash-Williams' strong orientation theorem, namely the min-cost well-balanced orientation problem: given an undirected graph with costs on both orientations of each edge, find a min cost well-balanced orientation. Bern\'ath, Iwata, Kir\'{a}ly, Kir\'{a}ly, and Szigeti \cite{bernath2008recent} proved that this problem is NP-hard. Further, Bern\'ath and Joret \cite{bernath2008well} proved that deciding if a mixed graph has a well-balanced orientation is also NP-hard. These results rule out the possibility of approximating the min cost well-balanced orientation within any finite factor. On the other hand, the optimization variant of Nash-Williams' weak orientation theorem---namely, given an undirected $2k$-edge-connected graph with costs on both orientations of each edge, finding a min-cost $k$-arc-connected orientation---is solvable in polynomial time via Edmonds-Giles' theory of submodular flows \cite{edmonds1977min}. 
+
+We observe that $k$-cut-balanced orientations are closely related to well-balanced orientations: if $\vec{E}$ is a $k$-cut-balanced orientation, then for every pair $(u,v)\in V$, we have that 
+\[\lambda_{\vec{E}}(u,v)=\min\limits_{u\in U\subseteq V-v}|\delta_{\vec{E}}^+(U)|\geq \min\limits_{u\in U\subseteq V-v}\frac{1}{k}|\delta_E(U)|=\frac{1}{k}\lambda_E(u,v).
+\]
+Thus, a $k$-cut-balanced orientation can be viewed as an ``approximately'' well-balanced orientation with the approximation factor being $k/2$. Since there exists an efficient algorithm to find a $6$-cut-balanced orientation in every $2$-edge-connected graph, it follows that there exists an efficient algorithm to find a ``$3$-approximately'' well-balanced orientation. More generally, a $k$-cut-balanced orientation with small cost  is a ``$k/2$-approximately'' well-balanced orientation with small cost, thus relating $\operatorname{WCBO}(k)$ to a bicriteria version of Frank's problem. This connection was one of the motivations for us to study the optimization version of $k$-cut-balanced orientation problem, namely $\operatorname{WCBO}(k)$.
+
+\vspace{1mm}
+\noindent \textbf{Orientation and Postman problems.}
+We observe that $\operatorname{WCBO}(\infty)$ is polynomial-time solvable. In fact, it is equivalent to the problem of finding a min cost strongly connected orientation: 
+an orientation $\vec{E}$ is $k$-cut-balanced for some finite integer $k\ge 2$ if and only if 
+for every $\emptyset\neq U\subsetneq V$, we have that $|\delta_{\vec{E}}^+(U)|\geq \frac{1}{k}|\delta_{E}(U)|$, i.e., $|\delta_{\vec{E}}^+(U)|\geq \roundup{\frac{1}{k}|\delta_{E}(U)|}$, i.e., $|\delta_{\vec{E}}^+(U)|\geq 1$. Min cost strongly connected orientation can be solved in polynomial time (via \cite{lucchesi1978minimax, edmonds1977min}). 
+
+In $\operatorname{WNZF}(\infty)$, we seek a nowhere-zero flow $(\vec{E}, f)$ which is equivalent to an integer-valued flow $f: E^+\cup E^-\rightarrow \Z_{\ge 0}$ such that the flow is positive in {\it exactly} one of $e^+$ and $e^-$ for every edge $e\in E$; instead, if we seek an integer-valued flow $f: E^+\cup E^-\rightarrow \Z_{\ge 0}$ such that {\it at least} one of $e^+$ and $e^-$ has positive flow value for every $e\in E$, then the resulting problem is the \emph{asymmetric postman problem} \cite{minieka1979chinese}: find a min cost directed Eulerian tour of the graph $G$ that traverses every edge $e\in E$ at least once. 
+In contrast to the symmetric postman problem which can be solved in polynomial time \cite{edmonds1973matching}, 
+the asymmetric postman problem is already NP-hard but admits a $3/2$-approximation \cite{win1989windy, raghavachari1999approximation}. A well-studied special case of the asymmetric postman problem is the \emph{mixed postman} problem, where we are given a mixed graph (consisting of undirected edges and directed arcs) with costs on the arcs and \textit{symmetric} costs on the edges and the goal is to find a min cost Eulerian tour that traverses every arc and edge at least once. This is also NP-hard \cite{papadimitriou1976complexity} and several works have focused on its approximability \cite{edmonds1973matching,christofides1984optimal,frederickson1979approximation,raghavachari19993}---the current best approximation ratio is $\frac{3}{2}$ \cite{raghavachari19993}. 
+The mixed postman problem with the restriction that each arc/edge can be traversed at most once has also been studied. The arc-restricted problem is NP-hard and admits a $4/3$-approximation~\cite{zaragoza2003postman}, while the edge-restricted problem is NP-hard to approximate within any finite factor \cite{zaragoza2003postman,veerasamy1999approximation,martinez2006complexity}.
+
+
+$\operatorname{WNZF}(\infty)$ can be viewed as the asymmetric postman problem with \emph{orientation constraints}: i.e., flow is allowed to be positive on exactly one of the two orientations of each edge.
+We will subsequently take this viewpoint while designing LP-based approximation algorithms for $\operatorname{WNZF}(k)$. We remark that $\operatorname{WNZF}(\infty)$, i.e., postman problem with orientation constraints, is different from the (mixed) postman problem with the restriction that each edge can be traversed at most once---the latter requires the flow value to be exactly $1$ on one orientation of each edge and $0$ on the other while $\operatorname{WNZF}(\infty)$ requires the flow value to be positive on exactly one orientation of each edge. Orientation constraints requiring flow value to be positive on exactly one orientation of each edge arise naturally in network design problems since they model one-way roads. 
+We mention that several prior works have considered orientation constraints in directed network design problems and most of them have concluded that orientation constraints tend to make the problem much harder (e.g., see \cite{frank2003combined,khanna2005directed,singh2018approximating,cygan2013steiner}). 
+\subsection{Our Results}
+We first show hardness and inapproximability of $\operatorname{WNZF}(k)$ and $\operatorname{WCBO}(k)$. 
+\begin{theorem}\label{thm:hardness-WNZF-WCBO}
+    For every finite integer $k\ge 3$, $\operatorname{WNZF}(k)$ and $\operatorname{WCBO}(k)$ are NP-hard to approximate within any finite factor.
+\end{theorem}
+
+Theorem \ref{thm:hardness-WNZF-WCBO} rules out the possibility of approximation algorithms for $\operatorname{WNZF}(k)$ and $\operatorname{WCBO}(k)$. Given this status, we investigate bicriteria approximation algorithms for both these problems. We say that an algorithm is an \emph{$(\alpha,\beta)$-approximation} for $\operatorname{WNZF}(k)$ (resp. $\operatorname{WCBO}(k)$) if the algorithm returns a nowhere-zero $\beta k$-flow (resp. $\beta k$-cut-balanced orientation) with cost at most $\alpha c(\opt)$ where $c(\opt)$ is the minimum cost of a nowhere-zero $k$-flow (resp. $k$-cut-balanced orientation). We show the following bicriteria approximation for $\operatorname{WNZF}(k)$. 
+\begin{theorem}\label{thm:approx-nwz-kflow}
+For every finite integer $k\ge 6$ and for $k=\infty$, $\operatorname{WNZF}(k)$ admits a $(6,6)$-approximation. 
+\end{theorem}
+We observe that Theorem \ref{thm:approx-nwz-kflow} implies a $6$-approximation for $\operatorname{WNZF}(\infty)$ as stated below. 
+\begin{corollary}\label{cor:approx-nwz-flow}
+$\operatorname{WNZF}(\infty)$ admits a $6$-approximation. 
+\end{corollary}
+
+
+Next, we turn to bicriteria approximation for $\operatorname{WCBO}(k)$. We recall that $\operatorname{WCBO}(\infty)$ is equivalent to the min cost strongly connected orientation problem which is solvable in polynomial time \cite{younger1983integer, edmonds1977min}. Hence, we focus on $\operatorname{WCBO}(k)$ for finite integers $k\ge 3$. 
+Moreover, Theorem \ref{thm:hardness-WNZF-WCBO} implies that $\operatorname{WCBO}(k)$ is inapproximable for every finite integer $k\ge 3$. We complement these results by showing the following bicriteria approximation. 
+\begin{theorem}\label{thm:approx-cut-balanced}
+For every integer $k\ge 6$, $\operatorname{WCBO}(k)$ admits a $(k,6)$-approximation. 
+\end{theorem}
+
+
+\iffalse 
+For $\operatorname{WNZF}(k)$, we exploit structural properties of an extreme point $x^*$ of its LP relaxation. In particular, we can divide the edges into integral and non-integral. An integral edge has $x^*$ being integral in both directions; a non-integral edge has $x^*$ equal to $\frac{1}{2}$ in both directions. We show that the integral arcs in the solution already form a `partial' k-flow $f$. To send flow on the non-integral edges, we use an arbitrary nowhere-zero $6$-flow $g$ of the whole graph which can be found in polynomial time. We then use the observation that the composed flow $6f+g$ is nonzero in every edge and has flow values of up to $6k-1$ to conclude that $6f+g$ is a nowhere-zero $6k$-flow. For the same reason, $6f-g$ is also a nowhere-zero $6k$-flow. Our algorithm returns the smaller cost one of $6f+g$ and $6f-g$. Finally since the non-integral edges are equal to $\frac{1}{2}$ in both directions in the extreme point $x^*$, we can prove the approximation guarantee on the cost of this composed flow.
+\snote{The above needs def of $f\pm 6g$}
+
+For $\operatorname{WCBO}(k)$, we show that the extreme point of its LP relaxation is $1/k$-integral by converting it into a submodular flow. The integral arcs of this LP no longer form a `partial' $k$-flow. However, we show that we can always complete the orientation given by the integral arcs into a $k$-cut-balanced orientation, which induces a partial $k$-flow $f$. Thus, we can use a similar approach as for $\operatorname{WNZF}(k)$ to obtain a $6k$-cut-balanced orientation with cost at most $k$ times the cost of the LP solution.
+\knote{These two paragraphs can go into techniques section.}
+\fi
+
+In most applications of nowhere-zero $k$-flows and $k$-cut-balanced orientations, we note that $k$ is a small constant. In particular, Theorems \ref{thm:approx-nwz-kflow} and \ref{thm:approx-cut-balanced} imply $(6,6)$-approximation algorithms for min cost nowhere-zero $6$-flow and min cost $6$-cut-balanced orientation respectively. 
+
+Next, we turn to the symmetric cost variants of the problems. 
+As mentioned earlier, the symmetric cost variant of $\operatorname{WCBO}(k)$ is equivalent to the feasibility variant, so we focus only on the symmetric cost variant of $\operatorname{WNZF}(k)$. We recall that $\operatorname{SWNZF}(\infty)$ is closely related to the symmetric postman problem: it can be viewed as an orientation constrained min-cost symmetric postman problem. While the min-cost symmetric postman problem is polynomial-time solvable, we show that $\operatorname{SWNZF}(\infty)$ is NP-hard even for unit costs. We show the following hardness and inapproximability results for $\operatorname{SWNZF}(k)$. 
+\begin{theorem}\label{thm:complexity-SWNZF-k}
+    For every finite integer $k\ge 3$ and for $k=\infty$, $\operatorname{SWNZF}(k)$ for unit costs is NP-hard. 
+Moreover, for $k=3$ and $k=4$, $\operatorname{SWNZF}(k)$ is NP-hard to approximate within any finite factor and $\operatorname{SWNZF}(5)$ is NP-hard to approximate within any finite factor assuming Tutte's $5$-flow conjecture is false.
+\end{theorem}
+
+Motivated by the hardness results in Theorem \ref{thm:complexity-SWNZF-k}, we turn to approximation algorithms for $\operatorname{SWNZF}(k)$. If the costs are symmetric, we observe that every nowhere-zero $6$-flow $f$ is a $5$-approximation for $\operatorname{SWNZF}(k)$ for every finite integer $k\ge 6$ and for $k=\infty$: this is because the flow value of $f$ on each edge is at most $5$, while the min cost nowhere-zero $k$-flow has to send at least one unit flow on each edge. We improve on this naive $5$-approximation for $\operatorname{SWNZF}(k)$ to achieve an approximation factor of $3$. We refer the reader to Table \ref{table:main} for a summary of our results.
+\begin{theorem}\label{thm:approx-SWNZF-k}
+For every finite integer $k\ge 6$ and for $k=\infty$, $\operatorname{SWNZF}(k)$ admits a $3$-approximation. 
+\end{theorem}
+
+
+
+
+
+\iffalse
+\begin{table}[htbp]
+\begin{tabular}{|cc|c|ccc|}
+\hline
+\multicolumn{2}{|c|}{$k$}                                                                          & $2$                     & \multicolumn{1}{c|}{\makecell{$3,4$ and $5$ \\(assuming Tutte's $5$-\\flow conjecture is false)}} & \multicolumn{1}{c|}{\makecell{Finite\\ $k\geq 6$}} & $\infty$          \\ \hline
+
+\multicolumn{1}{|c|}{\makecell{\textbf{Feasibility} of\\ $\operatorname{NZF}(k)$ and $\operatorname{CBO}(k)$}} & Hardness      & Polytime & \multicolumn{1}{c|}{NP-complete \cite{tutte1954contribution,kochol1998hypothetical}}                                           & \multicolumn{2}{c|}{\makecell{Always feasible \cite{seymour1981nowhere}\\ Polytime algorithm \cite{younger1983integer}}}                      \\ \hline
+
+\multicolumn{1}{|c|}{\multirow{2}{*}{\textbf{WNZF(k)}}}                                        & Hardness      & Polytime \cite{win1989windy}               & \multicolumn{2}{c|}{\makecell{NP-hard to approximate within any\\ finite factor (Theorem \ref{thm:hardness-WNZF-WCBO})}}                           & \makecell{NP-hard \\ (Theorem \ref{thm:complexity-SWNZF-k})}          \\ \cline{2-6} 
+\multicolumn{1}{|c|}{}                                                             & Approx & -                       & \multicolumn{2}{c|}{\makecell{$(6,6)$-approximation (Theorem \ref{thm:approx-nwz-kflow})}}                                                     & \makecell{$6$-approximation\\ (Corollary \ref{cor:approx-nwz-flow})} \\ \hline
+\multicolumn{1}{|c|}{\multirow{2}{*}{\textbf{WCBO(k)}}}                                        & Hardness      & Polytime \cite{win1989windy}               & \multicolumn{2}{c|}{\makecell{NP-hard to approximate within any\\ finite factor (Theorem \ref{thm:hardness-WNZF-WCBO})}}                           & Polytime \cite{lucchesi1978minimax,edmonds1977min}         \\ \cline{2-6} 
+\multicolumn{1}{|c|}{}                                                             & Approx & -                       & \multicolumn{2}{c|}{\makecell{$(k,6)$-approximation (Theorem \ref{thm:approx-cut-balanced})}}                                                     & -                 \\ \hline
+\multicolumn{1}{|c|}{\multirow{2}{*}{\textbf{SWNZF(k)}}}                                       & Hardness      & Polytime \cite{win1989windy}         & \multicolumn{1}{c|}{\makecell{NP-hard to approximate\\ within any finite factor\\ (Theorem \ref{thm:complexity-SWNZF-k})}}       & \multicolumn{2}{c|}{NP-hard (Theorem \ref{thm:complexity-SWNZF-k})}                              \\ \cline{2-6} 
+
+\multicolumn{1}{|c|}{}                                                             & Approx & -                       & \multicolumn{1}{c|}{\makecell{$(6,6)$-approximation\\ (Theorem \ref{thm:approx-nwz-kflow})}}                                 & \multicolumn{2}{c|}{$3$-approximation (Theorem \ref{thm:approx-SWNZF-k})}                    \\ \hline
+\end{tabular}
+\caption{Hardness and approximation algorithms for $\operatorname{WNZF}(k)$, $\operatorname{WCBO}(k)$ and $\operatorname{SWNZF}(k)$}
+\label{table:main}
+\end{table}
+
+\knote{I prefer separate columns for $k=3, 4$ and for $k=5$, and for $k\ge 6$. Those separate columns would help clarify which results are from previous works and which results are ours. I am hoping that we can get rid of Theorem 1 and just refer to the table there.}
+\knote{I see why you transposed my table: (i) the value of $k$ increases from left to right in this table and (ii) you are able to separate hardness from approximation. I prefer the version with $k$ going down vertically. I find that version easier to interpret; also, you can introduce separate rows for $k=3,4$ and for $k=5$ without being constrained by space. You don't have to worry about separate cols for hardness and approx in that version of the table: just state hardness before approximation results. 
+}
+\fi
+
+\begin{table}[htbp]
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+\textbf{Integer $k$} & \textbf{Feasibility}& \textbf{WNZF$(k)$} & \textbf{WCBO$(k)$} & \textbf{SWNZF$(k)$}\\
+    & \textbf{NZF$(k)$} $\&$ \textbf{CBO$(k)$} & & &  
+\\ \hline
+2  & Poly-time [folklore] & Poly-time \cite{win1989windy} & Poly-time \cite{win1989windy} & Poly-time \cite{win1989windy} 
+\\ \hline
+3, 4 & NP-complete & No finite approx & No finite approx & No finite approx \\
+& \cite{jaeger1988nowhere, tutte1954contribution, holyer1981np} & & &
+\\ \hline
+5  & NP-complete & No finite approx & No finite approx & No finite approx \\
+(assuming Tutte's & \cite{kochol1998hypothetical}  & & & \\
+$5$-flow conjecture & & & &\\ is false) & & & & 
+\\ \hline
+finite $k\ge 6$ & Always feasible & No finite approx  & No finite approx & NP-hard for unit costs\\
+ & \cite{seymour1981nowhere, younger1983integer}  & (Theorem \ref{thm:hardness-WNZF-WCBO}) & (Theorem \ref{thm:hardness-WNZF-WCBO}) & (Theorem \ref{thm:complexity-SWNZF-k}) \\
+ & & $(6,6)$-approx & $(k,6)$-approx & $3$-approx \\
+ & & (Theorem \ref{thm:approx-nwz-kflow}) & (Theorem \ref{thm:approx-cut-balanced}) & (Theorem \ref{thm:approx-SWNZF-k}) 
+\\ \hline
+$\infty$ & Always feasible & & Poly-time & NP-hard for unit costs\\
+ & \cite{seymour1981nowhere, younger1983integer}  & & \cite{lucchesi1978minimax,edmonds1977min} & (Theorem \ref{thm:complexity-SWNZF-k}) \\
+ & & $6$-approx & & $3$-approx \\
+ & & (Corollary \ref{cor:approx-nwz-flow}) & & (Theorem \ref{thm:approx-SWNZF-k})
+\\ \hline
+\end{tabular}
+\caption{Hardness and approximation algorithms for $\operatorname{WNZF}(k)$, $\operatorname{WCBO}(k)$ and $\operatorname{SWNZF}(k)$. 
+Feasibility $\operatorname{NZF}(k)$ and $\operatorname{CBO}(k)$ refer to the feasibility versions of $\operatorname{WNZF}(k)$ and $\operatorname{WCBO}(k)$ respectively.
+All inapproximability results are assuming $P\neq NP$.}
+\label{table:main}
+\end{center}
+\end{table}
+
+\vspace{-3em}
+\subsection{Techniques}
+We observe that the equivalence of nowhere-zero $k$-flows and $k$-cut-balanced orientations~\cite{jaeger1976balanced} implies a reduction between $\operatorname{WNZF}(k)$ and $\operatorname{WCBO}(k)$ with a small loss in approximation factor--see Lemma \ref{lemma:approx_translate}. A consequence of this reduction is that NP-hardness of approximating $\operatorname{WNZF}(k)$ within any finite factor implies the same for $\operatorname{WCBO}(k)$ and vice-versa. With this consequence, we observe that proving Theorem \ref{thm:hardness-WNZF-WCBO} reduces to showing that $\operatorname{WCBO}(k)$ does not admit a finite approximation. We prove the latter by a reduction from the satisfiability problem. We prove the hardness result for $\operatorname{SWNZF}(k)$ mentioned in Theorem \ref{thm:complexity-SWNZF-k} by a reduction from Not-All-Equal-3-SAT. Our reductions are based on careful choice of gadgets.  
+
+We now discuss the techniques underlying our algorithmic results. For $\operatorname{WNZF}(k)$, we write an integer program and show extreme points properties of its LP relaxation. In particular, let $x^*\in \mathbb{R}^{E^+\cup E^-}$ be an extreme point optimum solution to the LP relaxation. We show that $x^*$ is half-integral. We prove that the edges of the undirected graph can be partitioned into integral and non-integral edges: An integral edge has $x^*$ being integral in both directions; a non-integral edge has $x^*$ equal to $\frac{1}{2}$ in both directions. We show that the integral arcs in the solution already form a `partial' $k$-flow $f$ (that is conserved at every node but may be zero on some edges). Since we are interested in a nowhere-zero flow, we need to send flow along non-integral edges. 
+To send flow on the non-integral edges, we use an arbitrary nowhere-zero $6$-flow $g$ of the whole graph which can be found in polynomial time. We then use the observation that the composed flow $6f+g$ is nonzero in every edge and has all flow values at most $6k-1$ to conclude that $6f+g$ is a nowhere-zero $6k$-flow. For the same reason, $6f-g$ is also a nowhere-zero $6k$-flow. Our algorithm returns the smaller cost one among $6f+g$ and $6f-g$. Finally since the non-integral edges have LP values equal to $\frac{1}{2}$ in both directions in the extreme point $x^*$, we can bound the approximation factor of the returned nowhere-zero $6k$-flow relative to the optimum objective value of the LP-relaxation.
+
+
+For $\operatorname{WCBO}(k)$, the reduction mentioned in the first paragraph above (and detailed in Lemma \ref{lemma:approx_translate}) and Theorem \ref{thm:approx-nwz-kflow} imply a $(6(k-1),6)$-approximation. We improve on the factors to achieve a $(k,6)$-approximation in Theorem \ref{thm:approx-cut-balanced}. For this, 
+we write an integer program and study its LP-relaxation. In particular, we show that the LP-relaxation is $1/k$-integral via a connection to the theory of submodular flows. The integral arcs of this LP-relaxation no longer form a `partial' $k$-flow. However, we show that we can always complete the orientation given by the integral arcs into a $k$-cut-balanced orientation, which induces a partial $k$-flow $f$. Thus, we can use a similar approach as for $\operatorname{WNZF}(k)$ to obtain a $6k$-cut-balanced orientation with cost at most $k$ times the cost of the LP-relaxation.
+
+For $\operatorname{SWNZF}(k)$, we achieve a unicriteria approximation via combinatorial techniques. Our algorithm finds a \emph{locally optimal} nowhere-zero $6$-flow $(\vec{E},f)$, that is, a nowhere-zero $6$-flow whose cost cannot be reduced by pushing $6$ units of flow along any directed cycle in $\vec{E}$. 
+We show that a locally optimal nowhere-zero $6$-flow gives a $3$-approximation to $\operatorname{SWNZF}(k)$ for every finite integer $k\geq 6$ and for $k=\infty$.
+Next, we turn to the question of existence and an efficient algorithm to find a locally optimal nowhere-zero $6$-flow. 
+We show that for an arbitrary nowhere-zero $6$-flow $f$, there is a locally optimal nowhere-zero $6$-flow $f'$ that can be obtained starting from $f$ and repeatedly pushing $6$ units of flow along the reverse directions of directed cycles; this proves the existence of a locally optimal nowhere-zero $6$-flow. We phrase the problem of finding such a locally optimal nowhere-zero $6$-flow via such cycle augmentations from an arbitrary $f$ as a min-cost circulation problem. This can be solved in polynomial time, and its optimum can be used to recover a locally optimal nowhere-zero $6$-flow. 
+
+\vspace{1mm}
+\noindent \textbf{Organization.}
+In Section \ref{sec:basic}, we setup some notation, present basic properties of nowhere-zero $k$-flows, and show the equivalence of nowhere-zero $k$-flows and $k$-cut-balanced orientations. In Section \ref{sec:reduction}, we give the reduction between approximation algorithms for $\operatorname{WNZF}(k)$ and $\operatorname{WCBO}(k)$. In Section \ref{sec:complexity-WNZF+WCBO}, we prove the hardness of $\operatorname{WNZF}(k)$ and $\operatorname{WCBO}(k)$. In Section \ref{sec:algo-WNZF+WCBO}, we give LP relaxations and design bicriteria approximation algorithms for $\operatorname{WNZF}(k)$ and $\operatorname{WCBO}(k)$. In Section \ref{sec:SWNZF}, we prove the hardness and give unicriteria approximation algorithms for $\operatorname{SWNZF}(k)$. 
+
+
+
+\section{Preliminaries}\label{sec:basic}
+Let $G=(V, E)$ be an undirected graph. Let $\vec{G}=(V,E^+\cup E^-)$ denote its bidirected graph. A \emph{partial orientation} is an orientation $\vec{F}$ on a subset $F\subseteq E$ of edges. A \emph{partial $k$-flow} (or \emph{$k$-flow}) is a partial orientation $\vec{F}$ and a function $f:\vec{F} \rightarrow \{1,2,...,k-1\}$ such that $f(\delta_{\vec{F}}^+(v))=f(\delta_{\vec{F}}^-(v))$. Denote the reverse orientation of an arc $e$ by $e^{-1}$. For a partial orientation $\vec{F}$, denote the reverse orientation by $\cev{F}$. Given a $k$-flow $(\vec{F},f)$, we can extend the domain of the function $f$ to the arcs $E^+\cup E^-$ of the bidirected graph $\vec{G}$ by defining $f(e):=-f(e^{-1}) \ \forall e\in \cev{F}$ and $f(e):=0 \ \forall e\notin \vec{F}\cup \cev{F}$. We call the resulting extended function the \emph{extension} of the partial $k$-flow $f$ to $E^+\cup E^-$. We note that the extension of a partial $k$-flow satisfies flow conservation. This gives us the following equivalent definition of a $k$-flow: a $k$-flow is a function $f:E^+\cup E^-\rightarrow \{0, \pm 1,...,\pm (k-1)\}$ such that $f(e^+)=-f(e^-)\ \forall e\in E$ and $f(\delta_{\vec{G}}^+(v))=f(\delta_{\vec{G}}^-(v))$. A $k$-flow $f$ is a nowhere-zero $k$-flow if $f(e)\neq 0\ \forall e\in E^+\cup E^-$. For a $k$-flow $f:E^+\cup E^-\rightarrow \{0, \pm 1,...,\pm (k-1)\}$, we denote $\supp(f):=\{e\in E: f(e^+)\neq 0\}$ as the edges oriented by $f$ and $\supp^+(f):=\{e\in E^+\cup E^-: f(e)>0\}$ as the partial orientation associated with $f$. One can verify the two definitions of (nowhere-zero) $k$-flows are equivalent by letting $\vec{F}=\supp^+(f)$. 
+Due to the equivalence of the two definitions, we will sometimes refer to a $k$-flow $(\vec{F}, f)$ by the extension $f:E^+\cup E^-\rightarrow \{0, \pm 1,...,\pm (k-1)\}$, omitting the orientation $\vec{F}$.
+
+Equipped with this alternative definition, we can talk about negation, scaling and summation of $k$-flows. Let $G=(V, E)$ be an undirected graph. For a $k$-flow $(\vec{F},f)$, $-f$ is defined as the negation of the extension of $f$ to $E^+\cup E^-$. We observe that $-f$ is also a $k$-flow and moreover, $\supp^+(-f)=\cev{F}$. Let $(\vec{E}_1,f_1)$ be a $k_1$-flow and $(\vec{E}_2,f_2)$ be a $k_2$-flow of $G$ for some subsets $E_1,E_2\subseteq E$. The sum of the two flows $f=f_1+f_2$ is defined as the sum of the extensions of $f_1$ and $f_2$ to $E^+\cup E^-$. Let $\vec{E}:=\supp^+(f)$ be the partial orientation associated with $f$. We note that $f$ may not be a nowhere-zero flow even if $E_1\cup E_2=E$ because of flow cancellation between $f_1$ and $f_2$. 
+However, given $E_1\cup E_2=E$, if we scale $f_1$ by a factor of $k_2$, the resulting flow $f=k_2 f_1+f_2$ is nowhere-zero. This observation has been very useful in constructing nowhere-zero $k$-flows in general graphs (e.g. \cite{jaeger1976nowhere,jaeger1979flows,seymour1981nowhere}). We summarize it in the following proposition and give its proof for completeness.
+
+\begin{prop}\label{prop:sum-flows}
+    Let $G=(V,E)$ be an undirected graph and $E_1,E_2\subseteq E$ be such that $E_1\cup E_2=E$. Let $(\vec{E}_1,f_1)$ be a $k_1$-flow and $(\vec{E}_2,f_2)$ be a $k_2$-flow. Then, $f=k_2f_1+f_2$ is a nowhere-zero $k_1k_2$-flow. Moreover, $\vec{E}:=\supp^+(f)$ has the same orientation as $\vec{E}_1$ on $E_1$ and the same orientation as $\vec{E}_2$ on $E_2\setminus E_1$.
+\end{prop}
+\begin{proof}\textcolor{red}{TOPROVE 0}\end{proof}
+
+The feasibility of nowhere-zero $k$-flows and $k$-cut-balanced orientations are equivalent due to the following lemma by Jaeger \cite{jaeger1976balanced}. Since we will use this fact repeatedly, we include a proof.
+\begin{lemma}[Jaeger \cite{jaeger1976balanced}]\label{lemma:equivalence}
+Let $G=(V, E)$ be an undirected graph and $k\ge 2$ be an integer. An orientation is $k$-cut balanced if and only if it induces a nowhere-zero $k$-flow. Moreover, given a $k$-cut balanced orientation, there exists a polynomial-time algorithm to construct a nowhere-zero $k$-flow.
+\end{lemma}
+\begin{proof}\textcolor{red}{TOPROVE 1}\end{proof}
+
+\section{Reductions between $\operatorname{WNZF}(k)$ and $\operatorname{WCBO}(k)$}\label{sec:reduction}
+Lemma \ref{lemma:equivalence} implies that approximation algorithms for $\operatorname{WNZF}(k)$ and $\operatorname{WCBO}(k)$ can be translated to each other with a small loss in factors as shown in the following lemma. A consequence of the lemma below is that NP-hardness of approximating $\operatorname{WCBO}(k)$ within any finite factor implies the same for $\operatorname{WNZF}(k)$, and vice versa.
+\begin{lemma}\label{lemma:approx_translate}
+    If $\operatorname{WNZF}(k)$ has an $(\alpha,\beta)$-approximation algorithm, then $\operatorname{WCBO}(k)$ has a $((k-1)\alpha,\beta)$-approximation algorithm; if $\operatorname{WCBO}(k)$ has an $(\alpha,\beta)$-approximation algorithm, then $\operatorname{WNZF}(k)$ has a $((\beta k-1)\alpha,\beta)$-approximation algorithm.
+\end{lemma}
+\begin{proof}\textcolor{red}{TOPROVE 2}\end{proof}
+
+
+
+
+
+\section{Hardness of $\operatorname{WNZF}(k)$ and $\operatorname{WCBO}(k)$}\label{sec:complexity-WNZF+WCBO}
+We prove Theorem \ref{thm:hardness-WNZF-WCBO} in this section, i.e., we show that both $\operatorname{WNZF}(k)$ and $\operatorname{WCBO}(k)$ do not admit an algorithm with finite approximation factors for every finite $k\geq 3$.
+By Lemma \ref{lemma:approx_translate}, NP-hardness of approximating $\operatorname{WCBO}(k)$ within any finite factor implies the same for $\operatorname{WNZF}(k)$, and vice versa.
+Thus, it suffices to prove the NP-hardness of approximation within any finite factor for $\operatorname{WCBO}(k)$.
+To achieve this, we study the problem of determining whether an arbitrary partial orientation $\vec{F}$ of a $2$-edge-connected graph $G=(V,E)$ can be completed into a $k$-cut-balanced orientation. This is the key step towards proving the hardness of $\operatorname{WCBO}(k)$. This question is known to be NP-hard for $k=3,4$, because if we take $\vec{F}=\emptyset$, this recovers the problems of deciding whether a $2$-edge-connected graph admits a nowhere-zero $3$-flow and a nowhere-zero $4$-flow, which are both NP-hard. This question is also hard for $k=5$ if Tutte's $5$-flow conjecture is false. Thus, the problem of deciding whether a partial orientation can be completed into a $k$-cut-balanced orientation is interesting only for $k\geq 6$, for which we know that the graph has a nowhere-zero $k$-flow, and possibly for $k=5$. However, we show in Theorem \ref{thm:complete-CBO-hard} that this problem is hard for every finite integer $k\geq 3$.
+
+\emph{Satisfiability (SAT)} is a well-known NP-complete problem: the input is a collection of $n$ variables and $m$ clauses, where each clause is a disjunction of a subset of variables or their negation. The goal is to determine if there is an assignment of Boolean values to variables such that all clauses are satisfied. We call a SAT instance as a \emph{restricted SAT} if every variable appears in at most $3$ clauses. Restricted SAT is also NP-complete \cite{tovey1984simplified}.
+
+\begin{theorem}\label{thm:complete-CBO-hard}
+The following problem is NP-hard for every finite integer $k\ge 3$: given an undirected graph $G=(V, E)$ and a partial orientation $\vec{F}$ of a subset $F\subseteq E$ of edges, decide whether $\vec{F}$ can be completed into a $k$-cut-balanced orientation.
+\end{theorem}
+\begin{proof}\textcolor{red}{TOPROVE 3}\end{proof}
+
+Theorem \ref{thm:hardness-WNZF-WCBO} follows as a corollary.
+\begin{proof}\textcolor{red}{TOPROVE 4}\end{proof}
+
+
+
+
+
+
+
+
+\section{Bicriteria approximations for $\operatorname{WNZF}(k)$ and $\operatorname{WCBO}(k)$}\label{sec:algo-WNZF+WCBO}
+In this section, we design bicriteria approximations for $\operatorname{WNZF}(k)$ and $\operatorname{WCBO}(k)$. Our algorithms are based on an LP-relaxation for both problems. 
+
+We begin with a unified LP-relaxation for both problems. 
+Let $G=(V, E)$ be the input graph, $\vec{G}=(V,E^+\cup E^-)$ be its bidirected graph, and $c: E^+ \cup E^-$ be the given cost. For each edge $e\in E$, we introduce indicator variables $y(e^+)$ and $y(e^-)$ to indicate the orientation to be used for the edge and non-negative integer variables $z(e^+)$ and $z(e^-)$ for the flow value on the two orientations of the edge. For the $y$ variables that indicate orientation, we impose the constraint that $y(e^+) + y(e^-)=1$ for each edge $e\in E$, since each edge is to be oriented in exactly one of the two directions. For the flow variables $z$, we impose the constraint that $z(\delta_{\vec{G}}^+(v))=z(\delta_{\vec{G}}^-(v))$ for each vertex $v\in V$ to conserve flow. We also impose the constraint that $y(e)\le z(e)\le (k-1)y(e)$ for every arc $e\in E^+\cup E^-$ since we want the flow variables $z$ to send flow only along the direction of the oriented arc and the capacity of the flow to be at most $k-1$. Together, we obtain the LP-relaxation given in \eqref{eq:k-cut-balanced+nwz-k-flow}. 
+Thus, it follows from Lemma \ref{lemma:equivalence} that every integral feasible solution $y,z\in \Z^{E^+\cup E^-}$ to \eqref{eq:k-cut-balanced+nwz-k-flow} corresponds to a $k$-cut-balanced orientation and a nowhere-zero $k$-flow, respectively. 
+For $\operatorname{WCBO}(k)$, we let $c_y=c$ and $c_z=0$. For $\operatorname{WNZF}(k)$, we let $c_y=0$ and $c_z=c$.
+
+\begin{equation}\label{eq:k-cut-balanced+nwz-k-flow}
+    \begin{aligned}
+    \min~&c_y^\intercal y+c_z^\intercal z\\
+    s.t.~&z(\delta_{\vec{G}}^+(v))=z(\delta_{\vec{G}}^-(v))\quad \forall v\in V\\
+    &y(e^+)+y(e^-)=1\quad \forall e\in E\\
+    &y\leq z\leq (k-1)y\\
+        &y\geq 0.
+    \end{aligned}
+\end{equation}
+
+In Sections \ref{sec:WNZF-LP} and \ref{sec:WNZF-approx}, we focus on $\operatorname{WNZF}(k)$: we consider the projection of \eqref{eq:k-cut-balanced+nwz-k-flow} on the $z$ variables and prove certain extreme point properties of the projected LP in Section \ref{sec:WNZF-LP}. We use these properties to design a bicriteria approximation for $\operatorname{WNZF}(k)$ in Section \ref{sec:WNZF-approx} thereby proving Theorem \ref{thm:approx-nwz-kflow}.
+Lemma \ref{lemma:approx_translate} and Theorem \ref{thm:approx-nwz-kflow} imply a $(6(k-1),6)$-approximation algorithm for $\operatorname{WCBO}(k)$. Next, we improve on this bicriteria approximation to achieve a $(k, 6)$-approximation for $\operatorname{WCBO}(k)$.  
+In Sections \ref{sec:WCBO-LP} and \ref{sec:WCBO-approx}, we focus on $\operatorname{WCBO}(k)$: we consider the projection of \eqref{eq:k-cut-balanced+nwz-k-flow} on the $y$ variables and prove certain extreme point properties of the projected LP in Section \ref{sec:WCBO-LP}. We use these properties to design a bicriteria approximation for $\operatorname{WCBO}(k)$ in Section \ref{sec:WCBO-approx}, thereby proving Theorem \ref{thm:approx-cut-balanced}.
+
+\subsection{LP relaxation for $\operatorname{WNZF}(k)$ and its extreme point structure}\label{sec:WNZF-LP}
+We can project the feasible region of \eqref{eq:k-cut-balanced+nwz-k-flow} on the $z$ variables, which yields an LP relaxation for $\operatorname{WNZF}(k)$.
+\begin{equation}\label{eq:nwz-k-flow}
+    \begin{aligned}
+    \min~&c^\intercal z\\
+    s.t.~&z(\delta_{\vec{G}}^+(v))=z(\delta_{\vec{G}}^-(v))\quad \forall v\in V\\
+    &1\leq z(e^+)+z(e^-)\leq k-1\quad \forall e\in E\\
+        &z\geq 0.
+    \end{aligned}\tag{$\mathcal{P}_k$}
+\end{equation}
+
+\begin{lemma}\label{lemma:proj-z}
+    The polytope in \eqref{eq:nwz-k-flow} is the projection of the polytope in \eqref{eq:k-cut-balanced+nwz-k-flow} to the $z$ variables.
+\end{lemma}
+\begin{proof}\textcolor{red}{TOPROVE 5}\end{proof}
+
+\begin{remark}
+If we drop the upper bound constraint $z(e^+)+z(e^-)\leq k-1$ for every $e\in E$ from \eqref{eq:nwz-k-flow}, then the resulting LP is an LP-relaxation of the asymmetric postman problem and it has been shown to be half-integral in several earlier works \cite{kappauf1979mixed, win1989windy, ralphs1993mixed, zaragoza2003postman}. 
+\end{remark}
+
+We show that \eqref{eq:nwz-k-flow} is half-integral. Our proof is inspired by extreme point results for postman problems on mixed graphs \cite{zaragoza2003postman}. In fact, we show additional stronger properties as stated in the following theorem.
+
+
+\begin{theorem}\label{thm:APP_half_integral}
+Let $z^*$ be an extreme point optimal solution to \eqref{eq:nwz-k-flow}. Then,
+\begin{enumerate}[label={(\arabic*)}]
+    \item for every $e\in E$, if $e^+,e^-\in \supp(z^*)$, then $z^*(e^+)+z^*(e^-)=1$, 
+    \item for every $e\in E$, $z^*(e^+)\in \Z$ if and only if $z^*(e^-)\in \Z$, 
+    \item for every $e\in E^+\cup E^-$, if $z^*(e)$ is non-integral, then $z^*(e)=\frac{1}{2}$, and 
+    \item the integral arcs of $z^*$ form a $k$-flow.
+\end{enumerate}
+\end{theorem}
+\begin{proof}\textcolor{red}{TOPROVE 6}\end{proof}
+
+
+\subsection{Bicriteria approximation for $\operatorname{WNZF}(k)$}\label{sec:WNZF-approx}
+In this section, we prove Theorem \ref{thm:approx-nwz-kflow} by giving a bicriteria approximation algorithm for $\operatorname{WNZF}(k)$, for every finite integer $k\geq 6$ and for $k=\infty$. We recall that an algorithm is an $(\alpha,\beta)$-approximation for $\operatorname{WNZF}(k)$ if we return a nowhere-zero $\beta k$-flow with cost at most $\alpha c(\opt)$ where $c(\opt)$ is the minimum cost of a nowhere-zero $k$-flow. 
+
+
+\begin{proof}\textcolor{red}{TOPROVE 7}\end{proof}
+
+
+
+
+
+
+
+\subsection{LP relaxation for $\operatorname{WCBO}(k)$ and its extreme point structure}\label{sec:WCBO-LP}
+We can project the feasible region of \eqref{eq:k-cut-balanced+nwz-k-flow} on the $y$ variables, which yields an LP relaxation for $\operatorname{WCBO}(k)$.
+\begin{equation}\label{eq:k-cut_balanced}
+\begin{aligned}
+    \min~&c^\intercal y\\
+    s.t.~&y(\delta_{\vec{G}}^+(U))\leq \frac{k-1}{k}|\delta_E(U)|\quad \forall U\subseteq V\\
+    &y(e^+)+y(e^-)=1\quad \forall e\in E\\
+        &y\geq 0.
+\end{aligned}\tag{$\mathcal{Q}_k$}
+\end{equation}
+
+\begin{lemma}\label{lemma:proj-y}
+    The polytope in \eqref{eq:k-cut_balanced} is the projection of the polytope in \eqref{eq:k-cut-balanced+nwz-k-flow} on the $y$ variables.
+\end{lemma}
+\begin{proof}\textcolor{red}{TOPROVE 8}\end{proof}
+To prove extreme point properties of \eqref{eq:k-cut_balanced}, we need the following seminal theorem of Edmonds and Giles \cite{edmonds1977min}.
+\begin{theorem}[\cite{edmonds1977min}]\label{thm:submodular_flow}
+    Let $D=(V,A)$ be a digraph and $f:2^V\rightarrow \R$ be a submodular function. Consider the \emph{submodular flow} polyhedron defined as follows:
+    \[
+P(f):=\big\{y: A\rightarrow \R \mid y(\delta^+(U))-y(\delta^-(U))\leq f(U)\quad \forall U\subseteq V\big\}.
+\]
+If $f$ is integral, then $P(f)$ is  \emph{box-integral}, i.e., $P(f)\cap \{x: l\leq x\leq u\}$ is integral for every $l,u\in \Z$. 
+\end{theorem}
+The following theorem proves that after projecting \eqref{eq:k-cut_balanced} onto $\{y(e^+): e^+\in E^+\}$, we obtain a submodular flow where $f$ is $1/k$-integral.
+\begin{lemma}\label{lemma:1/k-integral}
+    The extreme points of \eqref{eq:k-cut_balanced} are $1/k$-integral.
+\end{lemma}
+\begin{proof}\textcolor{red}{TOPROVE 9}\end{proof}
+    
+
+
+
+\subsection{Bicriteria approximation algorithms for $\operatorname{WCBO}(k)$}\label{sec:WCBO-approx}
+Before going into the algorithm, we need one more definition. Given a graph $G=(V,E)$, a \emph{partial $k$-cut-balanced orientation} is an orientation $\vec{F}$ of a subset $F\subseteq E$ of edges such that $|\delta_{\vec{F}}^+(U)|\leq \frac{k-1}{k}|\delta_{F}(U)|\ \forall U\subseteq V$. We emphasize that the number of outgoing arcs is upper bounded by a fraction of the number of arcs in $F$ instead of $E$.
+
+
+In the following lemma, we give a characterization for the existence of a partial $k$-cut-balanced orientation that extends a partial orientation. The same characterization for $k=2$ was given by Ford and Fulkerson \cite{ford2015flows} (see also \cite{kappauf1979mixed}).
+\begin{lemma}\label{lemma:complete_k-balanced}
+     Given a graph $G=(V,E)$, suppose a subset $E_1\subseteq E$ of edges  has been oriented as $\vec{E}_1$. Then, $\vec{E}_1$ can be extended to a partial $k$-cut-balanced orientation if and only if 
+\begin{equation}\label{eq:partial_k_cut_balanced}
+         |\delta_{\vec{E_1}}^+(U)|\leq \frac{k-1}{k}|\delta_E(U)|\quad \forall U\subseteq V.
+     \end{equation}
+     Moreover, if $\vec{E}_1$ satisfies \eqref{eq:partial_k_cut_balanced}, then such a partial $k$-cut-balanced orientation can be found in polynomial time.
+\end{lemma}
+\begin{proof}\textcolor{red}{TOPROVE 10}\end{proof}
+
+\begin{remark}
+The function $f:2^V\rightarrow \R$ defined as, for $U\subseteq V$,
+    \[
+         f(U):=\frac{k-1}{k}|\delta_E(U)|-|\delta_{\vec{E_1}}^+(U)|=\frac{1}{k}\Big(|\delta_{\vec{E}_1}^-(U)|-|\delta_{\vec{E}_1}^+(U)|\Big)+\frac{k-2}{k}|\delta_{\vec{E}_1}^-(U)|+\frac{k-1}{k}|\delta_{E\setminus E_1}(U)|
+     \]
+     is submodular, since $|\delta_{\vec{E}_1}^-(U)|-|\delta_{\vec{E}_1}^+(U)|$ is modular, $|\delta_{\vec{E}_1}^-(U)|$ and $|\delta_{E\setminus E_1}(U)|$ are submodular, and $k\geq 2$. By Lemma \ref{lemma:complete_k-balanced}, checking whether $\vec{E}_1$ can be extended to a partial $k$-cut-balanced orientation is equivalent to checking whether $f(U)\geq 0\ \forall U\subseteq V$, which can be done in polynomial time using submodular minimization~(see e.g. \cite{schrijver2000combinatorial,grotschel1981ellipsoid,iwata2001combinatorial}). In contrast, according to Theorem \ref{thm:complete-CBO-hard}, checking whether $\vec{E}_1$ can be extended to a (complete) $k$-cut-balanced orientation is NP-hard.
+\end{remark} 
+
+
+
+Now we are ready to prove Theorem \ref{thm:approx-cut-balanced}. 
+\begin{proof}\textcolor{red}{TOPROVE 11}\end{proof}
+
+
+
+
+
+
+
+
+
+
+\section{Min cost Symmetric Nowhere-Zero Flows}\label{sec:SWNZF}
+In this section, we study $\operatorname{SWNZF}(k)$, the weighted nowhere-zero $k$-flow with symmetric costs. We prove the NP-hardness of $\operatorname{SWNZF}(k)$ in Section \ref{sec:SWNZF-hardness} and give a $3$-approximation algorithm for every $k\geq 6$ and $k=\infty$ in Section \ref{sec:SWNZF-approx}.
+
+\subsection{Hardness of $\operatorname{SWNZF}(k)$}\label{sec:SWNZF-hardness}
+We prove Theorem \ref{thm:complexity-SWNZF-k} in this subsection. We first prove the NP-hardness of $\operatorname{SWNZF}(\infty)$. We reduce from the NP-complete problem \emph{not-all-equal $3$-SAT (NAE3SAT)} \cite{schaefer1978complexity}: the input is a collection of $n$ variables and $m$ clauses, where each clause is a disjunction of $3$ variables or their negation. The goal is to determine if there is an assignment of Boolean values to variables such that the Boolean values assigned to the three variables in each clause are not all equal to each other (in other words, at least one is positive, and at least one is negative). Our construction is inspired by \cite{martinez2006complexity}.
+
+\begin{theorem}\label{thm:complexity-SWNZF}
+    $\operatorname{SWNZF}(\infty)$ for unit costs is NP-hard.
+\end{theorem}
+\begin{proof}\textcolor{red}{TOPROVE 12}\end{proof}
+In fact, the nowhere-zero flows we use in the proof of Theorem \ref{thm:complexity-SWNZF} are nowhere-zero $3$-flows. Thus, the proof also implies that $\operatorname{SWNZF}(k)$ is NP-hard for every $k\geq 3$. Moreover, it is NP-hard to approximate $\operatorname{SWNZF}(k)$ within any finite factor for $k=3,4$, and for $k=5$ if Tutte's $5$-flow conjecture is false. Indeed, setting the costs $c=0$ recovers the feasibility problem of deciding whether a graph has a nowhere-zero $k$-flow for $k=3,4,5$ which are NP-complete.
+Hence, Theorem \ref{thm:complexity-SWNZF-k} follows.
+
+
+
+\subsection{Approximation algorithms}\label{sec:SWNZF-approx}
+As we discussed earlier, every nowhere-zero $6$-flow is a $5$-approximation to $\operatorname{SWNZF}(k)$ for every finite integer $k\geq 6$ and for $k=\infty$.  Indeed, let $(\vec{E},f)$ be an arbitrary nowhere-zero $6$-flow, which is also a nowhere-zero $k$-flow. Let $\opt$ be a min cost nowhere-zero $k$-flow. Then,
+\[
+c(f)=\sum_{e\in\vec{E}} c(e)f(e)\leq \sum_{e\in\vec{E}} 5c(e)\leq 5c(\opt),
+\]
+where the first inequality follows from the fact that $f$ is a $6$-flow. The second inequality follows from the fact that $\opt$ is nowhere-zero.
+
+We provide an improved $3$-approximation algorithm by finding a cheaper nowhere-zero $6$-flow. Given a nowhere-zero $6$-flow $(\vec{E},f)$, for an arbitrary directed cycle $C\in\vec{E}$, if $\sum_{e\in C} c(e)f(e)>\sum_{e\in C} c(e)(6-f(e))$, we can push $6$ units flow along the reverse direction of $C$. This way, we reduce the cost of the flow along the cycle while maintaining a nowhere-zero $6$-flow. This observation inspires the definition of locally optimal nowhere-zero $6$-flow: we say that a nowhere-zero $6$-flow is \emph{locally optimal} if for every directed cycle $C$ (wrt the flow),
+\[
+    \sum_{e\in C} c(e)f(e)\leq \sum_{e\in C} c(e)(6-f(e)),
+\]
+i.e.,
+\begin{equation}\label{eq:local-opt}
+    \sum_{e\in C} c(e)f(e)\leq 3\sum_{e\in C} c(e).
+\end{equation}
+
+We prove the following lemma.
+
+\begin{lemma}\label{lemma:localopt}
+    For every finite integer $k\geq 6$ and for $k=\infty$, every locally optimal nowhere-zero $6$-flow is a $3$-approximation to $\operatorname{SWNZF}(k)$.
+\end{lemma}
+\begin{proof}\textcolor{red}{TOPROVE 13}\end{proof}
+
+Next, we show that a local optimum exists by giving a pseudo-polynomial algorithm to find it. 
+\begin{prop}
+\label{prop:local}
+    A locally optimal nowhere-zero $6$-flow exists and there is a pseudo-polynomial algorithm to find it.
+\end{prop}
+\begin{proof}\textcolor{red}{TOPROVE 14}\end{proof}
+
+We note that to arrive at a locally optimal nowhere-zero 6-flow $f'$ starting with $f$ in the above proof, we add a collection of cycles pushing $6$ units flow. This sum of cycles each pushing $6$ units flow gives a feasible solution to a circulation problem where all the nonzero flows in the circulation have value $6$. We formulate the task of finding such a circulation of minimum cost to obtain a strongly polynomial time algorithm for finding a locally optimal nowhere-zero $6$-flow.
+
+Let $(\vec{E},f)$ be an arbitrary nowhere-zero $6$-flow. We are now allowed to flip the direction of some arcs of $\vec{E}$ while maintaining a nowhere-zero $6$-flow. We restrict ourselves to always pushing $6$ units flow along the reverse direction of some directed cycle $C$. This way, for every arc $e\in \vec{E}$ we flip, the flow value $f(e)$ assigned to it becomes $6-f(e)$. Thus, the change in the cost by flipping $e$ becomes $c(e)\big((6-f(e))-f(e)\big)=2c(e)
+(3-f(e))$. This motivates us to formulate the following min cost circulation problem.
+
+Let $D=(V,\cev{E})$ be the directed graph consisting of arcs in $\cev{E}:=(\vec{E})^{-1}$. For each $e\in \cev{E}$, let cost $c'(e):=c(e)(3-f(e^{-1}))$ and capacity $l(e)=0,\ u(e)=1$. An integral $g:\cev{E}\rightarrow \Z$ is feasible if it is a circulation, i.e., $g(\delta_{\cev{E}}^+(v))=g(\delta_{\cev{E}}^-(v))\ \forall v\in V$, and it satisfies the capacity constraints $l(e)\leq g(e)\leq u(e)\ \forall e\in \cev{E}$. Let $g$ be a min cost integral circulation of the instance. Return $f+6g$ (notice that $g$ is a $2$-flow, which allows us to define $f+6g$ the same way as in Section \ref{sec:basic}). In the lemma below, we show that $f+6g$ is a locally optimal nowhere-zero $6$-flow.
+
+\begin{lemma}\label{lemma:localopt+mincostflow}
+    Let $(\vec{E},f)$ be a nowhere-zero $6$-flow and $D=(V,\cev{E})$ be a digraph with costs $c'(e)=c(e)(3-f(e))\ \forall e\in\cev{E}$ and capacities $l=0,u=1$. Then, $g:\cev{E}\rightarrow \Z$ is a min cost circulation if and only if $f+6g$ is a locally optimal nowhere-zero $6$-flow.
+\end{lemma}
+\begin{proof}\textcolor{red}{TOPROVE 15}\end{proof}
+
+Lemmas \ref{lemma:localopt} and \ref{lemma:localopt+mincostflow} together complete the proof of Theorem \ref{thm:approx-SWNZF-k}.
+
+
+\begin{proof}\textcolor{red}{TOPROVE 16}\end{proof}
+
+\begin{remark}
+    The approximation ratio $3$ is tight for this algorithm. To see this, consider the entire graph to be a cycle $C$, with unit costs. An optimal nowhere-zero flow is $(\vec{C},f)$ with $f(e)=1\ \forall e\in\vec{C}$, whose cost is $|C|$. However, if our algorithm starts from the nowhere-zero $6$-flow $(\vec{C},f')$ with $f'(e)=3\ \forall e\in\vec{C}$, this is already a local optimum, so we only obtain a nowhere-zero flow of cost $3|C|$.
+\end{remark}
+
+
+
+\section{Conclusion}
+We conclude with some interesting directions for future research. Firstly, is it possible to obtain a bicriteria approximation for min-cost well-balanced orientations? In particular, given an undirected graph $G=(V, E)$, is it possible to construct an orientation $\vec{E}$ such that (i) the cost of the orientation is at most a constant factor of a min-cost well-balanced orientation and (ii) the orientation $\vec{E}$ is constant-approximately well-balanced, i.e., $\lambda_{\vec{E}}(u,v)\ge \rounddown{\lambda_E(u,v)/\rho}$ for some constant $\rho$? Secondly, can we improve on the $(6,6)$-bicriteria approximation for $\operatorname{WNZF}(k)$, on the $(k,6)$-bicriteria approximation for $\operatorname{WCBO}(k)$, or on the $3$-factor approximation for $\operatorname{SWNZF}(k)$ for finite integer $k\ge 6$?
+
+
+
+
+
+
+\paragraph*{Acknowledgements} The first two authors would like to thank Eml\'ekt\'abla workshop in July 2024 and ICERM reunion workshop on \emph{Discrete Optimization: Mathematics, Algorithms, and Computation} in August 2024, where this work was initiated. We would like to thank Krist\'of B\'erczi and G\'erard Cornu\'ejols for initial discussions.
+
+
+
+\bibliographystyle{plain} \bibliography{reference}
+
+
+
+\end{document}

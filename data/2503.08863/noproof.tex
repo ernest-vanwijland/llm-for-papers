@@ -1,0 +1,1177 @@
+\documentclass[a4paper,UKenglish,cleveref, autoref, thm-restate]{lipics-v2021}
+
+\pdfoutput=1 
+\hideLIPIcs  
+\nolinenumbers
+
+
+
+\bibliographystyle{plainurl}
+
+
+\usepackage{todonotes}
+\usepackage{tikz}
+\usepackage{svg}
+
+\usepackage{thmtools}
+\usepackage{thm-restate}
+\usepackage[T1]{fontenc}
+\usepackage{xspace}
+\usepackage[ruled,vlined,linesnumbered]{algorithm2e}
+
+
+
+
+
+\newcommand{\eps}{\varepsilon}
+\newcommand{\opt}{\mathrm{OPT}}
+\newcommand{\Oc}{\mathcal{O}}
+\newcommand{\Sc}{\mathcal{S}}
+\newcommand{\RR}{\mathcal{R}}
+\newcommand{\twobp}{\textsc{2d-bp}\xspace}
+\newcommand{\tbp}{\textsc{3d-bp}\xspace}
+\newcommand{\tsp}{\textsc{3d-sp}\xspace}
+\newcommand{\tmvc}{\textsc{3d-mvbb}\xspace}
+
+\newcommand{\inter}{intermediate\xspace}
+\newcommand{\bigy}{big\xspace}
+\newcommand{\tin}{tiny\xspace}
+
+
+\renewcommand{\epsilon}{\lambda}
+
+\newtheorem{property}[theorem]{Property}
+
+
+\newcommand{\area}{\mathrm{area}}
+
+ 
+\title{Improved Approximation Algorithms for Three-Dimensional Bin Packing}
+
+
+\author{Debajyoti Kar}{Department of Computer Science and Automation, Indian Institute of Science, Bengaluru, India}{debajyotikar@iisc.ac.in}{https://orcid.org/0000-0003-4007-4648}{Debajyoti Kar is grateful to the Google PhD Fellowship Program.}
+\author{Arindam Khan}{Department of Computer Science and Automation, Indian Institute of Science, Bengaluru, India}{arindamkhan@iisc.ac.in}{https://orcid.org/0000-0001-7505-1687}{Arindam Khan's research is supported in part by Google India Research Award, SERB Core Research Grant
+(CRG/2022/001176) on “Optimization under Intractability and Uncertainty”, Ittiam Systems CSR grant, and the Walmart
+Center for Tech Excellence at IISc (CSR Grant WMGT-23-0001). }
+\author{Malin Rau}{Department of Mathematical Sciences, Chalmers University of Technology and University of Gothenburg, SE-412 96 Göteborg Sweden}{malin.rau@chalmers.se}{https://orcid.org/0000-0002-5710-560X}{}
+
+\authorrunning{D. Kar and A. Khan and M. Rau} 
+
+
+\Copyright{Debajyoti Kar and Arindam Khan and Malin Rau} 
+
+\ccsdesc[500]{Theory of computation~Packing and covering problems} 
+
+\keywords{Approximation Algorithm, Geometric Packing, Multidimensional Packing.} 
+
+\category{} 
+
+\relatedversion{} 
+
+
+\newcommand{\ak}{\textcolor{red}}
+\newcommand{\dk}{\textcolor{teal}}
+\newcommand{\akr}[1]{\todo[color=red!30,size=\tiny]{AK: #1}}
+\newcommand{\djr}[1]{\todo[color=green!70!black,size=\tiny]{DJ: #1}}
+\newcommand{\mrr}[1]{\todo[color=blue!30,size=\tiny]{MR: #1}}
+
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We study three fundamental three-dimensional (3D) geometric packing problems: 3D (Geometric) Bin Packing (\tbp), 3D Strip Packing (\tsp), and Minimum Volume Bounding Box (\tmvc), where given a set of  3D (rectangular) cuboids, the goal is to find an axis-aligned nonoverlapping packing of all cuboids.
+In \tbp, we need to pack the given cuboids into the minimum number of unit cube bins. In \tsp, we need to pack them into a 3D cuboid with a unit square base and minimum height. Finally, in \tmvc, the goal is to pack into a cuboid box of minimum volume. 
+
+It is NP-hard to even decide whether a set of rectangles can be packed into a unit square bin -- giving an (absolute) approximation hardness of 2 for \tbp and \tsp. The previous best (absolute) approximation for all three problems is by Li and Cheng (SICOMP, 1990), who gave algorithms with approximation ratios of 13, $46/7$, and $46/7+\eps$, respectively, for \tbp, \tsp, and \tmvc. We provide improved approximation ratios of 6, 6, and $3+\eps$, respectively, for the three problems, for any constant $\eps > 0$.
+
+For \tbp, in the asymptotic regime, Bansal, Correa, Kenyon, and Sviridenko  (Math.~Oper.~Res., 2006) showed that there is no asymptotic polynomial-time approximation scheme (APTAS) even when all items have the same height. Caprara (Math.~Oper.~Res., 2008) gave an asymptotic approximation ratio of $T_{\infty}^2 + \eps\approx 2.86$, where $T_{\infty}$ is the well-known Harmonic constant in Bin Packing. We provide an algorithm with an improved asymptotic approximation ratio of $3 T_{\infty}/2 +\eps \approx 2.54$.
+Further, we show that unlike \tbp (and \tsp), \tmvc admits an APTAS.
+\end{abstract}
+
+
+
+
+
+
+\section{Introduction}
+\label{sec:intro}
+Three-dimensional (3D) packing problems are used to model several practical settings in production and transportation planning -- ranging from cargo management, manufacturing, 3D printing and prototyping, to cutting and loading applications. In the 1960s, Gilmore and Gomory \cite{gilmore1965multistage} introduced 3D packing in the context of the cutting stock problem in operations research, where given a stock material (3D cuboid), the goal is to cut out a set of required items (smaller 3D cuboids) by a sequence of end-to-end cuts. Around the same time, Meir and Moser \cite{meir1968packing} asked a combinatorial question: given a set of cubes, when can we pack them in a given cuboid? Since then, due to its inherent mathematical aesthetics, computational nature, and practical relevance, the study of 3D packing has led to the development of several techniques in mathematics, computer science, and operations research.
+
+
+In this paper, we consider three classical 3D packing problems. 
+In all of these problems, the input is a collection of (rectangular) cuboids (items), each specified by their height, width, and depth.
+In the 3D Bin Packing (\tbp) problem, the goal is to output a packing of all the items using the minimum number of bins, where each bin is a unit cube. In the 3D Strip Packing (\tsp) problem, we are given a three-dimensional strip having a $1\times 1$ square base and unbounded height, and we have to pack all items minimizing the height of the strip. Finally, in the Minimum Volume Bounding Box (\tmvc) problem, we seek to obtain a cuboidal box of minimum volume that can accommodate all input items. 
+In all these problems, the items cannot be rotated about any axis, and they must be packed non-overlappingly. Further, we assume that all items and bins/boxes are axis-aligned. 
+
+
+With the recent exponential growth in transportation and shipping, specially with the advent of e-commerce and UAVs, these problems are receiving increasingly more attention. 
+For instance, in container ship loading, it is crucial to optimize the placement of cargo to maximize space usage while minimizing the number of containers needed. In pallet loading, manufacturers strive to stack goods on pallets in a way that maximizes storage capacity and ensures secure transport. Further, in supply chain management, it is crucial to optimize the arrangement of goods in storage to fit within the smallest possible space, reducing storage costs and enhancing inventory accessibility.
+The survey by Ali, Ramos, Carravilla, and Oliveira~\cite{ali2022line} provides a comprehensive overview of 3D packing, 
+with more than two hundred research articles. 
+ We refer readers to \cite{faroe2003guided, hifi2010linear, lodi2002heuristic, crainic2009ts2pack, parreno2010hybrid, crainic2008extreme,jin2003three,li2014genetic, mahvash2018column,mack2012heuristic} and \cite{george1980heuristic,bischoff1990comparative, allen2011hybrid,duong2015heuristics,wei2012reference,wauters2013effective} for important empirical procedures and heuristics to \tbp~and \tsp, respectively.
+ There are also many practical programming competitions for these problems, e.g., OPTIL 3D Bin Packing Challenge \cite{optil} and  ICRA VMAC Palletization  Competition  \cite{vmac}.
+
+
+In contrast to the above, the theoretical exploration of 3D packing has been significantly limited due to its inherently complicated nature. 
+All three considered problems are NP-hard. In fact, \tbp and \tsp generalize several classical strongly NP-hard problems in scheduling and packing, including (1D) bin packing, multiprocessor scheduling \cite{li-cheng}, packing squares into squares \cite{ferreira1999packing}, and packing cubes into cubes \cite{lu2015packing}. 
+In this paper, we study the absolute and asymptotic approximation algorithms for these problems. Given an algorithm $\mathcal{A}$ for a minimization problem $\Pi$, the {\em absolute approximation ratio} of $\mathcal{A}$ is defined as $\max_{I \in \mathcal{I}} \{\mathcal{A}(I)/\opt(I)\}$, where 
+$\mathcal{I}$ is the set of all input instances for $\Pi$, and $\mathcal{A}(I), \opt(I)$ are the values of the solution provided by  $\mathcal{A}$ and the optimal solution for an  input instance $I$, respectively.
+The {\em asymptotic approximation ratio} (AAR) is defined as: 
+$\limsup\limits_{m\rightarrow \infty} \max_{I \in \mathcal{I}} \left\{\frac{\mathcal{A}(I)}{\opt(I)} \mid \opt(I)=m \right\}.$
+A problem is said to admit an asymptotic polynomial-time approximation scheme (APTAS) if, for any $\eps>0$, there exists a polynomial-time algorithm $\mathcal{A}_\eps$ with AAR of $(1+\eps)$.
+\tbp and \tsp generalize 2D Bin Packing. Thus they do not admit an APTAS, as 2D Bin Packing has an asymptotic approximation hardness of $1+1/2196$ \cite{chlebik2009hardness}. 
+Furthermore, even for squares, it is NP-hard to decide if a set of squares can be packed in a single square bin or not \cite{ferreira1999packing} -- thus giving an absolute approximation hardness of 2 for \tbp and \tsp.
+
+Two-dimensional variants of these problems have been extensively studied. For \textsc{2d-bp}, Harren, Jansen, Pr{\"a}del, Schwarz, and van Stee~\cite{harren2013two} gave a {\em tight} absolute 2-approximation, and a line of work \cite{caprara2008packing,bansal2010new,jansen2016new} culminated in an asymptotic 1.406-approximation due to Bansal and Khan \cite{bansal2014improved}. 
+For \textsc{2d-sp}, the asymptotic approximation regime is settled by the AFPTAS due to Kenyon and R{\'{e}}mila \cite{kenyon2000near}.
+However, the best-known absolute approximation ratio for \textsc{2d-sp}  stands at $(5/3+\eps)$ \cite{harren20145} and there is a $3/2$-hardness. In pseudopolynomial-time, there is an almost tight (absolute) $(5/4+\eps)$-approximation algorithm \cite{JansenR19, HenningJRS18}. 
+Finally, for \textsc{2d-mvbb}, Bansal, Correa, Kenyon, and Sviridenko~\cite{bansal2006bin} gave a PTAS.
+
+
+For \tbp, Csirik and van Vliet \cite{csirik1993line} gave an asymptotic approximation ratio of $T_{\infty}^3 + \eps \approx 4.836$, where $T_{\infty} \approx 1.691$ is the omnipresent  Harmonic constant \cite{LeeL85} in Bin Packing, and the same ratio was achieved by Epstein and van Stee \cite{epstein2004optimal} by an online algorithm using bounded space. 
+This was later improved to $T_{\infty}^2 + \eps\approx 2.86$ by Caprara \cite{caprara2008packing}, which stands as the currently best-known asymptotic approximation ratio for \tbp. 
+
+For \tsp, Li and Cheng \cite{li-cheng} demonstrated that simple heuristics such as NFDH or FFDH for 2D packing \cite{coffman1980performance} have unbounded AARs. Then they provided an algorithm that returns a packing into a strip of height at most $(13/4)\opt_{\tsp}+8{h_{\max}}$, where $\opt_{\tsp}$ denotes the optimal Strip Packing height, and ${h_{\max}}$ is the maximum height of an input item. 
+Afterwards, there has been a long line of work \cite{li-cheng,li1992heuristic,miyazawa2004packing,miyazawa1997algorithm,jansen2006asymptotic,bansal2007harmonic} on the asymptotic approximability of \tsp, culminating in a $(3/2+\varepsilon)$-approximation by Jansen and Pr{\"a}del \cite{3d-strip-packing}. However, all these improved asymptotic approximation algorithms incur huge additive loss (more than 100). 
+
+The authors in \cite{3d-knapsack-diedrich} obtained an absolute approximation ratio of $(29/4+\varepsilon)$ for \tsp, and claimed it to be the best-known ratio for the problem. However, Li and Cheng \cite{li-cheng} had also designed an algorithm that returns a packing into a strip of height at most $(32/7)\opt_{\tsp}+2{h_{\max}}$. 
+This already gives a better absolute approximation ratio of $46/7$ for \tsp.
+Since $\opt_{\tsp}$ is a lower bound on the minimum number of unit (cube) bins needed to pack all items, an absolute $\alpha$-approximation for \tsp~directly implies an absolute $(2\lfloor \alpha \rfloor +1)$-approximation for \tbp~-- one can obtain bins by cutting a \tsp solution at integral heights, followed by packing the items intersected by the cutting planes into additional separate bins. Thus, the $46/7$-approximation for \tsp~implies an absolute 13-approximation for \tbp, which we believe to be the best-known approximation ratio for \tbp. 
+
+Finally, it is easy to obtain an absolute $\alpha(1+\varepsilon)$-approximation for \tmvc from an absolute $\alpha$-approximation for \tsp.  Applying this strategy to the claimed $(29/4+\varepsilon)$-approximation algorithm for \tsp \cite{3d-knapsack-diedrich}, Alt and Scharf \cite{alt2018approximating} obtained a $(29/4+\varepsilon)$-absolute approximation for \tmvc. However, as mentioned before, the result of Li and Cheng \cite{li-cheng} can also be extended to a $(46/7+\varepsilon)$-approximation for \tmvc.
+
+There have been some improvements for special cases. 
+For example, Bansal, Correa, Kenyon, and Sviridenko \cite{bansal2006bin} provided an APTAS for $d$-dimensional bin packing with $d$-dimensional cubes. 
+Harren \cite{Harren09} gave APTAS for $d$-dimensional strip packing with $d$-dimensional cubes when the base of the strip has a bounded aspect ratio. 
+Jansen, Khan, Lira, and Sreenivas \cite{Jansen0LS22} extended the APTAS to more general bases (not necessarily rectangular).
+
+However, for general cuboids, there has been no progress on the absolute approximation ratios for any of the three problems since 1990 \cite{li-cheng} and for asymptotic approximation ratio of \tbp since 2008 \cite{caprara2008packing}.
+In \cite{bansal2006bin}, the authors mention the inherent difficulty in extending results from 2D packing to 3D packing, due to the more complicated nature of interactions between different types of items in three dimension. 
+In fact, improved approximability of $d$-dimensional geometric Bin Packing and Strip Packing, for $d>2$, was listed as {\em one of the ten major open problems} in the survey on multidimensional packing \cite{christensen2016multidimensional}.
+
+
+\subsection{Our contribution}
+
+
+We present improved absolute approximation algorithms for \tbp, \tsp, and \tmvc. Further, we obtain improved asymptotic approximation algorithms for \tbp and \tmvc. 
+
+First, we discuss our results on the absolute approximation algorithms. 
+We show how a packing in $k$ bins can be transformed into $6k$ {\em structured} bins; following which, for constant $k$, it is possible to find such a structured packing efficiently using a variant of the Generalized Assignment Problem -- giving us an absolute approximation ratio of 6.
+One interesting idea is that we use an asymptotic approximation algorithm to obtain improved absolute approximation.
+One of our key ingredients is the asymptotic approximation algorithm for \tsp by Jansen and Pr{\"{a}}del \cite{jansen2006asymptotic}, which provides a packing into height at most $(3/2+\varepsilon)\opt_{\tsp}+\varepsilon + O_{\varepsilon}(1)h_{\text{max}}$. \footnote{The notation $O_{\eps}(f(n))$ means that the implicit constant hidden in big-$O$ notation can depend on $\eps$.} 
+Thus, for a sufficiently small appropriate constant $\mu$, if $h_{\text{max}}\le \mu$, then we can actually pack all items into $\lfloor 3k/2 \rfloor+1$ bins, assuming there exists a packing into $k$ bins. So, we partition the items into four classes: $L$ (large items: all dimensions are greater than $\mu$), $I_w, I_d, I_h$ (width, depth, height less than $\mu$, resp.).  If an item belongs to multiple classes, we assign them to anyone arbitrarily.
+Now {\em large} items can be packed in $k$ bins by brute-force enumeration in polynomial-time (for constant $k,\mu$). 
+Each of the remaining three classes can be packed into $\lfloor 3k/2 \rfloor+1$ bins. In total, we get $3(\lfloor 3k/2 \rfloor+1)+k\le 7k$ bins.
+
+To improve further, we pack {\em large} items together with some items from one of the three classes. First, we observe that one of these classes has a volume less than $k/3$. W.l.o.g.~let us assume it to be  $I_h$. Now, first, we use a volume-based argument and use an algorithm from  \cite{li-cheng} to show that we can pack all items in $I_h$ whose width or depth is less than 1/2. The remaining items in $I_h$ have both width and depth exceeding 1/2. Next, we show that we can guess the packing of {\em large} items and almost all items in $I_h$, except a set of items with small volume. However, with a refined and technical analysis, we finally show that even these remaining items can be packed in the free regions of the six bins. For \tbp, this yields an improvement over the previous bound of 13 \cite{li-cheng}.
+
+\begin{theorem}
+\label{thm:3dbpabsolute}
+    There exists a polynomial-time 6-approximation algorithm for \tbp.
+\end{theorem}
+
+This directly implies an absolute $(6+\eps)$-approximation for \tsp~-- guess the optimal Strip Packing height within a $(1+\eps)$-factor, then use appropriate scaling to apply the above \tbp~result, and finally stack the obtained six bins. 
+With a more careful analysis, we can show there is some extra empty space in the strip, and the resulting height is strictly below 6. 
+
+
+\begin{theorem}
+\label{thm:spabsolute}
+    There exists a small absolute constant $\rho>0$, such that for any $\varepsilon>0$, there is a polynomial-time $(6-\rho + \varepsilon)$-approximation algorithm for \textsc{3d-sp}.
+\end{theorem}
+
+Another implication of our result is a $(6+\eps)$-approximation for the \tmvc~problem, using the connection between \tsp and \tmvc \cite{alt2018approximating}. 
+However, we then use the power of resource augmentation in \twobp to obtain an APTAS for \tsp when we are allowed to use resource augmentation. With additional technical adaptations, we obtain a $(3+\eps)$-approximation for \tmvc.
+
+
+
+Furthermore, surprisingly, unlike \tbp and \tsp, we show that \tmvc admits an APTAS -- settling the asymptotic approximability for the problem. 
+
+\begin{theorem}
+\label{thm:mvbb}
+    For any $\varepsilon > 0$, there exists a polynomial-time $(3+\varepsilon)$-approximation algorithm and an asymptotic polynomial-time approximation scheme for \tmvc.
+\end{theorem}
+
+
+Finally, we turn our attention to the asymptotic approximability of \tbp.
+Towards this, we exploit connections between \tsp and \tbp. 
+Let $\opt_{\tsp}(I), \opt_{\tbp}(I)$ be the values of the optimal solution for Strip Packing and Bin Packing, for input $I$, respectively. Then $\opt_{\tsp}(I) \le \opt_{\tbp}(I)$, as the bins can be stacked on top of each other to provide a feasible solution for Strip Packing.
+Thus, one can trivially obtain a $(3+\eps)$-approximation algorithm as follows. First, we obtain a packing in height $(\frac32+\eps)\opt_{\tsp}(I)+O_{\eps}(1)$ using \cite{3d-strip-packing}. 
+We then can cut the strip into unit cube bins by cutting it at integral heights. All items that are completely contained within heights $[i, i+1)$ are packed in the $(2i+1)$-th bin. Remaining items that are cut by the $x$-$y$ axis-aligned plane at height $i$  (these items form one layer of items where each item has height at most $h_{\max} \le 1$) are packed in $(2i)$-th bin. This would give us a packing into $(3+\eps)\opt_{\tsp}(I)+O_{\varepsilon}(1)$ bins. 
+
+To improve beyond $T_{\infty}^2$, our approach will be to find a packing such that the items that are cut do not have large heights. Towards this, we use {\em harmonic rounding}  \cite{LeeL85}, where the function $f_k$ rounds up $\alpha\in(1/k,1]$
+to nearest larger number of the form $1/q$ where $q\in \mathbb{Z}$. Thus, for $\alpha_i\in(1/(q+1),1/q]$,  $f_k(\alpha_i):=1/q$, for $q \in [k-1]$.
+Otherwise, $f_k(\alpha_i):=\alpha_i$.
+It is well-known \cite{bansal2007harmonic} that, for any sequence $\alpha_1, \alpha_2, \dots, \alpha_n$, with $\alpha_i \in (0,1]$ and $\sum_{i=1}^n \alpha_i \le 1$, for a small enough $\eps$,
+we have $\sum_{i=1}^n  f_{1/\eps}(\alpha_i) \le T_{\infty}+\eps \approx 1.691$. 
+
+We first round the item heights in $I$ using $f_{1/\eps}$ to obtain a new set of items $I^{\infty}$ and obtain a 3D Strip Packing of them using the algorithm by \cite{jansen2006asymptotic}. Let $\opt_{\tbp}^{T_{\infty}}(I^{\infty})$ be the optimal number of $1\times 1 \times T_{\infty}$-sized bins needed to pack all items in $I^{\infty}$. 
+  Then, it is easy to see that  $\opt_{\tsp}(I^{\infty}) \le T_{ \infty}\opt_{\tbp}^{T_{\infty}}(I^{\infty})$. \footnote{For simplicity, we are ignoring the $O_{\varepsilon}(1)$ in the following discussion in this section.} Then we have $\frac32\opt_{\tsp}(I^{\infty}) \le  \frac{3 T_{\infty}}{2}\opt_{\tbp}^{T_{\infty}}(I^{\infty}) \le \frac{3T_{\infty}}{2} \opt_{\tbp}(I)$. The last inequality follows from harmonic rounding. 
+  
+  Now we need to ensure that the {\em tall} items in $I^{\infty}$ packed in the strip with height $\frac32\opt_{\tsp}(I^{\infty})$ are not cut by the cutting planes at integral heights -- we call this {\em tall-not-sliced} property. A similar idea was used by Bansal, Han, Iwama, Sviridenko, and Zhang \cite{bansal2007harmonic} to obtain an alternate $(T_{\infty}+\eps)$-approximation for \twobp. However, 3D packing is much more involved.
+  For this, we exploit the structural properties from the packing by \cite{3d-strip-packing}.
+  First, we show that the strip can be divided into $O_\eps(1)$ cuboids such that, for each cuboid, the corresponding items packed inside are {\em similar}. 
+  Next, we show that we can pack almost all {\em tall} items in $I^{\infty}$  of the same height ($1/q$ for some $q \in [k-1]$) at heights that are multiples of $1/q$  and incur only a small additive loss. This will ensure that none of these items are cut by planes at integral heights. For items with big width and depth, we use a linear program to assign items to the containers. For other items (except a small volume of them), the packing is based on variants of the Next-Fit-Decreasing-Height (NFDH) algorithm \cite{coffman1980performance}. 
+  Finally, we show that we can pack the remaining items in the remaining free regions and an additional $O_{\eps}(1)$ bins. 
+  This provides an improved guarantee for \tbp after nearly two decades.
+
+
+\begin{theorem}
+\label{thm:3dbpasymp}
+    For any $\eps >0$, there exists a polynomial-time algorithm for \tbp~with an asymptotic approximation ratio $(3T_{\infty}/2+\eps) \approx 2.54$.
+\end{theorem}
+
+\begin{table}
+    \centering
+    \renewcommand{\arraystretch}{1.3} \begin{tabular}{|c|>{\centering\arraybackslash}p{2.5cm}|>{\centering\arraybackslash}p{2.6cm}|
+                      >{\centering\arraybackslash}p{2.6cm}|>{\centering\arraybackslash}p{2.5cm}|}  
+        \hline
+        \multirow{2}{*}{\textbf{Problem}} & \multicolumn{2}{c|}{\textbf{Absolute Approximation Ratio}} & \multicolumn{2}{c|}{\textbf{Asymptotic Approximation Ratio}} \\ 
+        \cline{2-5}
+        & \textbf{Previous Best} & \textbf{Our Result} & \textbf{Previous Best} & \textbf{Our Result} \\
+        \hline
+        \tbp & 13 \cite{li-cheng} & 6 (WR: 5) & $T_{\infty}^2+\varepsilon < 2.86$ \cite{caprara2008packing} & $3T_{\infty}/2+\varepsilon < 2.54$ \\
+        \hline
+        \tsp & $46/7 \approx 6.58$ \cite{li-cheng}  & $6$ & $3/2+\varepsilon$ \cite{3d-strip-packing} & -- \\
+        \hline
+        \tmvc & $46/7+\varepsilon$ \cite{li-cheng, alt2018approximating} & $3+\eps$ & $46/7+\varepsilon$ \cite{li-cheng, alt2018approximating} & $1+\varepsilon$ \\
+\hline
+    \end{tabular}
+    \caption{Summary of results. WR denotes the case when $90^{\circ}$ rotation around any axis is allowed. }
+    \label{tab:comparison}
+\end{table}
+
+\noindent{\bf Organization of the paper.}
+In Section \ref{sec:prelim}, we present some preliminaries needed for our results. 
+Section \ref{sec:absolutesix} provides absolute approximation algorithms for \tbp and \tsp, and we prove Theorems \ref{thm:3dbpabsolute} and \ref{thm:spabsolute}.
+Section \ref{sec:asymptotic} deals with the asymptotic approximation algorithm for \tbp and establishes \Cref{thm:3dbpasymp}. In Section \ref{sec:minvolumecontainer}, we discuss results related to \tmvc and prove \Cref{thm:mvbb}. 
+Finally, Section \ref{sec:conc} ends with a conclusion. An overview of all results can be found in \cref{tab:comparison}.
+
+
+\subsection{Related work}
+For $d>3$, Caprara \cite{caprara2008packing} gave an algorithm with AAR of $T_{\infty}^{d-1}$ for both $d$-dimensional Bin Packing and Strip Packing. 
+Sharma \cite{Sharma21}  gave $T_{\infty}^{d-1}$-asymptotic approximation for these two problems when the items
+can be orthogonally rotated about all or a subset of axes.
+For \tmvc, if the items are allowed to be rotated by 90 degrees about any axis, Alt and Scharf \cite{alt2018approximating} gave a 17.738-approximation.
+Another related problem is the 3D Knapsack problem, in which each item additionally has an associated profit, and the goal is to obtain a maximum profit packing inside a unit cube knapsack. The authors in \cite{3d-knapsack-diedrich} have given a $(7+\varepsilon)$-approximation algorithm. For other related problems, we refer the readers to the surveys on approximation algorithms for multidimensional packing \cite{alt2016computational,christensen2016multidimensional}.
+
+
+
+
+
+\section{Preliminaries}
+\label{sec:prelim}
+We define width, depth, and height along $x,y,z$ axes, respectively.  
+Let $I$ be the given set of $n$ items, where each item $i\in I$ is an axis-aligned cuboid having height, width, and depth equal to $h_i, w_i, d_i$, 
+respectively. Let $h_{\max}, w_{\max}, d_{\max} \in (0,1]$ be the maximum height, width, and depth of an item in $I$, respectively. 
+Given a box $B:=[0,W]\times [0,D] \times [0,H]$, if the (bottom-left-back corner of) item $i$ is placed (by translation) at $(x_i, y_i, z_i)$ then it occupies the region: $[x_i, x_i+w_i] \times [y_i, y_i+d_i] \times [z_i, z_i+h_i]$, and the packing is feasible if $x_i \in [0,W-w_i],  y_i \in [0,D-d_i],  z_i \in [0,H-h_i]$. 
+In this placement, we define the top, right, and back faces of item $i$ to be $[x_i,x_i+w_i]\times[y_i, y_i+d_i]\times\{z_i+h_i\}$, $\{x_i+w_i\}\times[y_i, y_i+d_i]\times[z_i, z_i+h_i]$, and $[x_i, x_i+w_i]\times\{y_i+d_i\}\times[z_i, z_i+h_i]$, respectively. Analogously, bottom, left, and front faces are defined.
+Two items do not overlap if their interiors are disjoint. 
+The volume of item $i$ is $v(i):=h_i w_i d_i$. 
+For any set $T$, let $v(T)$ denote the total volume of items in $T$. We define $\opt_{\Pi}(I)$ to be the value of the optimal solution for problem $\Pi$ on instance $I$.
+
+
+\subsection{Algorithms for 3D Packing}
+We now state three results on 3D packing that will be crucial for our results.
+The first two results give a volume-based guarantee.
+
+
+\begin{restatable}[\cite{li-cheng}]{theorem}{licheng}
+\label{thm:licheng}
+    Let $T$ be a set of 3D items where each item has height bounded by $h_{\max}$. 
+    \begin{enumerate}[(i)]
+        \item All items in $T$ can be packed into a strip with $1\times 1$ base and height $4v(T) + 8h_{\max}$.
+        \item If further, each item has either width or depth (or both) not exceeding $1/2$, then all items in $T$ can be packed inside a strip with $1\times 1$ base and height $3v(T)+8h_{\max}$.
+    \end{enumerate}
+\end{restatable}
+
+
+\begin{proof}\textcolor{red}{TOPROVE 0}\end{proof}
+
+\begin{theorem}[\cite{martello2000three}]
+\label{thm:volume-packing}
+    Given a set of 3D items $T$, there is a polynomial-time algorithm that places these items into at most $8v(T) + O(1)$ bins.
+\end{theorem}
+
+The last result is regarding the asymptotic approximation of \tsp. 
+
+\begin{theorem}
+[\cite{3d-strip-packing}]
+\label{thm:jpstrippacking}
+    Given a set of 3D items $I$ where each item has height bounded by $h_{\max}$, for any constant $\eps >0$, there is a polynomial-time algorithm that returns a packing of $I$ into a strip of height at most $(3/2+\varepsilon)\opt_{\tsp}(I)+\varepsilon + O_{\varepsilon}(1)h_{\max}$.
+\end{theorem}
+
+\subsection{Harmonic transformation}
+\label{subsec:harmonic}
+Lee and Lee \cite{LeeL85} introduced harmonic transformation in the context of online bin packing. 
+The harmonic transformation with parameter $k$ is defined by the following function $f_k$:\\
+For $\alpha_i\in(1/(q+1),1/q]$,  $f_k(\alpha_i):=1/q$, for $q \in [k-1]$.
+Otherwise, $f_k(\alpha_i):=\frac{k}{k-1}\alpha_i$.\\
+Intuitively, the function $f_k$ rounds up $\alpha_i\in(1/k,1]$
+to the nearest larger number of the form $1/q$ where $q\in \mathbb{Z}$. 
+
+Now we define harmonic constant $T_{\infty}$.
+Let $t_1:=1$ and $t_{i+1}=t_i(t_i+1)$ for $i \in \mathbb{Z}_{\ge 2}$. 
+The sequence $t_i+1$ is also known as Sylvester's sequence (where each term is the product of the previous terms, plus one).
+Let $m(k)$ be the integer such that $t_{m(k)}\le k \le _{m(k)+1}$.
+Now $T_k$ is defined as $\sum_{q=1}^{m(k)}\frac{1}{t_q}+\frac{k}{t_{(m(k)+1}\cdot (k-1)}$, and $T_{\infty}:=\lim_{k \rightarrow \infty} T_k$.
+Thus $T_{\infty}=\sum_{i=1}^{\infty} \frac{1}{t_i}=1+\frac12+\frac16+\dots \approx 1.69103$.
+ Note that $T_k \le T_{\infty}+\frac{1}{(k-1)}$.
+
+
+Lee and Lee \cite{LeeL85} showed that that, for any sequence $\alpha_1, \alpha_2, \dots, \alpha_n$, with $\alpha_i \in (0,1]$ and $\sum_{i=1}^n \alpha_i \le 1$,
+we have $ \sum_{i=1}^n  f_k(\alpha_i) \le T_{k}$.  
+In fact, $\lim_{k \rightarrow \infty} \sum_{i=1}^n  f_k(\alpha_i) \le T_{\infty} \approx 1.691$. 
+
+In fact, Bansal, Han, Iwama, Sviridenko, and Zhang \cite{bansal2007harmonic} showed the above inequality is true even if we define $f_k(\alpha_i):=\alpha_i$ for $\alpha_i \le 1/k$.
+
+
+\subsection{Next-Fit-Decresing-Height (NFDH)}
+\label{appx:NFDH}
+
+The Next-Fit-Decreasing-Height (NFDH) algorithm is a shelf-based approach for packing 2D items into a strip of fixed width $w$. Given a set of items $I$, the algorithm first sorts them in decreasing order of height.
+It then places the items sequentially from left to right on the floor of the strip (or the current shelf) until the next item no longer fits, i.e., adding the next item would cause the total width of items on the shelf to exceed $w$. At this point, a new shelf is created by drawing a horizontal line at the height of the tallest item on the current shelf. The process then continues on the new shelf, following the same placement rule, until all items have been packed.
+For more details on the algorithm, we refer to \cite{coffman1980performance, christensen2016multidimensional}.
+
+
+\begin{lemma}[\cite{coffman1980performance}]
+\label{lem:NFDH}
+Given a 2D rectangular box of height $h$ and width $w$, and a set of 2D items with maximum height $h_{\max}$ and maximum width $w_{\max}$, it is possible to place any subset of items with a total area of at most $(h-h_{\max})(w-w_{\max})$, into the box using NFDH.
+\end{lemma}
+
+
+\subsection{Generalized Assignment Problem (GAP)}
+\label{sec:GAP}
+In the Generalized Assignment Problem, we are given a set of $k$ knapsacks, each with an associated capacity $\{c_j\}_{j\in [k]}$, and a set of $n$ items, where each item $i\in [n]$ has size $s_{ij}$ and profit $p_{ij}$ for knapsack $j$. The goal is to obtain a maximum-profitable packing of a subset of the items into the knapsacks that respects the knapsack capacities, i.e., the total size of the items packed inside each knapsack does not exceed the capacity of the knapsack. For the general case of GAP, there is a tight $(\frac{e}{e-1}+\eps)$-approximation \cite{fleischer2011tight}. However for the special case when $k=O(1)$, there exists a PTAS.
+
+\begin{theorem}[\cite{2dknapsack-lpacking}]
+    For any $\eps > 0$, there is an algorithm for GAP with $k$ knapsacks running in $n^{O(k/\eps^2)}$ time that returns a packing of profit at least $(1-\eps)\opt$.
+\end{theorem}
+
+
+
+
+
+
+
+
+\section{Absolute 6-approximation for 3D-BP}
+\label{sec:absolutesix}
+In this section, our goal is to prove \Cref{thm:3dbpabsolute}. Let $K>0$ be a large constant such that the algorithm of Caprara \cite{caprara2008packing} already yields an absolute 6-approximation when $\opt_{\tbp}>K$. Our goal is to obtain a 6-approximation for the case when $\opt_{\tbp} \le K$. 
+Let $\lambda = 1/40$, and $\delta<\lambda$ be a sufficiently small constant. 
+The following lemma follows from a standard shifting argument. 
+
+
+\begin{restatable}{lemma}{medium}
+\label{lem:medium}
+    There exists a polynomial-time computable $\mu \le \delta$ such that the total volume of the items that have at least one of the dimensions in the range $(\mu^4,\mu]$ is at most $\delta$.
+\end{restatable}
+
+\begin{proof}\textcolor{red}{TOPROVE 1}\end{proof}
+
+We classify the items depending on their dimensions: let $L$ be the items whose height, width and depth all exceed $\mu$ (called \emph{large} items), $I_h$ be the items with height at most $\mu^4$, $I_w$ be the remaining items having width at most $\mu^4$ and $I_d$ be the remaining items with depth at most $\mu^4$. Finally, let $I^{\text{rem}}$ be the remaining items, each having at least one of the dimensions in the range $(\mu^4,\mu]$. Note that $v(I^{\text{rem}})\le \delta$ owing to \Cref{lem:medium}. We further classify the items of $I^{\text{rem}}$ in a similar way -- let $I^{\text{rem}}_h \subseteq I^{\text{rem}}$ be the items with height at most $\mu$, $I^{\text{rem}}_w \subseteq I^{\text{rem}}\setminus I^{\text{rem}}_h$ be the remaining items with width at most $\mu$, and $I^{\text{rem}}_d = I^{\text{rem}} \setminus (I^{\text{rem}}_h \cup I^{\text{rem}}_w)$.
+
+
+
+
+In the remainder of the section, we prove the following result.
+
+\begin{proposition}
+\label{pro:sixapprox}
+    If there exists a packing of all items into $k\le K$ bins, then a packing using at most $6k$ bins can be computed in polynomial time.
+\end{proposition}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.55\linewidth]{SPtoBP.pdf}
+    \caption{Packing from \Cref{thm:packseparate} (only the front view is shown for simplicity) for $k=2$. The dark gray items are sliced while cutting out $\lfloor 3k/2 \rfloor+1 $ bins from the Strip Packing solution. Finally, sliced items are packed into the empty regions of the last bin.}
+    \label{fig:sptobp}
+\end{figure}
+
+For this, we first show the following lemma, which follows from a simple application of \Cref{thm:jpstrippacking}. 
+
+
+\begin{restatable}{lemma}{packseparate}
+\label{thm:packseparate}
+    Let $T$ be a set of items, each having a height (analogously width, depth) of at most $\mu$, and suppose that there exists a packing of $T$ into $k\le K$ bins. Then, it is possible to compute a packing of $T$ using $\lfloor 3k/2 \rfloor + 1$ bins in polynomial time. Further, one of these bins has an empty strip with $1\times 1$ base and height (analogously width, depth) $1/2-4\epsilon$. 
+\end{restatable}
+
+\begin{proof}\textcolor{red}{TOPROVE 2}\end{proof}
+
+We divide the proof of \Cref{pro:sixapprox} into two cases depending on $v(L)$.
+
+
+
+\subsection{Case 1: \texorpdfstring{$v(L) > 64\delta K$}{large volume of L}}
+In this case, for some $j\in \{h,w,d\}$, the total volume of the items in $I_{j}$ must not exceed $(k-64\delta K)/3 \le (1/3 - 21\delta)k$ -- w.l.o.g. assume that $j=h$. We first pack the items of $I_w \cup I^{\text{rem}}_w$ and $I_d \cup I^{\text{rem}}_d$ into $\lfloor 3k/2\rfloor +1$ bins each,  using \Cref{thm:packseparate}. Our goal next is to pack the items of $L \cup I_h \cup I^{\text{rem}}_h$ into $2k$ bins.
+To this end, we further classify the items of $I_h$ depending on their width and depth. Let $I_{h,\ell} := \{i\in I_h \mid w_i, d_i > 1/2\}$ and let $I_{h,s}:= I_h \setminus I_{h,\ell}$. We first pack the items of $I_{h,s}$ into $k$ bins using the following lemma by applying \cref{thm:licheng}.
+
+
+
+\begin{restatable}{lemma}{emptyregion}
+\label{lem:emptyregion}
+    The items of $I_{h,s}$ can be completely packed into $k$ bins where each bin additionally has an empty strip with $1\times 1$ base and height $59\delta$.
+\end{restatable}
+\begin{proof}\textcolor{red}{TOPROVE 3}\end{proof}
+
+
+Now consider the optimal packing inside $k$ bins restricted to the items of $I_{h,\ell}\cup L$. Our goal is to compute a packing of all these items, barring a subset of items from $I_{h,\ell}$ that have a total volume of at most $O(\mu)k$. 
+For this, we first discretize the positions of the large items inside the bins. We focus on the packing inside any one bin.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.55\linewidth]{packtogether.pdf}
+    \caption{The light gray items are items of $L$. The dark gray items are deleted in order to position the upper large item at a multiple of $\mu^4$.}
+    \label{fig:discretize}
+    \end{figure}
+
+\begin{lemma}
+\label{lem:discretepos}
+    By discarding items of $I_{h,\ell}$ having a total volume of at most $2\mu$, the number of distinct positions of the items of $L$ can be assumed to be polynomially-bounded. 
+\end{lemma}
+\begin{proof}\textcolor{red}{TOPROVE 4}\end{proof}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.55\linewidth]{Slots.pdf}
+    \caption{The regions between two consecutive dotted lines correspond to slots.}
+    \label{fig:slots}
+\end{figure}
+
+We next draw horizontal planes passing through the top and bottom faces of each large item and discard the items of $I_{h,\ell}$ that are intersected by these planes. The volume of these discarded items is bounded by $(2/\mu^3)\cdot \mu^4 = 2\mu$. This partitions the bin into at most $2/\mu^3 +1$ \emph{slots}, where each slot is penetrated from top to bottom by at most $1/\mu^2$ large items (see \Cref{fig:slots}). Note also that no large item begins or ends in the interior of a slot. Together with \Cref{lem:discretepos}, we thus have the following result.
+
+\begin{restatable}{lemma}{formslots}
+\label{lem:formslots}
+    There exists a subset $I'_{h,\ell}\subseteq I_{h,\ell}$ with $v(I'_{h,\ell})\ge v(I_{h,\ell})-4\mu k$ such that the items of $I'_{h,\ell}$ are completely packed inside the slots formed by the large items in the $k$ bins.
+\end{restatable}
+\begin{proof}\textcolor{red}{TOPROVE 5}\end{proof}
+
+Our algorithm essentially tries to compute a packing close to the one guaranteed by the above lemma. As mentioned before, we obtain a packing into $k$ bins of all items of $L$, and a large volume subset of $I_{h,\ell}$ that is packed inside the slots formed by the large items. 
+
+\begin{lemma}
+\label{lem:GAP}
+    In polynomial-time, it is possible to compute a set $I''_{h,\ell} \subseteq I_{h,\ell}$ with $v(I''_{h,\ell})\ge v(I_{h,\ell})-5\delta k$, and a packing of all items in $I''_{h,\ell}\cup L$ into $k$ bins.
+\end{lemma}
+\begin{proof}\textcolor{red}{TOPROVE 6}\end{proof}
+
+
+It remains to pack the items of $I_{h,\ell}\setminus I''_{h,\ell}$ and $I^{\text{rem}}_h$. Intuitively, they have a small volume, and hence, we can pack them into the empty regions inside the already-existing bins.
+
+\begin{restatable}{lemma}{repackdiscarded}
+\label{lem:repackdiscarded}
+    The items of $I_{h,\ell}\setminus I''_{h,\ell}$ can be completely packed by using a height of $25\delta$ from each of the empty regions inside the bins that were used to pack the items of $I_{h,s}$. Further, the items in $I^{\text{rem}}_h$ can be packed within a height of $12\delta$ inside one of the bins.
+\end{restatable}
+\begin{proof}\textcolor{red}{TOPROVE 7}\end{proof}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\linewidth]{PackLH.pdf}
+    \caption{Packing inside bin $B_h$}
+    \label{fig:Planes cutting}
+\end{figure}
+
+
+
+Altogether, we used $2\cdot (\lfloor 3k/2\rfloor +1)\le 4k$ bins for packing items in $I_w \cup I^{\text{rem}}_w \cup I_d \cup I^{\text{rem}}_d$ and $2k$ bins for packing the items of $L\cup I_h \cup I^{\text{rem}}_h$, resulting in at most $6k$ bins overall.
+
+\subsection{Case 2: \texorpdfstring{$v(L)\le 64\delta K$}{small volume for L}}
+\label{sec:largehassmallvol}
+
+In this case, we first pack the items of $I_h\cup I^{\text{rem}}_h, I_w \cup I^{\text{rem}}_w$ and $I_d \cup I^{\text{rem}}_d$ into $\lfloor 3k/2 \rfloor + 1$ bins each, using \Cref{thm:packseparate} (note that these items have height, width and depth bounded by $\mu$, respectively). Let $B_h, B_w, B_d$ be the bins having empty strips of height, width, and depth $1/2-4\epsilon$, respectively, that are guaranteed by \Cref{thm:packseparate}. Intuitively, since the large items have a very small volume, they can be completely packed inside these empty strips.
+
+\begin{restatable}{lemma}{packlarge}
+\label{lem:packlarge}
+    The items in $L$ can be completely packed inside three strips, each having a $1\times 1$ base aligned with the $xy$-, $yz$-, and $zx$-planes, respectively. The strips have height, width, and depth of $33\epsilon$, respectively, and therefore they fit inside the bins $B_h, B_w,$ and $B_d$.
+\end{restatable}
+\begin{proof}\textcolor{red}{TOPROVE 8}\end{proof}
+
+\noindent Overall, we obtain a packing into $3\cdot (\lfloor 3k/2 \rfloor +1) \le 6k$ bins, establishing \Cref{pro:sixapprox}.
+
+\textbf{Overall algorithm:} We first run the algorithm of Caprara \cite{caprara2008packing} that already returns a 6-approximate solution when $\opt_{\tbp} > K$. Next, for each guessed value of $\opt_{\tbp}=k \le K$, we run the algorithm of \Cref{pro:sixapprox}. For this, we first compute a value of $\mu$ using \Cref{lem:medium} and classify the items as discussed.
+Next, we divide into two cases depending on the volume of the large items. If $v(L) > 64\delta K$, we find $j \in \{h,w,d\}$ for which the volume of the items in $I_j$ does not exceed $(1/3-21\delta)k$; w.l.o.g~we take $j=h$. We pack the items of $I_w \cup I^{\text{rem}}_w$ and $I_d \cup I^{\text{rem}}_d$ into $\lfloor 3k/2\rfloor +1$ bins each using \Cref{thm:packseparate}. We classify items of $I_h$ into $I_{h,\ell}$ and $I_{h,s}$ depending on their width and depth and obtain a packing of $I_{h,s}$ into $k$ bins, ensuring each of these bins has an empty strip of height $59\delta$. Next we compute a set $I''_{h,\ell}\subseteq I_{h,\ell}$ such that $v(I_{h,\ell}\setminus I''_{h,\ell}) \le 5\delta k$, and pack the items of $I''_{h,\ell}\cup L$ into $k$ bins via a reduction to the Generalized Assignment Problem (\Cref{lem:GAP}). Finally, the items in $(I_{h,\ell}\setminus I''_{h,\ell})\cup I^{\text{rem}}_h$ are packed into the empty spaces inside the bins for $I_{h,s}$ using \Cref{lem:repackdiscarded}. For the other case when $v(L)\le 64\delta K$, we pack items in $I_h\cup I^{\text{rem}}_h, I_w \cup I^{\text{rem}}_w$ and $I_d \cup I^{\text{rem}}_d$ into $\lfloor 3k/2 \rfloor + 1$ bins each, using \Cref{thm:packseparate}, ensuring one of the bins has a sufficiently large empty strip, and then pack items of $L$ inside these empty strips using \Cref{lem:packlarge}.  
+
+
+
+
+
+
+
+
+
+\subsection{Implication on 3D-SP}
+We now establish \Cref{thm:spabsolute}. We use the following observation from our \tbp~algorithm.
+
+
+\begin{restatable}{lemma}{strippackinggap}
+\label{lem:strippackinggap}
+    If there exists a packing of all items into a single bin, then it is possible to compute a packing into 6 bins in polynomial-time, where one of the bins is filled up to a height of at most $1-22\delta$.
+\end{restatable}
+\begin{proof}\textcolor{red}{TOPROVE 9}\end{proof}
+
+Consider now the optimal Strip Packing of the input instance. Since the height of this packing must lie in $[h_{\text{max}},nh_{\text{max}}]$, we can assume the optimal height to be of the form $h_{\text{max}}(1+\varepsilon)^j$, by losing only a factor of $1+\varepsilon$. We scale the height of each item by the guessed height so that all items now fit inside a $1\times 1\times 1$ bin. Using \Cref{lem:strippackinggap}, we compute a packing into 6 bins and stack these bins one on top of the other along the height so that the resulting height of the packing is at most $6-22\delta$. This establishes \Cref{thm:spabsolute} with $\rho = 22\delta$.
+
+The above result holds for the case when the strip is unbounded along the $z$-axis. If, instead, the strip could be extended along any of the $x$-, $y$- or $z$-axes and the goal was to minimize the length of the strip along that direction, then we improve further.
+
+\begin{restatable}{lemma}{emptyregionforunitopt}
+\label{lem:emptyregionforunitopt}
+    If there exists a packing of all items into a single bin, then for any $\varepsilon >0$, it is possible to compute a packing into 6 bins in polynomial time, where one of the bins is filled up to a length (height/width/depth) of at most $1/2+O(\varepsilon)$.
+\end{restatable}
+\begin{proof}\textcolor{red}{TOPROVE 10}\end{proof}
+
+W.l.o.g.~assume that one of the bins is filled up to height $1/2+O(\eps)$. Thus, stacking the bins along the $z$-axis would be of height at most $11/2+O(\eps)$, implying the following result.
+
+\begin{corollary}
+\label{cor:spwithdirection}
+    For any $\varepsilon > 0$, there exists a polynomial-time $(11/2+\varepsilon)$-approximation for \tsp, if the strip can be extended along any of the $x$-, $y$- or $z$-axes.
+\end{corollary}
+
+
+
+
+
+
+
+\section{Asymptotic \texorpdfstring{$(\frac{3}{2}\cdot T_{\infty}+\eps)$}{near three-half}-approximation for 3D-BP}
+\label{sec:asymptotic}
+
+In this section, we prove \Cref{thm:3dbpasymp} and present an improved asymptotic approximation algorithm for \tbp.  
+We will utilize ideas from the algorithm for \tsp by Jansen and Prädel~\cite{3d-strip-packing} which  packs $I$ into strip height of $(3/2+\varepsilon) \cdot \opt_{\tsp}(I) + O_{\eps}(1)h_{\max}$.
+As mentioned earlier, the naive approach of cutting the strip at integral height will result in  $(3+\eps)$-approximation. 
+Instead, we exploit the structural properties of the solution provided by the algorithm, along with the {\em harmonically rounded heights} of the items, to ensure that items with a height larger than $\eps$ are not sliced.
+
+Recall the definition of harmonic rounding: 
+For $\alpha_i\in(1/(q+1),1/q]$, $f_k(\alpha_i):=1/q$, for $q \in [k-1]$; and for $\alpha_i \in(0,1/k], f_k(\alpha_i):=\alpha_i$.
+Also, if $\sum_{i=1}^n \alpha_i \le 1$,
+then $\lim_{k \rightarrow \infty} \sum_{i=1}^n  f_k(\alpha_i) \le T_{\infty} \approx 1.691$. In the following, we assume $k=1/\eps$ to be large enough such that $\sum_{i=1}^n  f_{1/\eps}(\alpha_i)\approx T_{\infty}$, and define $f_{1/\eps}$ to be $f$. 
+
+Let \( I^{\infty} \) be the instance derived from the given \tbp instance \( I \) by applying harmonic rounding $f$ to the heights of the items.
+Thus an item $i \in I$ becomes an item of  $I^{\infty}$ with width, depth, height to be $w_i, d_i, f(h_i)$, respectively. 
+Let \( \opt_{\tbp}^{T_\infty}(I^{\infty}) \) denote the minimum number of bins with dimensions \( 1 \times 1 \times T_{\infty} \) required to pack all items from \( I^{\infty} \), and let \( \opt_{\tsp}(I^{\infty}) \) denote the minimum height to pack all items from \( I^{\infty} \) into a strip with unit square base and unbounded height. 
+The following lemma connects packing of $I^{\infty}$ with $I$:
+
+\begin{restatable}{lemma}{asympHarmonic}
+\label{lem:asymp-harmonic}
+\( \opt_{\tsp}(I^{\infty}) \leq T_{\infty} \cdot  \opt_{\tbp}^{T_\infty}(I^{\infty}) \leq T_{\infty}\cdot \opt_{\tbp}(I) \).
+\end{restatable}
+
+\begin{proof}\textcolor{red}{TOPROVE 11}\end{proof}
+
+
+We transform the instance $I^{\infty}$ for $\tsp$ into an instance for \twobp, similar to \cite{3d-strip-packing}, which then uses structural results from a {\twobp} algorithm \cite{jansen2016new}.
+Given $\eps$, we round up the item heights of $I^{\infty}$  to the next multiple of $\frac{\eps v(I^{\infty})}{n}$.
+We create an instance $I_{\twobp}$ of \twobp, by introducing for each item $i \in I^{\infty}$ with rounded height $k \frac{\eps v(I^{\infty})}{n}$, exactly $k$ rectangles with width $w_i$ and depth $d_i$. The following lemma bounds the incurred loss. 
+
+\begin{restatable}{lemma}{asympTspToTwobsp}
+\label{lem:asymp-tsp-to-twobsp}
+$\frac{\eps v(I^{\infty})}{ n} \opt_{\twobp}(I_{\twobp})\leq (1+\eps)\opt_{\tsp}(I^{\infty})$.
+\end{restatable}
+
+\begin{proof}\textcolor{red}{TOPROVE 12}\end{proof}
+
+\subsection{Essentials of the 2D-BP algorithm}
+\label{subsec:2dbp}
+
+The main ingredient for the \twobp~algorithm by Jansen and Prädel~\cite{jansen2016new} is a restructuring theorem.
+It states that each packing can be rearranged into packing with an iterable structure. This rearrangement comes at the cost of introducing more bins to the packing.
+
+First, the items are classified into \bigy, vertical, horizontal, \inter, and  \tin based on a suitably chosen constant $\delta \in [\eps^{O_{\eps}(1)}, \eps]$.
+Let $\mu = \delta^4$.
+An item $i$ is {\em \bigy} if $w_i \geq \delta$ and $d_i \geq \delta$; {\em vertical} if $d_i \geq \delta$ but $w_i < \mu$; {\em horizontal} if $w_i \geq \delta$ but $d_i < \mu$; {\em \tin} if $d_i < \mu$ and $w_i < \mu$; and {\em \inter} if either $w_i \in [\mu,\delta)$ or $d_i \in [\mu,\delta)$.
+Using standard argument (see \Cref{lem:delta-twobp} in \Cref{subsec:2dbpAppndix}), we show that the area of \inter items is at most $\eps \cdot \area(I)$. 
+
+
+
+Jansen and Prädel~\cite{jansen2016new} showed the existence of a structured packing that we call \emph{$k$-2D-container-packing}.
+In a \emph{$k$-2D-container-packing}, one can consider a rounded-up instance $\tilde{I}$ from $I_{\twobp}$, where the widths and depths of \bigy items, widths of horizontal items, and depths of vertical items from $I_{\twobp}$ are rounded up to $O(1/\delta^2)$ values.
+Let $\mathcal{T}, \mathcal{W}, \mathcal{D}$ be the set of different types of (rounded) large items, widths of wide items, and depths of vertical items in $\tilde{I}$, respectively. 
+Then $|\mathcal{T}|$ is $O(1/\delta^4)$, and $|\mathcal{W}|, |\mathcal{D}|$ are $O(1/\delta^2)$. 
+
+
+In a \emph{$k$-2D-container-packing}, each bin of the packing is partitioned into containers. 
+Furthermore, vertical items are allowed to be sliced along $y$-axis, horizontal items may be sliced along $x$-axis, and \tin items may be sliced in both directions.
+The containers are of five types, and only specific types of items from $\tilde{I}$ are allowed to be packed in the corresponding containers:
+\begin{itemize}
+\item (i) {\em Big containers:} Each such container contains only one (rounded up) \bigy item and has the size of this \bigy item. 
+\item (ii) {\em Horizontal containers:} Each such container has a width $w \in \mathcal{W}$ and a depth that is a multiple of $\mu$, and contains only horizontal items with width $w$.  
+Per bin, the total width of these containers is bounded by $O(k)$.
+\item (iii) {\em Vertical containers:} 
+Each such container has a depth $d \in \mathcal{D}$, a height that is a multiple of $\mu$, and contains only vertical items with depth $d$.
+Per bin, the total depth of these containers is bounded by $O(k)$.
+\item (iv) {\em Tiny containers:} Each such container contains only \tin items and has a width and depth that is a multiple of $\mu$. Each bin contains at most $O(k)$ of these containers.
+\item (v) {\em Intermediate containers:} These containers contain only \inter items. There will be an extra $O(\eps)\opt_{\twobp}$ bins reserved separately to pack the \inter items.
+\end{itemize}
+We refer to a bin configuration as a valid way to split one bin into containers with regard to the considered $k$-2D-container-packing.
+Jansen and Prädel~\cite{jansen2016new} showed the existence of a good {\em 2D-container-packing} (see \Cref{subsec:2dbpAppndix} for omitted details). 
+
+\begin{restatable}[\cite{jansen2016new}]{theorem}{twoBPStructure}
+\label{thm:finding-2D-container-packing}
+    Given some instance $I$ for \twobp, there is an algorithm that finds in polynomial time a rounded-up instance $\tilde{I}$ with $|\mathcal{T}|, |\mathcal{D}|, |\mathcal{W}| \in O(1/\delta^4)$ and a $(1/\delta^3)$-2D-container-packing of $\tilde{I}$ into $B$ bins with at most $O_{\eps}(1)$ different bin-configurations that fulfills $B \leq (\frac{3}{2}+O(\eps))\opt_{\twobp}(I) +O_{\eps}(1)$.
+\end{restatable}
+Although this theorem is not explicitly stated in~\cite{jansen2016new}, it encapsulates the core idea of the paper. For completeness, we provide a proof in~\cref{subsec:2dbpAppndix}.
+
+
+\subsection{The algorithm for 3D-BP}
+\label{subsec:3dbpasymp}
+\begin{algorithm}[t]
+\DontPrintSemicolon
+\caption{Asymptotic $((3/2)T_{\infty}+\eps)$-approximation for 3D-BP with input $I$ and $\eps>0$.}
+\label{alg:asymp-tbp}
+Create $I^\infty$ by harmonically rounding the item heights of $I$.\;
+Create $I_{\twobp}$ after rounding the heights of the items in $I^\infty$ to multiples of $\frac{\eps v(I^{\infty})}{ n}$.\;
+Find a rounded instance $\tilde{I}$ and the $(1/\delta^3)$-2D-container-packing into $B$ 2D bins with at most $O_{\eps}(1)$ bin-configurations.\;
+Place $I^\infty$ into 3D containers corresponding to the \twobp solution as discussed in \cref{subsec:3dbpasymp}.\;
+\textbf{return} the packing. \;
+\end{algorithm} 
+
+In this subsection, we describe how the items are filled into the bins when a $(\eps/\mu)$-2D-container-packing is given.
+An overview of the complete algorithm can be found in \cref{alg:asymp-tbp}.
+To prove the following Lemma, we consider the \bigy, horizontal and vertical, as well as \tin items separately.
+
+\begin{restatable}{lemma}{algorithmToPlaceItemsIntoConfigurations}
+\label{lem:alg-to-put-all-items-into-2D-container-packing}
+    Given a rounded \twobp instance $\tilde{I}$ derived from the \tbp instance $I^{\infty}$ and an $(\eps/\mu)$-2D-container-packing of $\tilde{I}$ into $B$ 2D bins using $k$ 2D bin-configurations, a packing of the items $I^{\infty}$ into $(1+O(\eps))\frac{\eps v(I^{\infty})}{n} B + O(\log(1/\eps)k +|\mathcal{T}|)$ 3D bins can be found in polynomial time. 
+\end{restatable}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.9\linewidth]{harmonic-new.pdf}
+    \caption{The left figure depicts a 2D container-packing, which forms the base of a 3D configuration. 
+    The middle figure shows two 3D containers corresponding to two containers (one big and one horizontal) in 2D container-packing. 
+    On the right, the packing that ensures the \emph{tall-not-sliced} property is shown. The light gray rectangles are repacked into additional bins.}
+    \label{fig:container}
+\end{figure}
+
+
+Let $C$ be one of the $k$ 2D bin configurations used, and let $x_C$ denote the multiplicity (possibly fractional) of $C$ in the solution consisting of $B$ 2D bins.
+We create a 3D configuration of height $\lceil x_C \cdot \frac{\eps v(I^{\infty})}{n}\rceil$, whose base is identical to $C$. 
+Note that the rounding to an integer height increases the total height of the configurations by at most $k$, i.e., the total height of all 3D configurations is bounded by $\frac{\eps v(I^{\infty})}{n}B+k$.
+The 2D containers of $C$ raised by the corresponding height of the configuration will be referred to as 3D containers and will be denoted by the same type as the corresponding 2D containers.
+
+Our goal is to pack the items of $I^{\infty}$ into these 3D containers while ensuring the \emph{tall-not-sliced} property. Items with a rounded height larger than $\eps$ are called \emph{tall} items, and the remaining items are called \emph{short}. The classification of items into big, vertical, horizontal, tiny, and intermediate, depending on the dimensions of their top faces, as defined in the previous subsection, continues to hold.
+
+{\bf Placing big items:} 
+The different slices of a \bigy 3D item might be rounded differently by the \twobp~algorithm. 
+However, using a linear program, we can assign all big 3D items except for $O(|\mathcal{T}|)$ to the big 3D containers without violating the container heights.
+The $O_{\eps}(1)$ unassigned big items will be packed using $O_{\eps}(1)$ additional bins. 
+To formalize this process,
+consider the set of 3D items $I_B$ whose slices are \bigy 2D items in $\tilde{I}$.
+Further, for any $t \in \mathcal{T}$, denote by $K_t$ the set of 3D containers that are designated for \bigy items with rounded size of type $t$ and let $\tilde{I}_t$ denote the set of 3D items with rounded size $t$.
+
+
+\begin{lemma}
+\label{lem:frist-setp-big-items}
+Given a rounded (2D) instance $\tilde{I}$ of $I_{\twobp}$,
+in polynomial time, it is possible to compute an assignment of all but $|\mathcal{T}|$ \bigy 3D items to rounded sizes $t \in \mathcal{T}$, such that for each $t \in \mathcal{T}$, the total height of assigned 3D items is bounded by $\frac{\eps v(I^{\infty})}{n} |\tilde{I}_t|$.
+\end{lemma}
+
+\begin{proof}\textcolor{red}{TOPROVE 13}\end{proof}
+
+For each of the rounded base types $t \in \mathcal{T}$, let $B_t \subseteq I^{\infty}$ denote the set of 3D items that are assigned to have a rounded base $t \in \mathcal{T}$ by the basic solution of the assignment LP.  
+We place each of the $|\mathcal{T}|$ fractionally placed \bigy items into individual bins.
+In the next step, we assign the items in $B_t$ to containers $K_t$.
+
+\begin{lemma}
+\label{lem:placing-big-items-second-step}
+By extending the height of one container in $K_t$ by $O(\log(1/\eps))$ and all other containers by $\eps$, it is possible to place all the items $B_t$ into the containers $K_t$ while maintaining the tall-non-sliced property.
+\end{lemma}
+\begin{proof}\textcolor{red}{TOPROVE 14}\end{proof}
+
+Next, we show that the \bigy items can be placed into the containers while maintaining the tall-non-sliced property.
+
+\begin{restatable}{lemma}{bigThreeDContainer}
+\label{lem:packing-bins-into-containers}
+By extending the height of all containers for \bigy items by $O(\log(1/\eps))$, it is possible to place them into their containers and $O(|\mathcal{T}|)$ additional ones, while maintaining the tall-non-sliced property.
+\end{restatable}
+
+\begin{proof}\textcolor{red}{TOPROVE 15}\end{proof}
+
+
+\noindent \textbf{Placing vertical and horizontal items.}
+Note that for horizontal and vertical items, we use the same procedure, except that we rotate the strip and the items by 90 degrees along the $z$-axis. 
+
+For each $d\in \mathcal{D}$, let $\mathcal{V}_d$ denote the set of 3D items whose 2D counterparts have been rounded to be vertical items with rounded depth $d$ and let $K_d$ be the set of all containers for vertical items with rounded depth $d$. 
+Since the depth of each container in $K_d$ equals the vertical item depth $d$, we simplify the placement by considering only the $xz$-plane, i.e., the front face of the containers and the items.
+Let $\mathcal{V}_{d,xz}$ denote the set of all front faces of items in $\mathcal{V}_d$ and let $K_{d,xz}$ denote the set of front faces of all containers $K_d$ for these vertical items.
+\cref{alg:placing-vertical-items-into-containers} specifies how to place almost all 2D items $\mathcal{V}_{d,xz}$ into the 2D containers $K_{d,xz}$.
+Note that the y-coordinate of the 3D item corresponds to the y-coordinate of the 3D container.
+
+The idea of the algorithm is to iteratively choose any empty container-face $K \in K_{d,xz}$ and pick a set of 2D items $V_d'$ to be placed that have at least the area of $K$.
+To make sure that all items $V_d'$ can be placed into the target area, the container-face $K$ is extended on both sides.
+This extension is chosen large enough such that all items $V_d'$ fit, when using the NFDH algorithm to place them.
+We use the notation $\texttt{NFDH}(I, a \times b)$ to denote that the set of items $I$ is placed into the rectangular area $a \times b$ with width $a$ and height $b$ using the NFDH algorithm.
+The algorithm returns a pair of vectors $(x^N,z^N)$ specifying the x- and z-coordinates of the lower-left corner for each placed item.
+In the next step, the items overlapping the width of the container are removed and remembered in a set $V_d''$. 
+Later, we will see that the total area of these removed items is not too large.
+Remember that the NFDH algorithm places groups of items on shelves.
+To ensure the tall-not-sliced property, these shelves are shifted up such that they start at a height that is an integer multiple of the tallest item on the shelf.
+
+
+\begin{algorithm}
+\DontPrintSemicolon
+\caption{Algorithm to place the vertical items into containers.}
+\label{alg:placing-vertical-items-into-containers}
+\textbf{Input:}  $K_{d,xz}, \mathcal{V}_{d,xz}$.\;
+\smallskip
+Sort the items $\mathcal{V}_{d,xz}$ by height, $V_d'' \leftarrow \emptyset$.\;
+\While{$\mathcal{V}_{d,xz} \not =\emptyset$}{
+Choose $K \in K_{d,xz}$, $K_{d,xz} \leftarrow K_{d,xz} \setminus \{K\}$, $V_d' \leftarrow 
+ \emptyset$.\;
+\While{$\area(V_d') < \area(K)$ and $\mathcal{V}_{d,xz} \not = \emptyset $}{
+$i \leftarrow \arg \max_{i \in \mathcal{V}_{d,xz}} h_i$, $V_d' \leftarrow V_d'\cup \{i\}$, $\mathcal{V}_{d,xz} \leftarrow \mathcal{V}_{d,xz} \setminus \{i\}$.\;
+}
+$(x^N,z^N) \leftarrow \texttt{NFDH}(V_d', (w(K) +2\mu) \times (h(K)+2))$.\;
+$V_d'' \leftarrow V_d'' \cup \{i \in V_d' \mid w_i+x^N_i > w(K)\}$.\;
+Sequentially shift up all NFDH shelves such that every shelf whose tallest item has a height of $1/q > \eps$ is aligned at an integer multiple of $1/q$. Extend the height of the container as needed.
+}
+\textbf{return} the set of packings into the different areas and $V''_d$.\;
+\end{algorithm} 
+
+\begin{lemma}
+    \Cref{alg:placing-vertical-items-into-containers} places all vertical items $\mathcal{V}_{d,xz}$ except for $V_d''$ into the containers $K_{d,xz}$ whose heigths have been extended by $H_{1/\eps}+1$.
+\end{lemma}
+\begin{proof}\textcolor{red}{TOPROVE 16}\end{proof}
+
+Next, we show that iteratively using \cref{alg:placing-vertical-items-into-containers} for all rounded sizes $d \in \mathcal{D}$ gives a packing of all the vertical items into the container and a few additional bins.
+
+
+\begin{restatable}{lemma}{horizontalThreeDContainer}
+Enlarging the height of the 3D vertical containers by $O(\log(1/\eps))$ allows all vertical items to be placed into their containers and at most $O(\eps)(\frac{\eps v(I^{\infty})}{n} B+k)$ additional bins while maintaining the tall-not-sliced property. 
+\end{restatable}
+
+\begin{proof}\textcolor{red}{TOPROVE 17}\end{proof}
+
+\noindent \textbf{Placing \tin items.}
+The \tin items are placed by iteratively selecting a subset of items and packing them into the containers using the NFDH algorithm.
+We show that almost all \tin items can be packed into their designated 3D containers, except for a small-volume subset that can be accommodated in at most $O(\delta)\opt_{\twobp}+O(1)$ additional bins. 
+
+Let $\mathcal{S}$ denote the set of 3D items whose base is classified as \tin by the \twobp algorithm.
+Further, let $K_S$ denote the set of containers for \tin items.
+As the small items are not rounded to a constant number of sizes in any dimension, we will take a different approach than for the horizontal and vertical items.
+We sort the small items by height and iteratively pick a container $K \in K_S$ to fill the items inside.
+For this container $K$, we iteratively choose a set of items $\mathcal{S}_{K,\ell}$, for some $\ell \in \mathbb{N}$, by greedily taking the tallest small items until the top faces of the items have a larger area than the area of the top face of the container.
+The top-faces $\mathcal{S}_{K,\ell}^{\mathrm{flat}}$ of the items $\mathcal{S}_{K,\ell}$ are then placed into the area $(w(K) +2\mu) \times (d(K)+2\mu))$ using the NFDH algorithm.
+In the next step, the items overlapping the container borders are removed and added to the set $\mathcal{S}''$.
+The items in $\mathcal{S}_{K,\ell}$ are then actually placed into the container by assigning them their relative $xy$-position in the box and all of them a height such that their top faces align with the same height $h$.
+We call the placement of such a set $\mathcal{S}_{K,\ell}$ a layer and they are numbered starting at $1$.
+After the last layer intersects the height $h(K)+1$, we close the container. But before we consider the next container, the algorithm ensures the tall-not-sliced property by shifting the layers upwards, such that the z-axis of the layer is aligned with an integer multiple of the tallest item from the layer.
+
+
+\begin{algorithm}
+\DontPrintSemicolon
+\caption{Algorithm to place the \tin items into containers.}
+\label{alg:placing-tiny-items-into-containers}
+\textbf{Input:}  $\mathcal{S}$, $K_S$.\;
+\smallskip
+Sort the items $\mathcal{S}$ by height, $\mathcal{S}'' \leftarrow \emptyset$.\;
+\While{$\mathcal{S} \not =\emptyset$}{
+Pick $K \in K_S$, $K_S \leftarrow K_S \setminus \{K\}$, $h \leftarrow 0$, $\ell \leftarrow 0$.\;
+\While{$h \leq h(K)+1$ and $\mathcal{S} \not =\emptyset$}{
+$\mathcal{S}_{K,\ell} \leftarrow \emptyset$, $\mathcal{S}_{K,\ell}^{\mathrm{flat}} \leftarrow \emptyset$, $\mathcal{S}_{K,\ell}^{\area} \leftarrow 0$, $h \leftarrow h+\max\{h_i | i \in \mathcal{S}\}$.\;
+\While{$\mathcal{S}_{K,\ell}^{\area} < w(K) \cdot d(K)$ and $\mathcal{S} \not = \emptyset $}{
+$i = \arg \max_{i' \in \mathcal{S}} h_{i'}$,  $\mathcal{S}_{K,\ell} \leftarrow \mathcal{S}_{K,\ell} \cup \{i\}$,  $\mathcal{S}\leftarrow \mathcal{S} \setminus \{i\}$.\;
+$\mathcal{S}_{K,\ell}^{\mathrm{flat}}\leftarrow \mathcal{S}_{K,\ell}^{\mathrm{flat}} \cup \{(w_i,d_i)\}$,  $\mathcal{S}_{K,\ell}^{\area} \leftarrow\mathcal{S}_{K,\ell}^{\area} + w_id_i$.\;
+}
+$(\mathbf{x}^N,\mathbf{y}^N) \leftarrow \texttt{NFDH}(\mathcal{S}_{K,\ell}^{\mathrm{flat}}, (w(K) +2\mu) \times (d(K)+2\mu))$.\;
+$\mathcal{S}'' \leftarrow\mathcal{S}'' \cup \{i \in \mathcal{S}_{K,\ell} \mid (x^N_i + w_i > w(K)) \vee (y_i^N + d_i > d(K))\}$.\;
+$\forall i \in \mathcal{S}_{K,\ell} \setminus \mathcal{S}'': (x_i,y_i,z_i) \leftarrow (x_K+x^N_i,y_K+y^N_i,h-h_i)$.
+}
+$h_{s} \leftarrow 0$.\;
+\For(\tcp*[f]{ensure tall-non-sliced property}){$\ell' = 1$ \KwTo $\ell$}{
+$i =\arg \max_{i' \in \mathcal{S}_{K,\ell'}} h_{i'}$.\;
+\If{$h_i > \eps$}{
+$q \leftarrow 1/h_i$, $q' \leftarrow \lceil q\cdot (h_{i}+h_{s}+z_i)\rceil$, $h_{s} \leftarrow h_{s} + (q'/q -(h_{i}+h_{s}+z_i))$.\;
+$\forall i' \in \mathcal{S}_{K,\ell} \setminus \mathcal{S}'': (x_{i'},y_{i'},z_{i'}) \leftarrow (x_{i'},y_{i'},q'/q-h_{i'})$.
+}
+}
+}
+\textbf{return} $(\mathbf{x},\mathbf{y},\mathbf{z}) \in ([0,1)\times[0,1)\times\mathbb{R}_+)^{|\mathcal{S}|}$, $\mathcal{S}''$.\;
+\end{algorithm} 
+
+\begin{lemma}
+\label{lem:alg-to-place-tiny}
+    Given $\mathcal{S}$ and $K_S$, \cref{alg:placing-tiny-items-into-containers}  places all items in $\mathcal{S}$ into the containers $K_S$ whose heights have been extended by $H_{1/\eps}+1$ except for $\mathcal{S}''$ while fulfilling the tall-not-sliced property.
+\end{lemma}
+
+\begin{proof}\textcolor{red}{TOPROVE 18}\end{proof}
+
+It remains to place the items from $\mathcal{S}''$. The next lemma shows that all the \tin items can be placed into their containers and a few additional bins.
+
+\begin{restatable}{lemma}{smallThreeDContainer}
+    By enlarging the 3D tiny containers by $O(\log (1/\eps))$ along the height, it is possible to compute a packing of a subset of the tiny items, ensuring the tall-not-sliced property. The remaining tiny items can be packed into $O(\eps)(\frac{\eps v(I^{\infty})}{n}B+k)$ additional bins.
+\end{restatable}
+\begin{proof}\textcolor{red}{TOPROVE 19}\end{proof}
+
+These three lemmas about placing \bigy, vertical, horizontal, and \tin items give us the tools to prove \cref{lem:alg-to-put-all-items-into-2D-container-packing}.
+
+\begin{proof}\textcolor{red}{TOPROVE 20}\end{proof}
+
+
+By \cref{thm:finding-2D-container-packing}, we can find $\tilde{I}$ and a $(1/\delta^3)$-2D-container-packing of $\tilde{I}$ into $B$ bins with at most $O_{\eps}(1)$ different bin-configurations that fulfills $B \leq (\frac{3}{2}+O(\eps))\opt_{\twobp}(I) +O_{\eps}(1)$.
+As a consequence, since $\mu \leq \eps \delta^3$, by \cref{lem:alg-to-put-all-items-into-2D-container-packing}, we can find a packing of $I^\infty$ into at most 
+$
+\left(\frac{3}{2}+O(\eps)\right)\frac{\eps v(I^{\infty})}{n}\cdot \opt_{\twobp}(I_{\twobp}) + O_{\eps}(1)
+$
+3D bins, because $\frac{\eps v(I^{\infty})}{n} \leq \eps$ and $O(\log(1/\eps)k +|\mathcal{T}|) \in O_{\eps}(1)$.
+Since by \cref{lem:asymp-harmonic} and \cref{lem:asymp-tsp-to-twobsp}, we have that 
+$\frac{\eps v(I^{\infty})}{n}\opt_{\twobp}(I_{\twobp})  
+\leq (1+\eps)\opt_{\tsp}(I^{\infty}) 
+\leq (1+\eps)T_{\infty}\opt_{\tbp}(I)$,
+the solution generated by the algorithm uses at most $(\frac{3}{2}+O(\eps))T_{\infty}\cdot \opt_{\tbp}(I) + O_{\eps}(1)$ bins
+establishing \Cref{thm:3dbpasymp}.
+
+
+
+
+
+
+
+
+
+
+
+
+\section{Algorithms for 3D-MVBB}
+\label{sec:minvolumecontainer}
+
+In this section, we establish \Cref{thm:mvbb}. Note that by the discussion in \Cref{sec:absolutesix}, \Cref{cor:spwithdirection} already implies an absolute approximation ratio of $11/2+\eps$ for \tmvc, improving on the result of \cite{li-cheng}. We now improve the approximation factor to $(3+\varepsilon)$. First, as previously described, we guess the dimensions of the optimal bounding box within factors of $1+\varepsilon$ and then scale the dimensions of each item by the corresponding (guessed) dimensions of the bounding box so that all items now fit inside a $1\times 1 \times 1$ bin. 
+
+\subsection{Absolute approximation} 
+We first compute a value of $\mu$ in order to classify the items using the following lemma.
+
+\begin{lemma}
+\label{lem:mediumitems}
+     There exists a polynomial-time computable $\mu \le \varepsilon$ such that the total volume of the (scaled) items having at least one of the dimensions in the range $(\mu^6,\mu]$ is at most $\varepsilon$.
+\end{lemma}
+\begin{proof}\textcolor{red}{TOPROVE 21}\end{proof}
+
+We now classify the items as follows -- let $L$ be the items whose height, width and depth all exceed $\mu$, which we will refer to as \emph{large} items. Let $I_h$ be the items with height at most $\mu^6$, $I_w$ be the remaining items with width at most $\mu^6$ and $I_d$ be the remaining items having depth at most $\mu^6$. Finally, let $I^{\text{rem}}$ be the items having at least one dimension in the range $(\mu^6,\mu]$, whose total volume is bounded by $\varepsilon$ by \Cref{lem:mediumitems}. These items are further subdivided as follows: let $I^{\text{rem}}_h \subseteq I^{\text{rem}}$ be the items with height at most $\mu$, $I^{\text{rem}}_w \subseteq I^{\text{rem}} \setminus I^{\text{rem}}_h$ be the items with width at most $\mu$, and $I^{\text{rem}}_d = I^{\text{rem}}\setminus (I^{\text{rem}}_h \cup I^{\text{rem}}_w)$ be the remaining items with depth at most $\mu$.
+
+
+\begin{restatable}{lemma}{packmedium}
+\label{lem:packmedium}
+    The items of $I^{\text{rem}}_h$ (resp. $I^{\text{rem}}_w,I^{\text{rem}}_d$) can be packed inside a strip with $1\times 1$ base and height (resp. width, depth) at most $12\varepsilon$.
+\end{restatable}
+\begin{proof}\textcolor{red}{TOPROVE 22}\end{proof}
+
+We now consider the packing of the items in $L\cup I_h$ and obtain the following result.
+\begin{restatable}{proposition}{packLandIh}
+\label{pro:packLandIh}
+    In polynomial time, we can compute a packing of $L\cup I_h$ inside a cubic bin of side length $1+O(\varepsilon)$.
+\end{restatable}
+
+
+
+
+\begin{proof}\textcolor{red}{TOPROVE 23}\end{proof}
+
+As a special case, \Cref{pro:packLandIh} applied separately to $I_w$ and $I_d$ also yields packings into cubic bins of side length $1+O(\varepsilon)$. Together with \Cref{lem:packmedium}, we obtain a packing of all input items into a bounding box of volume $3+O(\varepsilon)$, establishing the absolute approximation guarantee of \Cref{thm:mvbb}.
+
+
+
+
+
+
+
+\subsection{APTAS}
+The technique described in the previous subsection (\Cref{lem:discretizeposition} together with \cite{3d-strip-packing}) gives an APTAS for \tsp~with resource augmentation.
+
+\begin{lemma}[\cite{bansal2006bin,3d-strip-packing}]
+    For any $\varepsilon>0$, it is possible to compute a packing into a strip whose width and depth are augmented by a factor of $1+O(\varepsilon)$ and whose height is at most $(1+\varepsilon)\opt_{\tsp}+\varepsilon+O_{\varepsilon}(1)h_{\max}$.
+\end{lemma}
+
+We run the above algorithm with the base of the strip aligned along the $xy$-, $yz$- and $zx$-planes, respectively, and return the bounding box with the minimum volume. Let $\delta$ be a small constant depending on $\varepsilon$. Note that clearly, the height, width, and depth of the optimal bounding box must be at least $h_{\max}, w_{\max}$ and $d_{\max}$, respectively. Therefore, the volume of the optimal box is lower bounded by $h_{\text{max}}w_{\text{max}}d_{\text{max}}$. 
+In the asymptotic case, we can assume $\opt >> h_{\text{max}} w_{\text{max}} d_{\text{max}}$.
+Hence, in order to establish an APTAS, we need that the volume of the box returned by our algorithm is at most $(1+O(\eps))\opt_{\tmvc}+O_{\eps}(1)h_{\text{max}}w_{\text{max}}d_{\text{max}}$. We divide the analysis into two cases depending on the values of $h_{\text{max}}, w_{\text{max}}, d_{\text{max}}$.
+
+\textbf{Case 1: $h_{\text{max}}, w_{\text{max}}, d_{\text{max}}$ all exceed $\delta$ -} Consider the Strip Packing along the $z$-axis. Since $w_{\text{max}}, d_{\text{max}} > \delta$, the height of the packing is at most $1+2\varepsilon+O_{\varepsilon}(1)\cdot (1/\delta^2)h_{\text{max}}w_{\text{max}}d_{\text{max}}$. Hence, the volume of the bounding box obtained is also at most $1+O(\varepsilon)+O_{\varepsilon}(1)h_{\text{max}}w_{\text{max}}d_{\text{max}}$, and we have an APTAS for this case.
+
+\textbf{Case 2: At least one out of $h_{\text{max}}, w_{\text{max}}, d_{\text{max}}$ does not exceed $\delta$ -} W.l.o.g.~assume that $h_{\text{max}}\le \delta$. Then the packing along the $z$-axis will have a height bounded by $1+2\varepsilon+O_{\varepsilon}(1)\cdot \delta \le 1+3\varepsilon$, for sufficiently small $\delta$. Therefore, the bounding box also has a volume of at most $1+O(\varepsilon)$, and we, in fact, obtain a PTAS in this case.
+
+Overall, we have the following theorem.
+
+\begin{theorem}
+    For any $\eps >0$, there is a polynomial-time algorithm that returns a packing into a bounding box of volume $(1+\eps)\opt_{\tmvc}+O_{\eps}(1)h_{\max}w_{\max}d_{\max}$.
+\end{theorem}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\section{3D-BP with rotation}
+\label{sec:rotation}
+
+
+
+In this section, we show the following result.
+
+\begin{theorem}
+    There exists a polynomial-time 5-approximation for \tbp~with rotations.
+\end{theorem}
+\begin{proof}\textcolor{red}{TOPROVE 24}\end{proof}
+
+\section{Conclusion}
+\label{sec:conc}
+We obtained an improved approximation for $\tbp, \tsp, \tmvc$.
+Our framework is quite general and should extend to other cases.
+E.g., for the case with rotations, we expect that our techniques should be easily extendable to provide similar asymptotic guarantees. 
+We also expect that the asymptotic approximation algorithm for $\tbp$  should extend to $d$-dimensions ($d>3$) and provide a $3T_{\infty}^{d-2}/2$-approximation. 
+The existence of a PTAS (or hardness) for \tmvc is still open. 
+It is also interesting to obtain improved guarantees in pseudopolynomial-time (when the input numeric data is polynomially bounded in $n$).
+
+\bibliography{ref}
+\appendix
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\section{Structural result for 2D-BP}
+\label{subsec:2dbpAppndix}
+In this section, we focus on the \twobp algorithm, and we restate all the ingredients to prove the main structure lemma for \twobp from \cite{jansen2016new}.
+
+\twoBPStructure*
+
+The proof works in three steps. First, we prove that a suitable rounding of the items exists, and then we prove that each packing of the rounded items can be rearranged into a $(1/\delta^3)$-2D-container-packing. Finally, we present an algorithm to find such a $(1/\delta^3)$-2D-container-packing.
+
+\subsection{Existence of a suitable rounding for the items in 2D-BP}
+To round the items, it will become necessary to slice horizontal items horizontally (along $x$-axis) and vertical items vertically (along $y$-axis). 
+Later, when constructing the container packing, it will become necessary to slice the \tin items in any direction.
+We denote by $\opt_{\twobp}^{\mathrm{slice}}(I)$ an optimal solution for a \twobp instance $I$, where we allow this kind of slicing of the items. 
+In this section, we prove the following lemma, which states that there exists a suitable rounding of the items of the given \twobp instance.
+
+\begin{lemma}
+\label{lem:twobp-rounding-main}
+Given $\eps > 0$ and  a set of items $I$ and an optimal packing into $\opt_{\twobp}(I)$ bins, we can find a rounded instance $\tilde{I}$
+where the \bigy items are rounded into $1/\delta^4$ types $\mathcal{T}$ such that either the width or the depth is a multiple of $\delta^2$, the vertical items have  $O(1/\eps \cdot \log(1/\delta))$ different depths $\mathcal{D}$, and the horizontal items have at most $O(1/\eps \cdot \log(1/\delta))$ different widths $\mathcal{W}$, such that $\opt_{\twobp}^{\mathrm{slice}}(\tilde{I}) \leq ((3/2)+O(\eps))\opt_{\twobp}(I) + O(1)$.
+The rounded instance $\tilde{I}$ is one of $n^{O_{\eps}(1)}$ possibilities to round the items.
+\end{lemma}
+
+First, note that we can find the right value $\delta$ to classify the items by size in polynomial time. Further, we can assume that $1/\eps$ and $1/\delta$ are integer values.
+
+\begin{lemma}[\cite{jansen2016new}]
+\label{lem:delta-twobp}
+    There exists a polynomial-time computable $\delta \in [\eps^{O_{\eps}(1)},\eps]$ such that the total area of items with width in $[\delta^4,\delta)$ or depth in $[\delta^4,\delta)$ is bounded by $\eps\cdot \area(I)$ and $1/\delta$ is a multiple of $24$.
+\end{lemma}
+
+\paragraph*{Rounding vertical and horizontal items}
+Rounding the width of horizontal items and the height of vertical items is classically done by linearly or geometrically grouping the items. 
+Indeed, this is also possible when considering \twobp. 
+For completeness, we add the proof here.
+The rounding will lead to a total area of at most $O(\eps)\opt_{\twobp}$ of vertical and horizontal items that cannot be placed inside the original bins. 
+The main work is to argue that these items can be placed into $O(\eps)\opt_{\twobp} +O(1)$ additional bins.
+
+Note that the rounding can be adjusted such that all the slices of a 3D item whose top faces have been classified as vertical or horizontal are rounded to the same depth or height, respectively.
+
+\begin{lemma}
+\label{lem:rounding-vert-hor-items-2bp}
+Let any packing of the items $I$ into $B$ bins be given.
+Assume we are allowed to slice the vertical items vertically and the horizontal items horizontally.
+Then we can find a packing into at most $B + O(\eps \opt_{\twobp}) +O(1)$ bins, where the depths of vertical and widths of horizontal items are rounded to $O(\frac{1}{\eps}\log(\frac{1}{\delta}))$ sizes.
+\end{lemma}
+\begin{proof}\textcolor{red}{TOPROVE 25}\end{proof}
+
+\paragraph*{Rounding \bigy items}
+Rounding the \bigy items presents a bigger challenge compared to rounding the horizontal or vertical items.
+To round the \bigy items, the entire packing has to be rearranged to allow one side of the items to be rounded to a multiple of $\delta^2/2$.
+The main ingredient for the structural result for \twobp~is the following restructuring theorem, which states that each bin can be restructured to have one of two properties, while not increasing the number of used bins too much.
+
+\begin{property}
+\label{prop1}
+The width and the x-coordinate of each item in the bin of width at least $\delta$ is a multiple of $\delta^2/2$.
+\end{property}
+
+\begin{property}
+\label{prop2}
+The depth and the y-coordinate of each item in the bin of depth at least $\delta$ is a multiple of $\delta^2/2$.
+\end{property}
+\begin{theorem}[\cite{jansen2016new}]
+\label{thm:2d-bin-packing-repacking-structure}
+    For any $\delta$, with $1/\delta$ being a multiple of 24, and for any solution that fits into $m$ bins, we are able to round up the widths or the depths of the rectangles so that they ﬁt into $(3/2 +5\eps)m +37$ bins, while the packing of each of the bins satisfies either \cref{prop1} or \cref{prop2}.
+\end{theorem}
+
+\cref{prop1} and \cref{prop2} allow one side of the items to be rounded to a multiple of $\delta^2$. The main idea behind rounding the other side is to use linear grouping for each rounded width and each rounded depth.
+
+\begin{lemma}
+\label{lem:rounding-large-items-two-bp}
+Consider a packing into $B$ bins where each bin fulfills \cref{prop1} or \cref{prop2}.
+By adding at most 
+$O(\eps) \opt_{\twobp}(I) +O(1)$
+bins, the sizes of the \bigy items can be rounded to at most $O(1/(\delta^3\eps))$ sizes.
+\end{lemma}
+
+\begin{proof}\textcolor{red}{TOPROVE 26}\end{proof}
+
+Note that when just considering the items, we do not know which of them are rounded to have widths that are multiples of $\delta^2$ and which of them are rounded to have depths that are multiples of $\delta^2$. 
+In~\cite{jansen2016new}, it is shown that there is only a constant number of possible rounding for \bigy items, and one of them corresponds to the one derived by the method in \cref{lem:rounding-large-items-two-bp}.
+
+\begin{lemma}[\cite{jansen2016new}]
+\label{lem:iterate-roundings-two-bp}
+There is an algorithm that iterates at most $n^{{O}_{\eps}(1)}$ different roundings for the \bigy items, where one of them is guaranteed to be the same, that can be derived from the optimal solution.
+\end{lemma}
+
+The main idea to find this rounding is to iterate over the possible subsets of items that are the $O(1/\delta^4)$ items responsible for the rounded width or depth in the linear grouping step. 
+Further, for each rounded depth and width that is a multiple of $\delta^2$, the total number of items is guessed that are rounded this way.
+After this guessing step, the \bigy items are assigned to the rounded classes using a flow network.
+As there are only $n^{{O}_{\eps}(1)}$ possible choices, the algorithm needs to iterate over at most this many number of different roundings.
+
+
+
+\begin{proof}\textcolor{red}{TOPROVE 27}\end{proof}
+
+
+
+\subsection{Existence of a container-based packing for 2D-BP}
+
+We define a \emph{preliminary container-based packing} as follows.
+Each bin is partitioned into at most $O(1/\delta^3)$ rectangular regions called containers. 
+Further vertical items may be sliced vertically, horizontal items may be sliced horizontally, and \tin items may be sliced in both directions.
+The containers have the following properties:
+\begin{itemize}
+        \item There are at most $1/\delta^2$ container containing only one \bigy item $i$ and having size of $i$. 
+        \item There are at most $3/\delta^3$ containers that contain only horizontal and \tin items. 
+        \item There are at most $3/\delta^3$ containers that contain only vertical and \tin items. 
+        \item The container contains only \inter items and spans the complete bin.
+\end{itemize}
+
+\begin{lemma}
+\label{lem:structure-2bp-1}
+Consider a packing of items $I$ into $B$ bins, where each bin satisfies either \cref{prop1} or \cref{prop2}.  
+By adding at most ${O}(\eps)B+O(1)$ bins, the packing can be transformed into a preliminary container-based packing.
+\end{lemma}
+
+\begin{proof}\textcolor{red}{TOPROVE 28}\end{proof}
+
+In the next step, the containers for vertical and horizontal items are divided into sub-containers, such that they only contain one type of item. 
+This will reduce the total number of possible container configurations further.
+
+Recall the definition of a $k$-\emph{2D-container-packing}:
+Each bin of the packing is partitioned into containers. 
+The containers are of five types, and only specific types of items from $\tilde{I}$ are allowed to be packed in the corresponding containers:
+\begin{itemize}
+\item (i) {\em Big container:} Each such container contains only one (rounded up) \bigy item and has the size of this \bigy item.  
+\item (ii) {\em Horizontal containers:} each such container has a width $w \in \mathcal{W}$ and a depth that is a multiple of $\mu$, and contains only horizontal items with width $w$.  
+The total width of these containers per bin is bounded by $O(k)$.
+\item (iii) {\em Vertical containers:} 
+each such container has a depth $d \in \mathcal{D}$, a height that is a multiple of $\mu$, and contains only vertical items with depth $d$.
+The total depth of these containers per bin is bounded by $O(k)$.
+\item (iv) {\em Tiny containers:} contain only \tin items and have a width and depth that is a multiple of $\mu$. Each bin contains at most $O(k)$ of these containers.
+\item (v) {\em Intermediate containers:} These containers contain only \inter items. There will be an extra $O(\eps)\opt_{\twobp}$ bins reserved separately to pack the \inter items.
+\end{itemize}
+
+In the following, we prove that such a $k$-\emph{2D-container-packing} can be generated from a preliminary container-based packing. 
+Further, note that \cref{prop1} implicitly states that each item that has a width larger than $\delta$ is further rounded up to be a multiple of $\delta^2/2$ if property. 
+We reverse this rounding to multiples of $\delta^2/2$ for the horizontal items and vertical items (for \cref{prop2}). 
+Instead, for them, we consider the rounded width from the first rounding step in \cref{lem:rounding-vert-hor-items-2bp}.
+
+
+\begin{lemma}
+Consider a preliminary container-based packing into $B$ bins.
+By adding at most ${O}(\max\{\eps,\mu/\delta^3\}\cdot B)$ bins, the packing can be transformed into a $(1/\delta^3)$-2D-container-packing for $\tilde{I}$.
+\end{lemma}
+
+
+
+\begin{proof}\textcolor{red}{TOPROVE 29}\end{proof}
+
+To find a $k$-\emph{2D-container-packing} for all items, it is a useful tool to have an algorithm that can decide for a set of items if these items can be placed into one bin, that fulfills the requirements to be a bin of a $k$-\emph{2D-container-packing}.
+In the next step, we prove that such a decision can indeed be made in polynomial time.
+
+\begin{lemma}
+\label{lem:check-if-one-bin-packing}
+    Given a set of rounded items $I$, it is possible to decide in $O(n)+ O_{\delta,\mu,k}(1)$ time if this set of items can be placed into a \emph{$k$-2D-container-packing} that consists of one bin. 
+\end{lemma}
+\begin{proof}\textcolor{red}{TOPROVE 30}\end{proof}
+
+\subsection{Algorithm to find a container-based packing for 2D-BP}
+
+A {\em 2D bin configuration} $C \in \mathbb{N}^{|\mathcal{T}|+|\mathcal{D}|+|\mathcal{W}|+1}$ is a vector that specifies a set of items that can be placed into one bin of a 2D-container-packing. 
+This vector specifies for each \bigy item type $t \in \mathcal{T}$, the number $n(t,C)$ of items of this type in the container; for each horizontal item width $w \in \mathcal{W}$,  the number $D(w,C)$ where the total depth of containers for these items is $D(w,C) \cdot \delta^4$; for each vertical item depth $d \in \mathcal{D}$, the number $V(d,C)$ where the total width of containers for these items is $V(d,C)\cdot \delta^4$; and for \tin items, the number $S(C)$  where the total area of containers for \tin items is $S(C)\cdot \delta^8$.
+Let $\mathcal{C}$ be the set of all 2D bin configurations.
+Then $|\mathcal{C}|$ is $O_{\eps}(1)$ as the sum of entries has an upper bound of $O(1/\delta^8)$. 
+By \cref{lem:check-if-one-bin-packing}, we can verify in polynomial time if a given vector translates to a configuration $C$.
+
+To find a 2D-container-packing, the algorithm from~\cite{jansen2016new} utilizes an integer program, to find $\opt_{\twobp}^{C}(\tilde{I})$. 
+However, for our purposes, the linear programming (LP) relaxation of this program is sufficient.
+For each \bigy item type $t \in \mathcal{T}$, let $n_t$ denote the number of items with this type. 
+Similarly, let $W_d$ denote the total width of vertical items with rounded depth $d \in \mathcal{D}$, 
+and $D_w$ denote the total depth of horizontal items with rounded width $w \in \mathcal{W}$. 
+Further, 
+let $S_{\area}$ denote the total area of \tin items in $I$.
+We introduce variables $x_C$ that denote for each configuration $C \in \mathcal{C}$, the {\em amount} of this configuration in the solution, e.g., if $x_C= 2.7$, the configuration $C$ appears 2.7 times in the optimal LP solution. 
+The LP is defined as follows. 
+
+\begin{align*}
+    \min \sum_{C \in \mathcal{C}} x_C\\
+    \text{s.t.} \quad \quad \sum_{C \in \mathcal{C}} n(t,C)x_C &\geq  n_t &\forall t \in \mathcal{T}\\
+     \sum_{C \in \mathcal{C}} V(d,C)\delta^4x_C &\geq  W_d &\forall d \in \mathcal{D}\\
+    \sum_{C \in \mathcal{C}} D(w,C)\delta^4x_C &\geq  D_w &\forall w \in \mathcal{W}\\
+    \sum_{C \in \mathcal{C}} S(C)\delta^8x_C &\geq  S_{\area}\\
+    x_C &\geq 0 &\forall C \in \mathcal{C}
+\end{align*}
+
+
+
+Let $\opt_{\twobp}^{\text{LP}}(\tilde{I})$ denote the optimal solution for the LP. 
+A basic solution to this LP uses only $O_{\eps}(1)$ different configurations, as there are only $O_{\eps}(1)$  types of containers in total.
+
+\begin{restatable}{lemma}{LPVsContainerTwobp}
+\label{lem::LP-vs-container-twobp}
+$\opt_{\twobp}^{\text{LP}}(\tilde{I}) \leq \opt_{\twobp}^{C}(\tilde{I})$ and in $n^{O_{\eps}(1)}$ time a basic solution $x$ with  $\sum_{C \in \mathcal{C}} x_C = \opt_{\twobp}^{\text{LP}}(\tilde{I})$ can be found.
+\end{restatable}
+
+\begin{proof}\textcolor{red}{TOPROVE 31}\end{proof}
+
+Now we have all the tools to prove \cref{thm:finding-2D-container-packing}.
+In the proof, we discuss the algorithm that 
+given some instance $I$ for \twobp, finds in polynomial time a rounded instance $\tilde{I}$ with $|\mathcal{T}|, |\mathcal{D}|, |\mathcal{W}| \in O(1/\delta^4)$ and a $(1/\delta^3)$-2D-container-packing of $\tilde{I}$ into $B$ bins with at most $O_{\eps}(1)$ different bin-configurations that fulfills $B \leq (\frac{3}{2}+O(\eps))\opt_{\twobp}(I) +O_{\eps}(1)$.
+
+
+
+\begin{proof}\textcolor{red}{TOPROVE 32}\end{proof}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\end{document}

@@ -1,0 +1,682 @@
+\documentclass[a4paper,USenglish,cleveref,thm-restate]{lipics-v2021}
+\pdfoutput=1 
+
+\usepackage{style}
+\usepackage{shortcuts}
+
+\title{Cost Preserving Dependent Rounding for Allocation Problems}
+
+\author{Lars Rohwedder}{University of Southern Denmark, Odense, Denmark}{rohwedder@sdu.dk}{}{}
+\author{Arman Rouhani}{Maastricht University, The Netherlands}{a.rouhani@maastrichtuniversity.nl}{}{}
+\author{Leo Wennmann}{University of Southern Denmark, Odense, Denmark}{wennmann@imada.sdu.dk}{}{}
+\authorrunning{L.~Rohwedder, A.~Rouhani and L.~Wennmann} 
+\Copyright{Lars Rohwedder and Arman Rouhani and Leo Wennmann} 
+
+\funding{\textit{Lars Rohwedder and Leo Wennmann}: Supported by Dutch Research Council (NWO) project "The Twilight Zone of Efficiency: Optimality of Quasi-Polynomial Time Algorithms" [grant number OCEN.W.21.268].}
+
+\begin{CCSXML}
+    <ccs2012>
+       <concept>
+           <concept_id>10003752.10003809.10003636.10003813</concept_id>
+           <concept_desc>Theory of computation~Rounding techniques</concept_desc>
+           <concept_significance>500</concept_significance>
+           </concept>
+     </ccs2012>
+\end{CCSXML}
+\ccsdesc[500]{Theory of computation~Rounding techniques}
+\keywords{Matching, Randomized Rounding, Santa Claus, Approximation Algorithms}
+
+\category{Track A: Algorithms, Complexity and Games}
+\relatedversion{}
+\relatedversiondetails{Full Version}{https://arxiv.org/abs/2502.08267}
+
+\EventEditors{Keren Censor-Hillel, Fabrizio Grandoni, Joel Ouaknine, and Gabriele Puppis}
+\EventNoEds{4}
+\EventLongTitle{52nd International Colloquium on Automata, Languages, and Programming (ICALP 2025)}
+\EventShortTitle{ICALP 2025}
+\EventAcronym{ICALP}
+\EventYear{2025}
+\EventDate{July 8--11, 2025}
+\EventLocation{Aarhus, Denmark}
+\EventLogo{}
+\SeriesVolume{334}
+\ArticleNo{122}
+
+\nolinenumbers 
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+    We present a dependent randomized rounding scheme, which rounds fractional solutions to integral solutions satisfying certain hard constraints on the output while preserving Chernoff-like concentration properties.
+    In contrast to previous dependent rounding schemes, our algorithm guarantees that the cost of the rounded integral solution does not exceed that of the fractional solution.
+    Our algorithm works for a class of assignment problems with restrictions similar to those of prior works.
+
+    In a non-trivial combination of our general result with a classical approach from Shmoys and Tardos [Math.\;Programm.'93] and more recent linear programming techniques developed for the restricted assignment variant by Bansal, Sviridenko [STOC'06] and Davies, Rothvoss, Zhang~[SODA'20], we derive a $O(\log n)$-approximation algorithm for the \emph{Budgeted Santa Claus Problem}.
+    In this new variant, the goal is to allocate resources with different values to players, maximizing the minimum value a player receives, and satisfying a budget constraint on player-resource allocation costs.
+\end{abstract} \section{Introduction}
+\label{sec:introduction}
+A successful paradigm in the design of approximation algorithms
+is to first solve a continuous relaxation, which can
+typically be done efficiently using
+linear programming, and then to round the 
+fractional solution $x\in [0,1]^d$
+to an integer solution $X\in\{0,1\}^d$. 
+Careful choices need to be made in the rounding step
+so that the error introduced is low.
+Independent randomized rounding is one of the most natural
+rounding schemes. In the simplest variant, we independently
+set each variable $X_i$ to $1$ with probability $x_i$ and
+to $0$ with probability~$1 - x_i$.
+The advantage is that the value of every linear function
+(over the $d$ variables) is maintained in expectation.
+Moreover, for linear functions with small coefficients,
+a Chernoff bound yields strong concentration guarantees
+for the value.
+Hence, if the initial solution $x$ satisfies some linear 
+constraints from the continuous relaxation, we can often
+argue with several Chernoff bounds combined by a union bound that 
+they are still satisfied up to a small error by the
+rounded solution $X$.
+
+In some cases, however, the problem dictates structures or
+hard constraints on the solution. For example, we might
+require $X$ to be (the incidence vector of) a perfect matching
+in a given graph or the basis of a given matroid.
+Perfect matchings or bases are objects
+that are quite simple in many computational aspects,
+but it is typically very unlikely that independent
+randomized rounding on a fractional object,
+that is, a point in the convex hull of the objects we
+want, results in one of these objects.
+This motivates so-called dependent randomized rounding.
+Here, the goal is to achieve similar guarantees
+as independent randomized rounding, but with a distribution over a restricted set of objects,
+which necessarily introduces some dependency between
+variables.
+These rounding schemes are typically tailored to specific
+object structures and achieving comparable goals is already challenging for very simple structures.
+
+For bipartite perfect matchings, a fundamental structure in
+combinatorial optimization, one cannot hope to achieve
+similar concentration guarantees to independent randomized rounding, due to the following well-known example.
+Given a cycle of length $n\in 2\N$,
+there are only two perfect matchings, 
+the two alternating sets of edges. If the values
+of a linear function over the edges alternate between
+$0$ and $1$, then the fractional matching, which takes every
+edge with $1/2$ will have a function value of $n/2$, but
+each of the integral matchings incurs an additive
+distortion of $\Omega(n)$, much higher than the bound
+of $O(\sqrt{n})$ that holds with high probability
+if each edge is picked independently with probability $1/2$.
+If one considers~$b$-matchings or other more general assignment problems, however, then there are non-trivial guarantees that can be achieved with dependent rounding.
+Gandhi, Khuller, Parthasarathy, and Srinivasan~\cite{GandhiKPS06} 
+show that between any two edges incident to the same vertex, they can establish \emph{negative correlation}. 
+Furthermore, their algorithm has the natural property of \emph{marginal preservation},
+which means that the probability of $X_e = 1$ is equal to the fractional value $x_e$ for each variable $X_e$.
+Together this implies strong concentration guarantees at least for linear functions on the incident edges of each vertex.
+The following proposition is a consequence of their result.
+\begin{proposition}\label{prop:assign}
+    Let $G = (A\cup B, E)$ be a bipartite graph and
+    $x\in [0, 1]^{E}$ represent a fractional many-to-many assignment.
+    Furthermore, let $c\in\RR^{E}$, and $a_1,\dotsc,a_k\in [0, 1]^E$ such
+    that for each $j\in \set{1,\dotsc,k}$ there is some $v\in A\cup B$
+    with $\supp(a_j) \subseteq \delta(v)$.
+    Then, in randomized polynomial time, one can compute
+    $X\in \{0, 1\}^E$ satisfying with constant probability
+    \begin{description}
+        \item[Cost Approximation.] \hspace{0.13cm} $c\T X \le (1 + \epsilon) \cdot c\T x$
+        \item[Concentration.] \hspace{1.03cm} $|a_j\T x - a_j\T X| \le
+            O(\max\{\log k, \sqrt{a_j\T x \cdot \log k}\})$ for all $j\in \set{1,\dotsc,k}$
+        \item[Degree Preservation.] \hspace{0.05cm}  $X(\delta(v)) \in \{\floor{x(\delta(v)}, \ceil{x(\delta(v))} \}$
+    \end{description}
+    Here, $\epsilon > 0$ is an arbitrarily small constant
+    that influences the success probability.
+\end{proposition}
+
+A generalization to matroid intersection with a similar
+restriction was shown by Chekuri, Vondrack, and Zenklusen~\cite{ChekuriVZ10}.
+The same work also presents a dependent rounding
+scheme for a single matroid that outputs a basis
+satisfying similar concentration bounds on linear functions without a restriction on the support.
+In this study, we ask the following question:
+\begin{center}
+    \medskip
+    \emph{Can we avoid an error in the cost for dependent rounding while maintaining comparable other guarantees?}
+    \medskip
+\end{center}
+We call a rounding algorithm \emph{cost preserving} if it does not
+exceed the cost of the fractional solution we start with.
+Here, we focus on the stronger variant where distributions are only over objects that are cost preserving, although one might be satisfied with a sufficiently high probability of cost preservation in some
+cases. We have no evidence that such a relaxation would make the task significantly easier.
+
+There are several situations where even the seemingly
+small cost approximation of $(1 + \epsilon)$, as derived from
+marginal preservation and Markov's inequality in the previously mentioned result, is unacceptable. For example, the cost of the fractional solution might come from a hard budget constraint $c\T x \le C$ in the problem.
+Another situation is an extension of the objective function to
+potentially negative values, representing for example the task of
+maximizing profit = revenue - cost. Here, Markov's inequality
+cannot be applied at all. Finally, an algorithm that preserves the cost
+provides polyhedral insights: every fractional object
+is in the convex hull of integer objects that marginally deviate
+ in the considered linear functions. And similarly, the (non-integral) polytope of a relaxation is
+contained in an approximate integral polytope. 
+It is easy to see that cost preservation is incompatible with marginal preservation and hence cannot be satisfied by the dependent rounding schemes above: consider $d+1$ variables~$x_0, x_1, \dotsc, x_d$
+of which exactly one is selected, then this can be modeled by bases of a uniform matroid or a degree constraint in the assignment problem above.
+Suppose that $c_1 = \cdots = c_{d} = 1/(1 - 2^{-d}) > 1$ and $c_0 = 0$ where the fractional solution is given by~$x_1 = \cdots = x_n = (1 - 2^{-d})/d$
+and $x_0 = 2^{-d}$, leading to a cost of~$1$. For a marginal preserving distribution, the probability that the integral solution $X$ has a cost lower than~$1$ (i.e.,~$X_0 = 1$) is exponentially small.
+Note, however, that this is not an immediate counter-example to our stated goal:
+in this example, deterministically choosing $X_0 = 1$ (and~$X_1 = \cdots = X_d = 0$) still maintains
+$|a\T x - a\T X| \le 1$ for every $a\in [0, 1]^{d+1}$. 
+\paragraph*{Our contributions}
+Our results are twofold.
+First, we show that one can obtain comparable guarantees to \Cref{prop:assign} while preserving costs. 
+\begin{restatable}{theorem}{RDR}
+    \label{thm:assign}
+    Let $G = (A\cup B, E)$ be a bipartite graph and
+    $x\in [0, 1]^{E}$ represent a many-to-many assignment.
+    Furthermore, let $c\in\R^{E}$ and $a_1,\dotsc,a_k\in [0, 1]^E$ such
+    that for each $j \in \set{1,\dotsc,k}$ there is some $v\in A\cup B$
+    with $\supp(a_j) \subseteq \delta(v)$.
+    Then, in randomized polynomial time, one can compute
+    $X\in \{0, 1\}^E$ satisfying with constant probability
+    \begin{description}
+        \item[Cost Preservation.] \hspace{0.46cm} $c\T X \le c\T x$,
+        \item[Concentration.] \hspace{1.03cm} $|a_j\T x - a_j\T X| \le
+            O(\max\{\log k, \sqrt{a_j\T x \cdot \log k}\})$ for all $j\in \set{1,\dotsc,k}$,
+        \item[Degree Preservation.] \hspace{0.05cm} $\sss{X}{\delta(v)} \in \{\floor{\, \sss{x}{\delta(v)} \,}, \ceil{\, \sss{x}{\delta(v)} \,} \}$.
+    \end{description}
+\end{restatable}
+\medskip \noindent Note that in contrast to the previous result, we allow for negative components in the cost function~$c$.
+
+Second, we present a non-trivial application of our theorem to an allocation problem we call the \emph{Budgeted Santa Claus Problem (with identical valuations)}.
+Colloquially, it is often described as Santa Claus distributing gifts to children on Christmas.
+Formally, there are $n$ resources~$\cR$ (gifts) to be distributed among $m$ players~$\cP$ (children). 
+Each resource~$j$ has a specific value~$v_j \ge 0$.
+Additionally, there is a total budget of $C \ge 0$, and assigning a resource~$j$ to a player $i$ incurs
+a cost denoted by $c_{ij} \ge 0$. 
+The goal is a distribution of resources among the players where the least happy player is as happy as possible and
+the total cost does not exceed the budget $C$. 
+Formally, we aim to find disjoint sets $R_i\subseteq \cR $, $i\in \cP$, maximizing $\min_{i\in\cP} \sum_{j \in R_i} v_{j}$
+while ensuring that $\sum_{i\in\cP }^{}\sum_{j\in R_i}^{} c_{ij} \leq C$.
+Note that not all resources need to be assigned. However, the variant, where all resources must be assigned can be shown to be 
+not more difficult than our problem, see Appendix~\ref{subsec:appendix-santa-claus-with-all-resources-assigned}.
+
+
+It is possible to consider an even more general variant
+where each value $v_{ij}$ depends on both player $i$~and
+resource~$j$, which we call the \emph{unrelated valuations}.
+Mainly, we restrict ourselves to identical valuations because
+the understanding of unrelated valuations in literature is
+rather poor---even without considering costs.
+In fact, much of the recent literature is focused on the so-called
+restricted assignment case
+of unrelated valuations (without costs),
+where~$v_{ij}\in\{0, v_j\}$,
+meaning each resource is either desired with a value of~$v_j$ or worthless to a player.
+Among players who desire a particular resource,
+its value is the same. Our budgeted variant generalizes the
+restricted assignment case: observe that by setting costs~$c_{ij}\in\{0,1\}$ and $C = 0$, we can restrict
+the set of players to which a resource can be assigned.
+In a non-trivial framework, we apply our dependent rounding theorem
+to obtain the following approximation guarantee.
+\begin{restatable}{theorem}{SCapprox}
+    There is a randomized polynomial time $O(\log n)$-approximation algorithm for the Budgeted Santa Claus problem.
+\end{restatable}
+
+\paragraph*{Other related work for dependent rounding}
+Saha and Srinivasan~\cite{SahaS18} also provide a
+dependent rounding scheme for allocation problems,
+focusing on combinations of dependent
+and iterative rounding.
+Bansal and Nagarajan~\cite{BansalN16}
+combine dependent rounding with techniques from discrepancy theory, known as the Lovett-Meka algorithm~\cite{LovettM15}. They
+prove that one can round a fractional independent
+set (or basis) of a matroid to an integral one,
+while maintaining comparable concentration guarantees to both Lovett-Meka and Chernoff-type bounds.
+We note that Bansal and Nagarajan also integrate
+costs in their framework, but they make the
+assumption that the costs are polynomially bounded,
+which is inherently different from our setting (apart from the fact that they consider matroids).
+
+Another well-known dependent rounding scheme is the maximum entropy
+rounding developed by Asadpour, Goemans, M{\k{a}}dry, Gharan and Saberi~\cite{AsadpourGMGS17}.
+This is used to sample
+a spanning tree, i.e., a basis of a particular matroid,
+while guaranteeing negative correlation properties and therefore Chernoff-type concentration.
+This result led to the first improvement over the longstanding
+approximation rate of $\Theta(\log n)$ for the asymmetric
+traveling salesman problem (ATSP).
+However, all algorithms above guarantee marginal preservation, which means they
+cannot guarantee cost preservation.
+
+At least superficially related to our work is the literature on multi-budgeted
+independence systems~\cite{ChekuriVZ11, GrandoniZ10}.
+Here, the goal is to find objects of certain structures, e.g.,
+matchings or independent sets of matroids,
+subject to several (potentially hard) packing constraints
+of the form
+$a\T x\le b$ for some $a\in \RR^n$, $b\in \RR$.
+This can also be used to model cost preservation alike to our
+results.
+Chekuri, Vondrak, and Zenklusen~\cite{ChekuriVZ11}
+and Gradoni and Zenklusen~\cite{GrandoniZ10}
+show various positive results in a similar spirit to ours.
+These results, however, are restricted to downward-closed structures where for a given solution, formed by a
+set of elements, all subsets are valid solutions as well.
+For example, Chekuri, Vondrak, and Zenklusen achieve
+strong concentration results for randomized rounding on matchings, but this relies on dropping edges in long augmenting paths or cycles in order to reduce dependencies.
+Gradoni and Zenklusen~\cite{GrandoniZ10} give a rounding algorithm for a constant number of hard budgets, but
+this requires rounding down all components of a fractional solution.
+Hence, these results are unable to handle instances like matroid basis constraints, perfect matching constraints, or degree preservation as in~\Cref{thm:assign}.
+
+
+\paragraph*{Other related work for the Santa Claus problem}
+Omitting the costs in the variant we study, the problem
+becomes significantly easier and admits an EPTAS, see e.g.~\cite{JansenKV20}, which relies on techniques that contrast with the ones that are relevant to us.
+As mentioned before, the problem with costs generalizes
+the restricted assignment variant and therefore
+inherits the approximation hardness of $2-\epsilon$ due to~\cite{BansalS06}.
+Here and in the following, we use restricted assignment synonymous
+with the variant without costs, but $v_{ij}\in \{0, v_j\}$.
+Bansal and Srividenko~\cite{BansalS06} developed a randomized rounding algorithm for the restricted assignment.
+Normally, this would lead
+to a similar logarithmic approximation rate as ours
+(for the problem without costs),
+but they show that combining it
+with the Lov\'asz Local Lemma yields an even better rate of
+$O(\log\log m/ \log\log\log m)$.
+Using similar techniques, the rate was improved to a constant by Feige~\cite{Feige08}.
+Note that this randomized rounding uses intricate preprocessing
+that violates the marginal preserving property and thus cannot even
+maintain the cost of a solution in expectation.
+Based on local search, there is also a combinatorial approach, 
+see e.g.,~\cite{BamasLMRS24, AsadpourFS08, AnnamalaiKS17},
+which yields a (better) constant approximation for restricted
+assignment. However, it is not at all clear how costs could be
+integrated in this framework.
+
+Finally, a classical algorithm by Shmoys and Tardos~\cite{ShmoysT93}
+gives an additive guarantee, where the rounded integral solution
+is only worse by the maximum value $v_{\max} = \max_{ij} v_{ij}$.
+Therefore, it even works in the unrelated case without increasing
+the cost. Notably, they state this result for
+the dual of minimizing the maximum value, namely the Generalized Assignment Problem.
+The mentioned guarantee for Santa Claus is followed by a trivial
+adaption, see \Cref{lem:rounding-small-items}.
+Although very influential, this is the only technique we are
+aware of which considers the problem with costs.
+Unfortunately, this additive guarantee does not lead
+to a multiplicative guarantee, since the optimum may be lower
+than~$v_{\max}$. In fact, it is well known that the linear 
+programming relaxation used in~\cite{ShmoysT93} has an unbounded
+integrality gap even for restricted assignment~\cite{BansalS06}. Hence, one
+cannot hope to improve this by a simple modification.
+Nevertheless, this algorithm forms an important subprocedure in our result.
+
+\paragraph*{Notation}
+
+
+First, we introduce some necessary notation. Let $S,T \in \set{0,1}^E$ be edge sets in a bipartite graph $G = (A\cup B, E)$.
+For all $T \subseteq S$, define $S(T) = \sum_{e \in T} S_e$. 
+Let $P$ be the convex hull of degree preserving edge sets $S \in [0,1]^E$. Moreover, for any $v \in A\cup B$ define $\delta(v) = \{e \in E \mid v$ is incident to $e\}$. For the sake of simplicity, we use the shorthand notation $[q] = \set{1, \dotsc, q}$ for any $q \in \N$. Furthermore, for any vector $a \in [0, 1]^E$, the support of $a$ is denoted by $\supp(a) = \{e \in E \mid a_e \neq 0 \}$. \section{Budgeted Dependent Rounding}
+\label{sec:dependent-randomized-rounding}
+
+This section will introduce a dependent randomized rounding procedure,
+which produces an integral solution satisfying certain concentration guarantees, while preserving the cost and the degree of the fractional solution.
+The formal properties are summarized in the following theorem.
+
+\RDR*
+\medskip
+
+Throughout this section, the proofs of the technical lemmas are deferred to~\cref{subsec:appendix-ommitted-proofs-of-dependent-rounding}.
+An oversimplified outline of our algorithm is as follows:
+imagine~$x$ is
+the average of two integral edge sets, then
+the result can be shown by decomposing the
+symmetric difference of both edge sets into cycles and paths.
+We reduce to this case by starting with many edge sets and iteratively merging pairs of them in
+a tree-like manner.
+
+In order to find the initial integral edge sets, we compute a representation of~$x$ (or rather another similar assignment~$y'$) that is a convex
+combination of degree preserving edge sets
+such that its scalars satisfy
+a certain level of discreteness.
+Let~$P$ be the convex hull of degree preserving edge sets~$S \in \set{0,1}^E$, that is, those $S$ that satisfy for all $v\in A\cup B$
+\begin{equation*}
+    S(\delta(v))\in\{\floor{x(\delta(v))}, \ceil{x(\delta(v)}\}.
+\end{equation*}
+It can be shown that $x$ is contained in $P$ and,
+in particular, $x$ is a convex combination of
+degree preserving sets. 
+In the following lemma, we show something even stronger: there
+exists a fractional assignment~$y$ at least
+as good as~$x$, which is the
+convex combination of only few edge sets
+and has few fractional
+variables in the support of each constraint.
+
+\begin{restatable}{lemma}{BoundedNumberOfFracVariables}
+    \label{lem:bounded-number-of-frac-variables}
+    There exists a convex combination $y = \sum_{i \in [k]} \lambda_i S_i$
+    where $\lambda_i \in [0,1]$ and $\sum_{i \in [k]} \lambda_i = 1$ and $S_i \in P \cap \{0,1\}^E$ with
+    \begin{align}
+        c\T y &\le c\T x & \\
+        a_j\T y &= a_j\T x &&\forall j \in \set{1,\dotsc,k} \\
+        |\{e\in \delta(v) \mid y_e \notin \{0, 1\}\}| &\le 2k &&\forall v\in A\cup B & \label{eq:sos-bounded-support}
+    \end{align}
+\end{restatable}
+Considering~$y$ as a vertex solution of a linear program, the proof follows from analyzing the structure of polytope~$P$.
+For our algorithm, however, the scalars~$\lambda_i$ are not discrete enough.
+Hence, we use the following lemma to round~$y$ to a more discrete assignment~$y'$.
+
+\begin{restatable}{lemma}{ScalarRounding}
+    \label{lem:convex-represenation-scalar-rounding}
+    Let $\ell\in\N_{\ge 0}$ 
+    and $y = \sum_{i \in [k]} \lambda_i S_i$ where $\lambda_i \in [0,1]$, $\sum_{i \in [k]} \lambda_i = 1$, and $S_i \in \{0,1\}^E$.
+    In polynomial time, we can compute $y' = \sum_{i \in [k]} \lambda'_i S_i$ where $\sum_{i \in [k]} \lambda'_i = 1$ and
+    \begin{align}
+        \lambda'_i &\in \tfrac{1}{2^{\ell}}\cdot \ZZ, &&  \forall i \in \set{1, \dotsc, k} \label{eq:integer-multiples}\\
+        \lambda'_i &= \lambda_i, &&  \forall i \in \set{1, \dotsc, k}, \lambda_i\in\{0,1\} \\
+        |y_e - y_e'| &\le k \cdot \tfrac{1}{2^\ell}, &&  \forall e \in E \label{eq:close-solution}\\
+        \cost{y'} &\le \cost{y}. \label{eq:rounding-cost-preservation}
+    \end{align}
+\end{restatable}
+We prove this lemma by constructing a flow network and
+the standard argument that integral capacities imply existence of an integral min-cost circulation.
+
+Notably, this is the first time we incur a small error for the linear functions $a_j$ while the cost is preserved.
+More precisely, we use the lemma with 
+$\ell := 2\log(2k)$. From \cref{eq:close-solution} follows that for all~$e \in E$
+\begin{equation}
+    \label{eq:rdr-scalar-rounding-error}
+    |y_e - y_e'| \le k \cdot \tfrac{1}{2^\ell} \le \tfrac{1}{2k}.
+\end{equation} 
+Therefore, the linear functions also slightly change.
+Using \cref{eq:sos-bounded-support,eq:rdr-scalar-rounding-error}, it holds that for all~$j\in \set{1,\dotsc,k}$
+\begin{equation}
+    \label{eq:rdr-increase-in-linear-function}
+    |a_j\T x - a_j\T y'| = |a_j\T y - a_j\T y'| = \sum_{e \in E} (a_j)_e | y_e' - y_e | \le 1.
+\end{equation} 
+Since $y'$ is a convex combination of (integral)
+degree preserving sets in $P$, we have $y'\in P$. In other words, the scalar rounding in \cref{lem:convex-represenation-scalar-rounding} does in fact preserve the degree of~$y$. 
+
+Next, we construct a complete binary tree~$\tree$ with levels~$0,1,\dotsc,\ell$, where each node will be labeled with an edge set.
+When the algorithm finishes, the label of the root will be~$X \in \set{0,1}^E$ and satisfy the properties stated in \cref{thm:assign}.
+In the following, we describe how the algorithm \textsc{TreeMerge} creates the labels on~$\tree$.
+The lowest level~$\ell$ represents the fractional assignment~$y' = \sum_{i \in [k]} \lambda'_i S_i$ where~$S_i \in P\cap \set{0,1}^E$ are degree preserving edge sets.
+As we can write~$\lambda'_i = h_i/2^{\ell}$ 
+for some $h_i\in\ZZ$ and all $h_i$ sum to $2^{\ell}$, we can naturally label~$h_i$ leaves of level~$\ell$ with $S_i$ for all~$i \in \set{1, \dotsc, k}$.
+Thus, $y'$ is the average of all labels of level~$\ell$.
+For all $j \in \set{0, \dotsc, \ell-1}$, the labels of level~$j$ are derived from those in level~$j + 1$ such that each node's label is closely related to
+those of its two children.
+Similar to the last level, each level~$j$ represents a (fractional) edge set~$y_j'$ by taking the average of all labels in this level.
+
+One of the central goals in the construction of $y'_j$ is to guarantee~$\cost y_{j}' \le \cost y_{j+1}'$.
+We achieve this by creating two complementary
+labelings of level $j$ and selecting the better
+of the two.
+Denote the labels of level~$j+1$ by~$S_{2i-1}, S_{2i}$ for all~$i\in\set{1, \dotsc, 2^{j}}$. 
+Here, each pair~$S_{2i-1}, S_{2i}$ represents the children of the $i$-th node in level $j$. For node~$i$, we construct two potential labels~$T_{i}, T_{i}' \in \set{0,1}^E$ using a random procedure with the following guarantees.
+
+\begin{restatable}{lemma}{EdgeSetDecomposition}
+    \label{lem:decomposition}
+    Let $S_1, S_2 \in \set{0,1}^E$.
+    There exists a random polynomial time procedure that constructs two random edge sets $T, T' \in \set{0,1}^E$ with the following properties. 
+    \begin{itemize}
+        \item It holds that $T + T' = S_1 + S_2$ and $\E(T) = \E(T') = (S_1+S_2)/2$.
+        \item For all $v \in A\cup B$ it holds that $T(\delta(v)), T'(\delta(v)) \in \set{\floor{\,(S_1(\delta(v)) + S_2(\delta(v)))/2 \,}, \ceil{\,(S_1(\delta(v)) + S_2(\delta(v)))/2 \,}}$.
+        \item For all $v \in A\cup B$ and all $e \in \delta(v)$, there is at most one edge $e' \in \delta(v)\setminus\{e\}$ such that $T_e$ depends on $T_{e'}$. Likewise, there is at most one edge $e' \in \delta(v)\setminus\{e\}$ such that $T'_e$ depends on $T'_{e'}$. 
+    \end{itemize}
+\end{restatable}
+\medskip
+\noindent The lemma can be derived in two steps. First, decompose the symmetric difference of~$S_1$ and~$S_2$ into cycles and paths.
+Second, for each of cycle and path, randomly select one of the alternating edge sets for~$T$ and the other for~$T'$.
+This random process is similar to other dependent rounding approaches, e.g.~\cite{ChekuriVZ10,GandhiKPS06}, except that we also store~$T'$ that contains the ``opposite'' to every decision in $T$.
+
+We create one fractional assignment from the random edge sets~$T_{i}$, $i\in\{1,\dotsc,2^j\}$,
+and one from $T'_{i}$, $i\in\{1,\dotsc,2^j\}$, and pick the lower cost assignment for~$y_{j}'$.
+Formally, let 
+\begin{equation*}
+    z_{j} = \tfrac{1}{2^{j}} \sum_{i \in [2^j]} T_{i} \qquad \text{ and } \qquad
+    z'_{j} = \tfrac{1}{2^{j}} \sum_{i \in [2^j]} T'_{i} 
+\end{equation*}
+From the fact that~$T_{i} + T'_{i} = S_{2i-1} + S_{2i}$, it immediately follows that $(z_{j} + z'_{j})/2 = y_{j+1}'$.
+If~$\cost z_j \le \cost z'_j$, set~$y_{j}' = z_{j}$. Otherwise,~$y_{j}' = z'_{j}$.
+Consequently, we have that
+\begin{equation}
+    \label{eq:rdr-cost-of-level-j-assignment}
+    \cost y_{j}' \le (\cost z_{j} + \cost z'_{j})/2 = \cost y_{j+1}'.
+\end{equation}
+We determine the labels of level~$j$ by picking either $T_i$ (if $z_j$ was chosen) or $T'_i$ (if $z'_j$ was chosen).
+Repeating the procedure for all~$j \in \set{\ell-1,\dotsc,0}$
+results in a label for the root node that is identical to $y_0'$. We conclude by setting $X = y_0'$.
+As a last step before proving the main theorem, we 
+bound how much the linear functions $a_j$ can change in each level.
+
+\begin{restatable}{lemma}{IncreaseOfLinearFunction}
+    \label{lem:linear-function-increase-per-level}
+    Let $v\in A\cup B$ and $a \in [0, 1]^E$ with $\supp(a) \subseteq \delta(v)$.
+    Let $y_{j+1}' \in [0,1]^E$
+    be the fractional solution of the $(j+1)$-th
+    level of \textsc{TreeMerge}
+    and $y'_{j}\in [0,1]^E$
+    that of the $j$-th level.
+    Let $t= 132 \ln k$.
+    Then with probability at least $1 - 1/k^{10}$, it holds that
+    \begin{equation}
+        \label{eq:lfipl-bound-on-lf-increase}
+        |a\T y_j' - a\T y_{j+1}'| \le 2^{-j/2} \left(t + \sqrt{a\T y_{j+1}' \cdot t}\,\right).
+    \end{equation}
+\end{restatable}
+This lemma follows from a standard Chernoff bound.
+We are now in the position to prove \cref{thm:assign} using the lemmas above.
+
+\begin{proof}\textcolor{red}{TOPROVE 0}\end{proof}
+
+\subsection{Omitted Proofs of Dependent Rounding}
+\label{subsec:appendix-ommitted-proofs-of-dependent-rounding}
+
+In this section, we provide the proofs of the previously stated lemmas.
+Recall that $P$ is the convex hull of integral degree preserving edge sets for $x\in [0,1]^E$.
+Let the operator $\oplus$ denote the symmetric difference (i.e., XOR) of two edge sets.
+We start by showing that~$P$ indeed contains $x$.
+
+\begin{lemma}
+    \label{lem:convex-hull-of-edge-preserving-edge-sets}
+    Let $q = |E|$.
+    There exists a convex representation $x = \sum_{i \in [q]} \lambda_i S_i \in P$ where $S_i \in P\cap\{0,1\}^E$ and $\lambda_i \in [0,1]$ and
+    $\sum_{i \in [q]} \lambda_i = 1$ such that for all $v\in A\cup B$ and~$i \in \set{1,\dotsc,q}$ holds that $\sss{S_i}{\delta(v)} \in \{\floor{\,\sss{x}{\delta(v)}\,}, \ceil{ \,\sss{x}{\delta(v)} \,}\}$.
+\end{lemma}
+
+\begin{proof}\textcolor{red}{TOPROVE 1}\end{proof}
+
+Further, there always exists a comparable convex representation which has only few fractional variables in the support of each constraint.
+
+\BoundedNumberOfFracVariables*
+
+\begin{proof}\textcolor{red}{TOPROVE 2}\end{proof}
+
+Allowing a small rounding error, there always exists a convex representation where the scalars are integer multiples of a power of two.
+
+\ScalarRounding*
+
+\begin{proof}\textcolor{red}{TOPROVE 3}\end{proof}
+
+The \textsc{TreeMerge} algorithm described in \cref{sec:dependent-randomized-rounding} uses the following lemma to construct new random edge sets while preserving the degree of the former sets.
+
+\EdgeSetDecomposition*
+
+\begin{proof}\textcolor{red}{TOPROVE 4}\end{proof}
+
+The last lemma bounds the change of a linear function between two consecutive levels of~\textsc{TreeMerge}.
+
+\IncreaseOfLinearFunction*
+
+\begin{proof}\textcolor{red}{TOPROVE 5}\end{proof} \section{Application to Budgeted Santa Claus Problem}
+\label{sec:santa-claus}
+
+In this section, we present our approximation algorithm the Budgeted Santa Claus Problem based on the dependent rounding scheme described in \cref{sec:dependent-randomized-rounding}.
+
+\subsection{Linear Programming Formulation}
+\label{subsec:lp}
+Introducing an LP relaxation for the Budgeted Santa Claus Problem,  we first reduce the problem to its decision variant.
+For a given threshold $T \ge 0$, the goal is to either
+find a solution of value $T/ \alpha$ or determine that
+$\OPT < T$, where $\OPT$ is the optimal value of the original optimization problem. This variant is equivalent to an
+$\alpha$-approximation algorithm by a standard
+binary search framework. 
+
+Based on $T$, intuitively thought of as the optimal value, we partition the resources into two sets by size. Set $\cB$ consists of the \emph{big resources} with $\cB \coloneq \{ j \in \cR : v_j \geq T/\alpha\}$ and set~$\cS$ consists of the \emph{small resources} $\cS \coloneq \{ j \in \cR : v_j < T/\alpha\}$.
+We use assignment variables that indicate whether a particular
+resource is assigned to a particular player. For clarity,
+we use different symbols for big and small resources.
+Let~$x_{ib} \in [0,1]$ denote the portion of big resource $b \in \cB$ that player $i \in  \cP$ receives. Similarly, denote by $z_{is} \in [0,1]$ the portion of the small resource $s \in \cS$ that player $i$ receives.
+Unlike the original problem, we allow these
+assignments to be fractional in the relaxation.
+Since naive constraints on these variables lead to an unbounded integrality gap, see e.g.~\cite{BansalS06}, we use
+non-trivial constraints inspired by an LP formulation of Davies, Rothvoss and Zhang~\cite{DaviesRZ20}. Here, we make the structural
+assumption that in any solution, a player either receives exactly
+one big resource (and nothing else) or only small resources.
+Towards the goal of obtaining a solution of value $T/\alpha$,
+any big resource is sufficient for any player and receiving more
+would be wasteful.
+If there is a solution of value $T$, then there is also
+a pseudo-solution such that each player either gets exactly one big
+resource (and nothing else) or a value of at least $T$ from
+small resources only. Note that it might be that the former
+type of player only has a value of $T/\alpha$. Thus, if $T \le \OPT$, then the following relaxation called \LP{T}
+is feasible and has a value at most $C$.
+\begin{align}
+    \min \; \sum_{i \in \cP}^{} &\left[\sum_{b \in \cB}^{}c_{ib}\cdot x_{ib} + \sum_{s \in \cS}^{}c_{is}\cdot z_{is} \right]  && \label{eq:economical-objective-function} \\
+    \sum_{s \in \cS} v_{s}\cdot z_{is} &\geq T \cdot \left(1 - \sum_{b \in \cB} x_{ib}\right) &&\forall i \in \cP \label{eq:economical-value} \\
+    z_{is} &\leq 1 - \sum_{b \in \cB}^{} x_{ib} &&\forall s \in \cS, i \in \cP \label{eq:economical-small-gifts} \\
+    \sum_{i \in \cP}^{} x_{ib} &\leq 1 &&\forall b \in \cB \label{eq:economical-ub-player} \\
+    \sum_{i \in \cP}^{} z_{is} &\leq 1 &&\forall s \in \cS \label{eq:economical-ub-z} \\
+    \sum_{b \in \cB}^{} x_{ib} &\leq 1 &&\forall i \in \cP \label{eq:economical-ub-big-gifts} \\
+    z_{is}, x_{ib}  &\geq 0 &&\forall s \in \cS, b \in \cB, i \in \cP \label{eq:economical-nonneg-x}
+\end{align}
+
+The constraints~\eqref{eq:economical-ub-player} and \eqref{eq:economical-ub-z} describe that
+each big or small resource is only assigned once.
+Justified by earlier arguments, constraint~\eqref{eq:economical-ub-big-gifts} ensures that each player receives at most one big resource.
+Considering constraint~\eqref{eq:economical-small-gifts}, we only need to verify that the constraint is valid for integer solutions.
+By our
+assumption, if player $i$ receives one big resource, then it should not get any small resources,
+which is exactly what the constraint expresses. Conversely, if the player does not receive any big resources, the
+constraint is trivially satisfied. Similarly, there are two cases for
+Constraints~\eqref{eq:economical-value}. If
+player~$i$ receives one big resource, the constraint is trivially satisfied. Otherwise, it must receive a value of at least $T$ in small resources. During our rounding procedure in \Cref{sec:rounding-of-small-items}, we essentially lose
+some value from small resources and can only guarantee
+a value of $T/\alpha$ for players without a big resource.
+
+\subsection{Technical Goals}
+Let $(x, z)$ be a feasible solution to \LP{T}, where $x$ and $z$ represent the vectors of assignment variables corresponding to big and small resources, respectively. Formally, we have $x_{ib}, z_{is} \in [0,1]$ for $i \in \cP, b\in \cB, s \in \cS$.
+We will define a randomized rounding procedure that constructs
+a distribution over the binary variables
+$X_{ib} \in \{0,1\}$ and $Z_{is}\in\{0, 1\}$ describing whether a big resource $b \in \cB$ or small resource $s\in \cS$ is assigned to player~$i \in \cP$.
+For notational convenience, define $Y_i = 1 - \sum_{b\in B} X_{ib}$ as the indicator variable whether a player~$i$ \emph{does not}
+get a big resource (and needs small resource). Similarly, let $y_i = 1 - \sum_{b\in \cB} x_{ib}$ be the corresponding value to~$Y_i$ from the corresponding value from the LP variables.
+
+Our goal is that the total cost of assignments does not exceed the budget $C$ and the integral solution $(X,Z)$ is an $\alpha$-approximation solution with respect to the minimum value a player
+receives. In other words, we want to obtain an integral solution $(X,Z)$ that satisfies the following two properties.
+\smallskip
+\begin{enumerate}
+    \item $\sum_{i \in \cP}^{} \left[\sum_{b \in \cB}^{}c_{ib}\cdot X_{ib} + \sum_{s \in \cS}^{}c_{is}\cdot Z_{is} \right] \leq C$.
+    
+    \item Every player receives resources of value at least $T/\alpha$ with high probability.
+\end{enumerate}
+
+We first apply our dependent rounding scheme to round
+the assignment of big resources to an integral one.
+To cover the players that do not receive big resources, i.e.,
+those with~$Y_i = 1$, we need to change the assignment of
+small resources as well.
+Initially, some small resources will be assigned fractionally
+and even more than once.
+In a second step, we transform the solution into one
+where each small resource is assigned only once---incurring a
+loss in the value that the players receive.
+
+\subsection{Rounding of Big Resources}
+\label{sec:rounding-of-big-items}
+The following lemma summarizes the properties we derive
+from the dependent rounding scheme. 
+Note that while the assignment of small resources can change, it remains fractional for now.
+
+\begin{lemma}
+    \label{lem:cost-preservation}
+    Let $(x,z)$ be a feasible solution to \LP{T, C}. There is a randomized algorithm that produces an assignment $X_{ib}\in\{0,1\}$, $i\in \cP$, $b\in\cB$, and $z'_{is}\in [0,1]$, $i\in \cP$, $s\in\cS$ such that
+    with high probability
+    \begin{enumerate}
+        \item $\sum_{i\in\cP}\sum_{b\in\cB} c_{ib}\cdot X_{ib} +  \sum_{i\in\cP }\sum_{s\in\cS} c_{is} z'_{is} \leq C$, \label{eq:costs}
+        \item Each big resource is assigned at most once, i.e., $\forall b\in \cB :\sum_{i\in\cP} X_{ib} \le 1$,
+        \item Each small resource is assigned at most $O(\log n)$ times, i.e., $\forall s\in \cS: \sum_{i\in\cP} z'_{is} \le O(\log n)$,
+        \item Each player receives either one big resource or a value of at least $T$ in small resources.
+    \end{enumerate}
+\end{lemma}
+\begin{proof}\textcolor{red}{TOPROVE 6}\end{proof}
+
+\subsection{Rounding of Small Resources}
+\label{sec:rounding-of-small-items}
+In the previous subsection, we described how big resources $b \in \cB$ were integrally assigned to the players.
+As some players did not receive any big resources and still need to be covered by small resources, let
+$\cQ$ be the set of those players, i.e., players~$i\in\cP$ 
+for which $Y_i = 1$. The linear program in the following lemma
+corresponds to the property of the assignment variables
+for small resources from the previous section.
+
+\begin{restatable}{lemma}{RoundingSmallItems}
+    \label{lem:rounding-small-items}
+    Let $\cQ \subseteq \cP$ and consider the LP $\mathrm{small}(T, \beta)$ defined as
+    \begin{align*}
+        \sum_{s\in \cS} v_s \cdot z'_{is} &\ge T &\forall i\in\cP \\
+        \sum_{i\in \cQ} z'_{is} &\le \beta &\forall s\in\cS\\
+        z'_{is} &\ge 0 &\forall i\in \cQ, s\in \cS
+    \end{align*}
+    If $\mathrm{small}(T, \beta)$ has a fractional solution $z'$,
+    then $\mathrm{small}(T/\beta - \max_{s\in\cS} v_s, 1)$ has an integral solution $Z$ that can be found in polynomial time with
+    \begin{equation*}
+       \sum_{s\in\cS}\sum_{i\in\cQ} c_{is}\cdot Z_{is}     
+       \le \sum_{s\in\cS}\sum_{i\in\cQ} c_{is}\cdot z'_{is},
+    \end{equation*}
+\end{restatable}
+\begin{proof}\textcolor{red}{TOPROVE 7}\end{proof}
+
+
+\subsection{Approximation Factor}
+Concluding the previous subsections, this section provides an $\alpha$-approximation for the Budgeted Santa Claus Problem, where $\alpha = \Order(\log n)$. 
+\SCapprox*
+\begin{proof}\textcolor{red}{TOPROVE 8}\end{proof}
+ \section{Conclusion}
+Based on the finding in this paper there are several interesting questions arising for future research.
+For the Budgeted Santa Claus Problem, a naturally arising question is whether the approximation factor of
+$O(\log n)$ can be improved. Notably, the special case of restricted assignment (without a budget constraint)
+admits a constant approximation due to Feige~\cite{Feige08}.
+We are not aware of any hardness
+results indicating that such a result cannot hold for our problem. As an intermediate question,
+one could look at the bi-criteria approximation that approximates both the minimum player value and the cost by a constant. This would still generalize the aforementioned algorithm for restricted assignment.
+
+Another intriguing question is whether a dependent rounding scheme exists for rounding matroid bases that simultaneously guarantees cost preservation and Chernoff-type concentration 
+like \textsc{SwapRounding}~\cite{ChekuriVZ10} does. 
+It seems likely that the techniques from this paper
+transfer at least to a limited
+class of matroids, namely strongly base-orderable
+matroids, because
+these have very strong decomposition properties for the
+symmetric difference of two bases.
+It might, however, require other ideas to generalize to
+arbitrary matroids. 
+\bibliographystyle{plainurl}
+\bibliography{paper}
+
+\appendix
+\section{Appendix}
+
+\subsection{Santa Claus Problem where all resources need to be assigned}
+\label{subsec:appendix-santa-claus-with-all-resources-assigned}
+In the following, we show that the Budgeted Santa Claus Problem with the requirement that all items need to be assigned is not harder than the variant we study. 
+For each resource $j$, adjust the cost of assigning $j$ to any player $i$ to $c_{ij}' = c_{ij} - \min_{i \in \mathcal{P}} c_{ij}$. This reduces the total budget by the sum of these minimum values across all resources, $C' = C - \sum_{j \in \mathcal{R}} \min_{i \in \mathcal{P}} c_{ij}$. Then we solve the reduced problem without enforcing that all the resources have to be assigned. If some resources remain unassigned, we allocate them to the players with zero cost (i.e., players $i \in \cP$ with $c_{ij}'  = 0$). This ensures that all resources are assigned without exceeding the original budget, as the reduced budget $C'$ already accounted for these assignments. This reduction maintains the approximation ratio of the solution, as values remain the same and costs are not approximated. 
+\end{document}

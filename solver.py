@@ -37,7 +37,7 @@ def gptSolver(tree, id):
     return openai_request(solver_prompt(tree, id), system_prompt=solver_system_prompt, paper = noproof(tree.paper))
 
 def solver(tree, SOLVER):
-    tree.print()
+    #tree.print()
     solutions = {}
     levels = []
     for id in tree.ids:
